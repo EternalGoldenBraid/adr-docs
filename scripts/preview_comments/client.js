@@ -159,7 +159,7 @@
   let historyComments = [];
   let historyRevision = -1;
   let selectedThread;
-  let historyFilter = "page";
+  let historyFilter = "unresolved";
   let pendingFocus;
   const FILTERS = [["page", "This page"], ["chat", "Chat"], ["unresolved", "Open"], ["all", "All"], ["resolved", "Resolved"]];
   let historyTimer;
@@ -207,7 +207,7 @@
     bar.hidden = !vimEnabled;
     find(".sb-hint").textContent = !history.hidden ? (selectedThread
       ? "j/k next/prev thread · r resolve · i reply · o open page · s region · h back · Esc"
-      : "j/k move · l open · r resolve · [ ] tabs · g/G ends · Esc close") : visual ? "c comment · Esc cancel · hjkl extend" : `${KM.page.visual} select text · ${KM.page.comment} comment · ${KM.leader}${KM.leaderKeys.history} threads · : commands · :help`;
+      : "j/k move (k at top → tabs) · l open · r resolve · [ ] tabs · Esc close") : visual ? "c comment · Esc cancel · hjkl extend" : `${KM.page.visual} select text · ${KM.page.comment} comment · ${KM.leader}${KM.leaderKeys.history} threads · : commands · :help`;
     find(".sb-mode").textContent = `-- ${mode}${prefix ? " " + prefix : ""} --`;
     vimButton.setAttribute("aria-pressed", String(vimEnabled));
   }
@@ -719,7 +719,7 @@
     if (history.hidden) return;
     clearInterval(historyTimer);
     historyTimer = setInterval(load, 2000);
-    (find(".thread-list").querySelector(".thread-card") || find(".history-close")).focus();
+    (find(".thread-list").querySelector(".thread-card") || find(`.tab[data-filter="${historyFilter}"]`) || find(".history-close")).focus();
   }
   async function updateThread(values, commentId = selectedThread) {
     historySaving = true;
@@ -951,7 +951,15 @@
     };
     const key = event.key;
     let handled = true;
-    if (selectedThread) {
+    const values = FILTERS.map(([value]) => value);
+    if (!selectedThread && field?.classList.contains("tab")) {
+      const i = values.indexOf(field.dataset.filter);
+      if ((key === "l" || key === "ArrowRight") && i < values.length - 1) setFilter(values[i + 1]);
+      else if ((key === "h" || key === "ArrowLeft") && i > 0) setFilter(values[i - 1]);
+      else if (key === "j" || key === "ArrowDown") cards[0]?.focus();
+      else if (key === "G") step(Infinity);
+      else handled = key === "h" || key === "l";
+    } else if (selectedThread) {
       const here = ids.indexOf(selectedThread);
       if (key === "h" || key === "ArrowLeft") leaveThread();
       else if (key === "r") triage(selectedThread);
@@ -963,13 +971,12 @@
       else handled = key === "j" || key === "k";
       if (key === "o") event.preventDefault();
     } else if (key === "j" || key === "ArrowDown") step(1);
-    else if (key === "k" || key === "ArrowUp") step(-1);
+    else if (key === "k" || key === "ArrowUp") { if (at <= 0) find(`.tab[data-filter="${historyFilter}"]`)?.focus(); else step(-1); }
     else if (key === "g") step(-Infinity);
     else if (key === "G") step(Infinity);
     else if (key === "l" || key === "ArrowRight") { if (at >= 0) cards[at].click(); }
     else if (key === "r") { if (at >= 0) triage(ids[at]); }
     else if (key === "[" || key === "]") {
-      const values = FILTERS.map(([value]) => value);
       setFilter(values[(values.indexOf(historyFilter) + (key === "]" ? 1 : values.length - 1)) % values.length]);
     } else handled = false;
     if (handled) event.preventDefault();
