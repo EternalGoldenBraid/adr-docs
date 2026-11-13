@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.0 - 2026-11-13
+
+- Scroll gutter: a tick at the right edge for every unresolved comment, positioned by its place in the whole page (text, graph nodes and edges). Click a tick to scroll to the comment; hover shows its text.
+
 ## 0.8.0 - 2026-11-13
 
 - Comment markers sit at the comment: in the left margin beside commented text, on the top-right corner of a commented graph node, above a commented edge label. Overlapping markers are nudged apart; the fixed right-hand rail is gone.
