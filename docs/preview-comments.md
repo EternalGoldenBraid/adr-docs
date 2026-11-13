@@ -65,6 +65,10 @@ Agents can start threads too with `add_doc_review_comment` (page, kind, quote, c
 
 `c` with nothing selected (or the `Page` button) comments on the whole page; `-m` (or `Chat`) sends a general message to the session that is not tied to a page. Both appear in History (filter "Page & chat") and are replied to like any thread.
 
+## Agent status and proposed edits
+
+The agent can show a status line (`set_doc_review_status`) and attach a before/after diff to a thread; Accept/Reject buttons reply to the agent, which then applies the edit itself.
+
 ## Command line
 
 `:` opens a command line at the bottom of the page: `:help`, `:history`, `:chat`, `:comment`, `:tree`, `:keys`, `:vim on|off`.

@@ -15,6 +15,8 @@
       label{display:block;margin:12px 0 6px}textarea{width:100%;min-height:110px;max-height:240px;resize:vertical;padding:10px;background:#111318;color:#eee;border:1px solid #59616d;border-radius:6px}
       .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}.status{max-width:390px;margin:8px 0;padding:10px 12px;border:1px solid #59616d;border-radius:8px;background:#1b1d22;white-space:pre-wrap}.status:empty{display:none}.error{color:#ffb4a9}
       .hint{margin:10px 0 0;color:#b7c1ce}
+      .proposal{margin:10px 0;border:1px solid #59616d;border-radius:8px;padding:8px}.proposal pre{margin:0 0 6px;padding:6px;white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.4 ui-monospace,monospace;border-radius:4px}.proposal .del{background:#4a1d24}.proposal .add{background:#16402a}
+      .agent-status{position:fixed;left:14px;bottom:44px;padding:4px 10px;border:1px solid #59616d;border-radius:999px;background:#1b1d22;font-size:12px;color:#b7c1ce}.agent-status::before{content:"● ";color:#51cf66}
       .cmdbar{position:fixed;left:0;right:0;bottom:0;display:flex;gap:6px;padding:6px 14px;background:#111318;border-top:1px solid #59616d;font:14px/1.4 ui-monospace,monospace}.cmdbar input{flex:1;background:none;border:0;color:#eee;font:inherit;outline:0}
       .contextual{position:fixed}
       .panel.contextual-panel{position:fixed;margin:0;max-height:calc(100vh - 140px);overflow:auto}
@@ -89,6 +91,7 @@
     <div class="status" role="status" aria-live="polite"></div>
     <div class="region" hidden><div class="region-box" hidden></div><div class="region-tip">Drag to select a region · Esc cancels</div></div>
     <div class="vim-caret" hidden aria-hidden="true"></div>
+    <div class="agent-status" hidden></div>
     <form class="cmdbar" hidden><span>:</span><input class="cmdinput" autocomplete="off" spellcheck="false" aria-label="Command"></form>
     <div class="contextual" hidden><button class="ctx-comment" type="button">Comment</button><span class="swatches" style="display:flex;gap:5px"></span></div><div class="rail"></div>
     <div class="dock"><div class="toolbar" hidden>
@@ -417,6 +420,31 @@
     return row;
   }
   const open_ = url => window.open(url, "_blank", "noopener");
+  function proposalCard(comment, run) {
+    const card = document.createElement("div");
+    card.className = "proposal";
+    for (const [cls, label, text] of [["del", "−", comment.proposal.before], ["add", "+", comment.proposal.after]]) {
+      const pre = document.createElement("pre");
+      pre.className = cls;
+      pre.textContent = text.split("\n").map(line => `${label} ${line}`).join("\n");
+      card.append(pre);
+    }
+    const verdict = comment.replies.find(reply => reply.author !== "copilot" && /^(✓ Accepted|✗ Rejected)/.test(reply.comment));
+    const row = document.createElement("div");
+    row.className = "actions";
+    if (verdict) row.textContent = verdict.comment.split(/[ .—]/).slice(0, 2).join(" ");
+    else {
+      const accept = document.createElement("button");
+      accept.type = "button"; accept.className = "primary"; accept.textContent = "Accept";
+      accept.addEventListener("click", () => run({ id: crypto.randomUUID(), reply: "✓ Accepted — please apply this edit." }));
+      const reject = document.createElement("button");
+      reject.type = "button"; reject.textContent = "Reject";
+      reject.addEventListener("click", () => run({ id: crypto.randomUUID(), reply: "✗ Rejected.", resolved: true }));
+      row.append(reject, accept);
+    }
+    card.append(row);
+    return card;
+  }
   function threadNodes(comment, run) {
     const nodes = [];
     if (comment.comment) {
@@ -425,6 +453,7 @@
         onEdit: text => run({ editComment: text }),
       }));
     }
+    if (comment.proposal) nodes.push(proposalCard(comment, run));
     if (comment.images?.length) nodes.push(thumbnails(comment.images));
     for (const reply of comment.replies) {
       const mine = reply.author !== "copilot";
@@ -1353,4 +1382,13 @@
   applyScale();
   syncMarks();
   setInterval(syncMarks, 3000);
+  const agentLine = find(".agent-status");
+  async function pollAgent() {
+    try {
+      const { agent } = await api("status");
+      agentLine.hidden = !agent || agent.state === "idle" || !agent.text;
+      if (!agentLine.hidden) agentLine.textContent = `Copilot · ${agent.state}: ${agent.text}`;
+    } catch { agentLine.hidden = true; }
+  }
+  setInterval(pollAgent, 2500);
 })();
