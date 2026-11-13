@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.20.1 - 2026-11-14
+
+- **Link landing highlight:** following a link to `#anchor` (also in-app and from comments) scrolls the target below the nav bar and flashes it for 2 s; `/graph#node-<id>` opens the node's layer, centres, selects and flashes it. Reduced-motion users get no animation.
+
 ## 0.20.0 - 2026-11-14
 
 - **Next awaiting thread:** `]` / `[` on any page jump to the next / previous thread waiting for you, across pages (navigates, then opens the thread). Completes the attention beacon.

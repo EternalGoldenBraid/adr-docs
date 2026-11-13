@@ -217,3 +217,7 @@ Open a thread and use **Link to another thread…** to reference another thread.
 ## Next awaiting thread and notes
 
 `]` / `[` (page level, vim mode) jump to the next / previous thread awaiting you, across pages. Highlights without text and private notes are not threads: they have no resolved state, stay off the Open/This page/Chat/Resolved tabs, and are listed on the **Notes** tab. Open one and press **Remove** to delete it; `r` never deletes.
+
+## Landing on a link target
+
+A link to `#anchor` scrolls the heading or passage clear of the nav bar and flashes it for 2 seconds. `/page#node-<id>` does the same for a graph node (opening its layer first). Reduced-motion preferences disable the animation.
