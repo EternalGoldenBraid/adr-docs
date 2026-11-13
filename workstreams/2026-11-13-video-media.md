@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: in-progress
 title: Video and local media
 summary: Local MP4 playback works today; add timestamp comments, frame step and a publish flag.
 ---

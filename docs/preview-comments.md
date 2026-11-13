@@ -193,3 +193,7 @@ opens a separate fixture tab,
 checks keyboard and mouse commenting, history, resolution, and reply retries,
 intercepts every comment and thread-update submission,
 and restores the original tab and Vim preference.
+
+## Video
+
+Embed with `<video controls src="/x.mp4">` (files in `public/`, or a symlink under the doc root). Each video gets frame-step buttons and **Comment at this time**, which pauses and attaches a timestamped comment.

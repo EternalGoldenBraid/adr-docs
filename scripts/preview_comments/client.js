@@ -1293,6 +1293,10 @@
           if (comment.author === "copilot" && !comment.resolved) el.dataset.adrPoint = "";
           marks.push({ custom: true, comment, range: { getBoundingClientRect: () => el.getBoundingClientRect() } });
         }
+      } else if (comment.kind === "figure" && doc && /^Video .+ @ /.test(comment.quote)) {
+        const name = comment.quote.slice(6, comment.quote.lastIndexOf(" @ "));
+        const el = [...doc.querySelectorAll("video")].find(v => videoName(v) === name);
+        if (el) marks.push({ custom: true, comment, range: { getBoundingClientRect: () => el.getBoundingClientRect() } });
       } else if (doc && CSS.highlights) {
         const range = locate(doc, comment.quote);
         if (range) marks.push({ range, comment });
@@ -1411,7 +1415,51 @@
   replyInput.addEventListener("keydown", event => {
     if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) { event.preventDefault(); find(".reply-form").requestSubmit(); }
   });
+  const clock = seconds => `${Math.floor(seconds / 60)}:${(seconds % 60).toFixed(2).padStart(5, "0")}`;
+  const videoName = video => (video.currentSrc || video.src || "video").split("/").pop().split("?")[0];
+  function enhanceVideos() {
+    for (const video of document.querySelectorAll(".vp-doc video")) {
+      if (video.dataset.adrBar) continue;
+      video.dataset.adrBar = "1";
+      let fps = 25;
+      if (video.requestVideoFrameCallback) {
+        let last;
+        const probe = (now, meta) => {
+          if (last !== undefined && meta.mediaTime > last) fps = Math.round(1 / (meta.mediaTime - last)) || fps;
+          last = meta.mediaTime;
+          if (!video.paused) video.requestVideoFrameCallback(probe);
+        };
+        video.addEventListener("play", () => { last = undefined; video.requestVideoFrameCallback(probe); });
+      }
+      const bar = document.createElement("div");
+      bar.style.cssText = "display:flex;gap:6px;align-items:center;margin:4px 0 16px;font:13px system-ui;color:#b7c1ce";
+      const time = document.createElement("span");
+      time.style.cssText = "min-width:70px;font-variant-numeric:tabular-nums";
+      const make = (label, title, action) => {
+        const b = document.createElement("button");
+        b.type = "button"; b.textContent = label; b.title = title;
+        b.style.cssText = "padding:3px 9px;border:1px solid #444c56;border-radius:6px;background:#22272e;color:#d0d7de;cursor:pointer";
+        b.addEventListener("click", action);
+        return b;
+      };
+      const step = frames => { video.pause(); video.currentTime = Math.max(0, video.currentTime + frames / fps); };
+      bar.append(
+        make("◀ frame", "Back one frame", () => step(-1)),
+        make("frame ▶", "Forward one frame", () => step(1)),
+        time,
+        make("💬 Comment at this time", "Comment on this moment", () => {
+          video.pause();
+          open(context(video, "figure", `Video ${videoName(video)} @ ${clock(video.currentTime)}`), video);
+        }));
+      const refresh = () => { time.textContent = clock(video.currentTime); };
+      video.addEventListener("timeupdate", refresh);
+      video.addEventListener("seeked", refresh);
+      refresh();
+      video.after(bar);
+    }
+  }
   async function syncMarks() {
+    enhanceVideos();
     try { await refreshHistory(); } catch { /* the bridge may be offline; keep the last marks */ }
     applyMarks();
     announceAwaiting();
