@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: done
 title: Agent attention beacon and "go to agent" navigation
 summary: Wherever the user is, show that an agent comment awaits them and make jumping to it one key.
 ---

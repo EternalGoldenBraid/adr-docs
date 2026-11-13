@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: done
 title: Highlights are not threads: no resolve state, deletable comments
 summary: A bare highlight or a note has nothing to resolve. Keep them out of the open/resolved flow and let the user delete a comment while keeping the highlight.
 ---

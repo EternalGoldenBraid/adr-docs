@@ -161,7 +161,9 @@
   let selectedThread;
   let historyFilter = "unresolved";
   let pendingFocus;
-  const FILTERS = [["page", "This page"], ["chat", "Chat"], ["unresolved", "Open"], ["all", "All"], ["resolved", "Resolved"]];
+  const FILTERS = [["page", "This page"], ["chat", "Chat"], ["unresolved", "Open"], ["all", "All"], ["resolved", "Resolved"], ["notes", "Notes"]];
+  // Highlights and notes carry no resolve state and stay out of triage.
+  const isNote = comment => Boolean(comment.note || comment.highlight && !comment.comment);
   let historyTimer;
   let historySaving = false;
   const vimButton = find(".vim-mode");
@@ -207,13 +209,14 @@
     bar.hidden = !vimEnabled;
     find(".sb-hint").textContent = !history.hidden ? (selectedThread
       ? "j/k scroll messages · J/K next/prev thread · r resolve · i reply · o page · h back · Esc"
-      : "j/k move (k at top → tabs) · l open · r resolve · [ ] tabs · Esc close") : visual ? "c comment · Esc cancel · hjkl extend" : `${KM.page.visual} select text · ${KM.page.comment} comment · ${KM.leader}${KM.leaderKeys.history} threads · : commands · :help`;
+      : "j/k move (k at top → tabs) · l open · r resolve · [ ] tabs · Esc close") : visual ? "c comment · Esc cancel · hjkl extend" : `${KM.page.visual} select text · ${KM.page.comment} comment · ${KM.leader}${KM.leaderKeys.history} threads · ] next awaiting · : commands · :help`;
     find(".sb-mode").textContent = `-- ${mode}${prefix ? " " + prefix : ""} --`;
     vimButton.setAttribute("aria-pressed", String(vimEnabled));
   }
   const cmdbar = find(".cmdbar"), cmdinput = find(".cmdinput");
   const helpText = () => [
     `h/j/k/l/w/b/0/$ move · ${KM.page.visual} select · ${KM.page.comment} comment (page if nothing selected)`,
+    `] / [ next / previous thread awaiting you (across pages)`,
     `${KM.page.region} region screenshot · ${KM.leader}${KM.leaderKeys.history} history · ${KM.leader}${KM.leaderKeys.chat} session chat`,
     `${KM.resize.narrower}/${KM.resize.wider}/${KM.resize.shorter}/${KM.resize.taller} resize panel · t page tree`,
     "In history: j/k move · l open · r resolve · h back · [ ] tabs · i reply · o page · J/K thread",
@@ -515,8 +518,10 @@
       find(".thread-list").textContent = "Loading comment history...";
       return;
     }
-    const resolved = historyComments.filter(comment => comment.resolved).length;
-    find(".history-counts").textContent = `${historyComments.length - resolved} unresolved · ${resolved} resolved`;
+    const threads = historyComments.filter(comment => !comment.removed && !isNote(comment));
+    const resolved = threads.filter(comment => comment.resolved).length;
+    const noteCount = historyComments.filter(comment => !comment.removed && isNote(comment)).length;
+    find(".history-counts").textContent = `${threads.length - resolved} unresolved · ${resolved} resolved · ${noteCount} notes`;
     const list = find(".thread-list");
     const focusedComment = pendingFocus ?? shadow.activeElement?.dataset.commentId;
     pendingFocus = undefined;
@@ -534,10 +539,11 @@
       if (comment.removed) continue;
       // A resolved thread with a reply you have not seen stays listed as open until viewed.
       const closed = comment.resolved && !hasFresh(comment);
-      if (filter === "chat" ? closed || (comment.kind !== "page" && comment.kind !== "session")
+      if (filter === "notes" ? !isNote(comment) : isNote(comment) && filter !== "all") continue;
+      if (filter !== "notes" && (filter === "chat" ? closed || (comment.kind !== "page" && comment.kind !== "session")
         : filter === "page" ? closed || (comment.kind !== "session" && pagePath(comment.url) !== pagePath(location.href))
         : filter === "unresolved" ? closed
-        : filter === "resolved" ? !comment.resolved : false) continue;
+        : filter === "resolved" ? !comment.resolved : false)) continue;
       const card = document.createElement("button");
       card.type = "button";
       card.className = "thread-card";
@@ -574,11 +580,11 @@
     find(".thread-source").href = comment.url;
     if (find(".thread-quote").textContent !== comment.quote) find(".thread-quote").textContent = comment.quote;
     const state = find(".thread-state");
-    state.textContent = `${comment.resolved ? "Resolved" : "Unresolved"} · ${comment.note ? "Private note" : comment.seen ? "Read by Copilot" : "Unread by Copilot"}`;
+    state.textContent = `${isNote(comment) ? "Note" : comment.resolved ? "Resolved" : "Unresolved"} · ${comment.note ? "Private note" : comment.seen ? "Read by Copilot" : "Unread by Copilot"}`;
     const quoteLine = (comment.quote || "").replace(/\s+/g, " ");
     find(".quote-summary").textContent = quoteLine ? `“${quoteLine.slice(0, 90)}${quoteLine.length > 90 ? "…" : ""}”` : "Selected content";
     state.classList.toggle("resolved", comment.resolved);
-    find(".thread-resolve").textContent = comment.resolved ? "Reopen" : "Resolve";
+    find(".thread-resolve").textContent = isNote(comment) ? "Remove" : comment.resolved ? "Reopen" : "Resolve";
     markSeen(comment);
     renderLinks(comment);
     find(".thread-messages").replaceChildren(...threadNodes(comment, values => updateThread(values)));
@@ -605,6 +611,7 @@
   function triage(id) {
     const comment = historyComments.find(c => c.id === id);
     if (!comment || historySaving) return;
+    if (isNote(comment)) return;
     if (comment.resolved && hasFresh(comment)) {
       const rows = [...find(".thread-list").children].map(card => card.dataset.commentId);
       pendingFocus = rows[rows.indexOf(id) + 1] ?? rows[rows.indexOf(id) - 1];
@@ -618,7 +625,7 @@
     return updateThread({ id: crypto.randomUUID(), resolved: !comment.resolved }, id);
   }
   // Awaiting: a thread the agent started, still open, with the agent's message last.
-  const awaiting = comment => !comment.resolved && !comment.removed && comment.author === "copilot" &&
+  const awaiting = comment => !comment.resolved && !comment.removed && !isNote(comment) && comment.author === "copilot" &&
     (comment.replies.at(-1)?.author ?? "copilot") === "copilot";
     const banners = find(".banners");
   const linkLabel = c => `${c.section} · ${(c.comment || c.quote || "").slice(0, 40)}`;
@@ -654,6 +661,16 @@
     for (const c of live) if (!c.resolved && !out.includes(c)) picker.append(new Option(linkLabel(c), c.id));
     picker.addEventListener("change", () => picker.value && updateThread({ id: crypto.randomUUID(), addRefs: [picker.value] }));
     box.replaceChildren(...out.map(c => row("→", c, true)), ...back.map(c => row("←", c, false)), picker);
+  }
+  // Cycle through threads awaiting you, across pages; remembers the last stop.
+  function jumpToAwaiting(step) {
+    const queue = historyComments.filter(awaiting).sort((x, y) => new Date(x.at) - new Date(y.at));
+    if (!queue.length) { message("Nothing awaiting you"); return; }
+    const last = queue.findIndex(c => c.id === sessionStorage.getItem("adr-beacon"));
+    const next = queue[(last + step + queue.length) % queue.length];
+    sessionStorage.setItem("adr-beacon", next.id);
+    message(`Awaiting ${(last + step + queue.length) % queue.length + 1}/${queue.length}`);
+    goToThread(next);
   }
   async function openThreadById(id) {
     await openHistory();
@@ -789,7 +806,12 @@
     updateThread({ id: draft.id, reply: replyInput.value });
   });
   find(".thread-resolve").addEventListener("click", () => {
-    triage(selectedThread);
+    const comment = historyComments.find(c => c.id === selectedThread);
+    if (comment && isNote(comment)) {
+      pendingFocus = undefined;
+      selectedThread = undefined;
+      updateThread({ id: crypto.randomUUID(), removed: true }, comment.id).then(applyMarks);
+    } else triage(selectedThread);
   });
   let draftImages = [];
   const shots = find(".shots");
@@ -1206,6 +1228,7 @@
       return;
     }
     if (event.key === ":") { event.preventDefault(); openCmdline(); return; }
+    if (event.key === "]" || event.key === "[") { event.preventDefault(); jumpToAwaiting(event.key === "]" ? 1 : -1); return; }
     if (!hasDoc) return;
     const { motions, visual: vKey, documentStart, documentEnd, viewTop, viewBottom, details: dKey } = KM.page;
     if (!motions[event.key] && ![vKey, documentStart, documentEnd, viewTop, viewBottom, dKey].includes(event.key)) return;
