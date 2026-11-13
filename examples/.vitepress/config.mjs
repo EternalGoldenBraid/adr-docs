@@ -1,6 +1,6 @@
 import { defineConfig } from "vitepress";
 import { fileURLToPath } from "node:url";
-import { treeThemeConfig, treeJsonPlugin } from "../../src/page-tree.mjs";
+import { treeThemeConfig, treeJsonPlugin, unpublished } from "../../src/page-tree.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 
@@ -9,7 +9,7 @@ export default defineConfig({
   title: "Agent Doc Review",
   base: process.env.SITE_BASE || "/",
   appearance: "force-dark",
-  srcExclude: ["papers/**"],
-  themeConfig: treeThemeConfig(root),
+  srcExclude: ["papers/**", ...unpublished(root)],
+  themeConfig: treeThemeConfig(root, { publishedOnly: true }),
   vite: { optimizeDeps: { include: ["cytoscape"] }, plugins: [treeJsonPlugin(root)] },
 });

@@ -1,10 +1,24 @@
 import { readdirSync, readFileSync } from "node:fs";
-import { basename, join } from "node:path";
+import { basename, join, relative } from "node:path";
+
+const frontOf = text => text.match(/^---\n([\s\S]*?)\n---/)?.[1] ?? "";
+const isUnpublished = text => /^publish:\s*false\s*$/m.test(frontOf(text));
+
+// Markdown files (any depth) marked `publish: false`, as paths relative to the root for srcExclude.
+export function unpublished(documentRoot, directory = documentRoot) {
+  return readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
+    const path = join(directory, entry.name);
+    if (entry.isDirectory()) return entry.name === "node_modules" || entry.name.startsWith(".") ? [] : unpublished(documentRoot, path);
+    return entry.name.endsWith(".md") && isUnpublished(readFileSync(path, "utf8")) ? [relative(documentRoot, path)] : [];
+  });
+}
 
 // Pages are the top-level Markdown files. Front matter: `nav:` label, `parent:` page slug
 // (default: top level), `order:` number. Top-bar links are the pages without a parent.
-export function readPageTree(documentRoot) {
-  const pages = readdirSync(documentRoot).filter(f => f.endsWith(".md")).map(file => {
+export function readPageTree(documentRoot, { publishedOnly = false } = {}) {
+  const files = readdirSync(documentRoot).filter(f => f.endsWith(".md"))
+    .filter(f => !publishedOnly || !isUnpublished(readFileSync(join(documentRoot, f), "utf8")));
+  const pages = files.map(file => {
     const slug = basename(file, ".md");
     const text = readFileSync(join(documentRoot, file), "utf8");
     const front = text.match(/^---\n([\s\S]*?)\n---/)?.[1] ?? "";
@@ -35,21 +49,21 @@ export function nestedTree(pages, parent = null) {
 }
 
 export function treeJsonPlugin(documentRoot) {
-  const body = () => JSON.stringify(nestedTree(readPageTree(documentRoot)), null, 2) + "\n";
+  const body = publishedOnly => JSON.stringify(nestedTree(readPageTree(documentRoot, { publishedOnly })), null, 2) + "\n";
   return {
     name: "adr-tree-json",
     configureServer(server) {
       server.middlewares.use((request, response, next) => {
         if (request.url?.split("?")[0] !== "/tree.json") return next();
         response.setHeader("content-type", "application/json");
-        response.end(body());
+        response.end(body(false));
       });
     },
-    generateBundle() { this.emitFile({ type: "asset", fileName: "tree.json", source: body() }); },
+    generateBundle() { this.emitFile({ type: "asset", fileName: "tree.json", source: body(true) }); },
   };
 }
 
-export function treeThemeConfig(documentRoot) {
-  const pages = readPageTree(documentRoot);
+export function treeThemeConfig(documentRoot, options) {
+  const pages = readPageTree(documentRoot, options);
   return { nav: topBar(pages), pageTree: pages };
 }

@@ -635,6 +635,14 @@
     renderHistory();
     [...find(".thread-list").children].find(card => card.dataset.commentId === previous)?.focus();
   });
+  find(".thread-quote").addEventListener("click", () => {
+    const m = find(".thread-quote").textContent.match(/^Video (.+) @ (\d+):([\d.]+)$/);
+    const video = m && [...document.querySelectorAll(".vp-doc video")].find(v => videoName(v) === m[1]);
+    if (!video) return;
+    video.currentTime = Number(m[2]) * 60 + Number(m[3]);
+    closeHistory();
+    video.scrollIntoView({ block: "center" });
+  });
   find(".thread-source").addEventListener("click", event => {
     if (historySaving) event.preventDefault();
     else closeHistory();
