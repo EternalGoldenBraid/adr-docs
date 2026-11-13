@@ -229,3 +229,5 @@ A link to `#anchor` scrolls the heading or passage clear of the nav bar and flas
 ## Workstreams
 
 Tickets in `workstreams/*.md` follow the schema in `workstreams/README.md`. The index page groups them by status; `list_workstreams` (agent tool) or `npm run workstreams -- --json` returns them as JSON.
+
+Links to `/workstreams/<id>` pages show a status chip (status, owner, progress) automatically.

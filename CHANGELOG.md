@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.22.1 - 2026-11-14
+
+- Links to a workstream page (`/workstreams/<id>`) get a status chip after them (status, owner, steps done/total), coloured by status. Data comes from the `workstreams/` folder under the document root and refreshes with the page tree.
+
 ## 0.22.0 - 2026-11-14
 
 - **Native workstreams:** one front-matter schema (`title`, `status` = proposed/queued/active/blocked/done/declined, `owner`, `requester`, `date`, `summary`, `depends_on`), checklist steps counted as progress, and a generated index grouped by status (owner, steps, dependency links). `npm run workstreams -- --json` and the new `list_workstreams` agent tool return the board as JSON. Legacy `accepted`/`in-progress` read as `queued`/`active`.
