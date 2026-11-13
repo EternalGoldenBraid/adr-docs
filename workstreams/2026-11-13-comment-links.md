@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: done
 title: Links between comments
 summary: Let a comment reference another thread, so a page-level discussion can point at the exact node or text thread it is about and be jumped to.
 ---

@@ -352,6 +352,28 @@ test("agent-authored threads are red, quiet, listed, and wake the agent only on 
   rmSync(directory, { recursive: true, force: true });
 });
 
+test("threads link to other threads; links are validated and removable without waking the agent", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "preview-comments-"));
+  const sessionId = randomUUID();
+  writeFileSync(join(directory, "page.md"), "# Page\n\nText.");
+  const bridge = await startCommentBridge({
+    sessionId, documentRoot: directory, storageRoot: directory, previewOrigin: "http://127.0.0.1:8767",
+    onError: error => assert.fail(error.message), notify: async () => {},
+  });
+  const a = bridge.add({ page: "/page", kind: "page", quote: "Page", comment: "a" }).id;
+  const b = bridge.add({ page: "/page", kind: "page", quote: "Page", comment: "b", refs: [a] }).id;
+  assert.deepEqual(bridge.list().find(c => c.id === b).refs, [a]);
+  bridge.update({ id: randomUUID(), commentId: a, addRefs: [b] });
+  assert.deepEqual(bridge.list().find(c => c.id === a).refs, [b]);
+  assert.throws(() => bridge.update({ id: randomUUID(), commentId: a, addRefs: [a] }));
+  assert.throws(() => bridge.update({ id: randomUUID(), commentId: a, addRefs: [randomUUID()] }));
+  bridge.update({ id: randomUUID(), sessionId, commentId: a, removeRefs: [b] }, "user");
+  assert.deepEqual(bridge.list().find(c => c.id === a).refs, []);
+  assert.equal(bridge.pending().count, 0);
+  await bridge.close();
+  rmSync(directory, { recursive: true, force: true });
+});
+
 test("page tree: parent and order front matter shape the top bar and tree.json", async () => {
   const { readPageTree, topBar, nestedTree } = await import("../src/page-tree.mjs");
   const directory = mkdtempSync(join(tmpdir(), "page-tree-"));

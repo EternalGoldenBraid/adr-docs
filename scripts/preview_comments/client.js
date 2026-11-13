@@ -34,6 +34,8 @@
       .history-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
       select{font:inherit;padding:6px;background:#292d35;color:#eee;border:1px solid #59616d;border-radius:6px}
       .thread-card{display:block;width:100%;text-align:left;margin:10px 0;padding:12px}
+      .thread-links{margin:8px 0;display:grid;gap:4px}.thread-links .link-row{display:flex;gap:4px}
+      .thread-links .link-row button:first-child{flex:1;text-align:left}.thread-links select{width:100%}
       .thread-card{border-left:4px solid #444c56}
       .thread-card.unread{border-left-color:#e3b341;background:rgba(227,179,65,.14)}
       .thread-card.waiting{border-left-color:#f85149;background:rgba(248,81,73,.16)}
@@ -94,6 +96,7 @@
         <a class="thread-source">Open page</a></div>
         <div class="thread-state"></div>
         <details><summary>Selected content</summary><div class="quote thread-quote"></div></details>
+        <div class="thread-links"></div>
         <div class="thread-messages"></div>
         <form class="reply-form"><label for="thread-reply">Your reply</label>
         <textarea id="thread-reply" required maxlength="4000"></textarea>
@@ -534,12 +537,46 @@
     state.classList.toggle("resolved", comment.resolved);
     find(".thread-resolve").textContent = comment.resolved ? "Reopen" : "Resolve";
     markSeen(comment);
+    renderLinks(comment);
     find(".thread-messages").replaceChildren(...threadNodes(comment, values => updateThread(values)));
   }
   // Awaiting: a thread the agent started, still open, with the agent's message last.
   const awaiting = comment => !comment.resolved && !comment.removed && comment.author === "copilot" &&
     (comment.replies.at(-1)?.author ?? "copilot") === "copilot";
     const banners = find(".banners");
+  const linkLabel = c => `${c.section} · ${(c.comment || c.quote || "").slice(0, 40)}`;
+  function goToThread(other) {
+    if (other.kind === "session" || pagePath(other.url) === pagePath(location.href)) { openThreadById(other.id); return; }
+    sessionStorage.setItem("adr-open-thread", other.id);
+    location.assign(other.url);
+  }
+  function renderLinks(comment) {
+    const box = find(".thread-links");
+    const live = historyComments.filter(c => !c.removed && c.id !== comment.id);
+    const out = (comment.refs || []).map(id => live.find(c => c.id === id)).filter(Boolean);
+    const back = live.filter(c => c.refs?.includes(comment.id));
+    const row = (arrow, other, removable) => {
+      const line = document.createElement("div");
+      line.className = "link-row";
+      const go = document.createElement("button");
+      go.type = "button";
+      go.textContent = `${arrow} ${linkLabel(other)}`;
+      go.addEventListener("click", () => goToThread(other));
+      line.append(go);
+      if (removable) {
+        const drop = document.createElement("button");
+        drop.type = "button"; drop.textContent = "✕"; drop.title = "Remove link";
+        drop.addEventListener("click", () => updateThread({ id: crypto.randomUUID(), removeRefs: [other.id] }));
+        line.append(drop);
+      }
+      return line;
+    };
+    const picker = document.createElement("select");
+    picker.append(new Option("Link to another thread…", ""));
+    for (const c of live) if (!c.resolved && !out.includes(c)) picker.append(new Option(linkLabel(c), c.id));
+    picker.addEventListener("change", () => picker.value && updateThread({ id: crypto.randomUUID(), addRefs: [picker.value] }));
+    box.replaceChildren(...out.map(c => row("→", c, true)), ...back.map(c => row("←", c, false)), picker);
+  }
   async function openThreadById(id) {
     await openHistory();
     find("#history-filter").value = "all";
@@ -1482,6 +1519,11 @@
   async function syncMarks() {
     enhanceVideos();
     try { await refreshHistory(); } catch { /* the bridge may be offline; keep the last marks */ }
+    const pendingOpen = sessionStorage.getItem("adr-open-thread");
+    if (pendingOpen && historyComments.some(c => c.id === pendingOpen)) {
+      sessionStorage.removeItem("adr-open-thread");
+      openThreadById(pendingOpen);
+    }
     applyMarks();
     announceAwaiting();
   }

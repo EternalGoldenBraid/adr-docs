@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.18.0 - 2026-11-13
+
+- Links between comments. A thread shows `→` links to threads it references and `←` backlinks from threads that reference it; a picker ("Link to another thread…") adds a link, ✕ removes one. Following a link opens the target thread, switching page if needed.
+- Agents link threads with `refs` on `add_doc_review_comment` and `link_comment_ids` on `update_doc_review_comment`.
+
 ## 0.17.3 - 2026-11-13
 
 - A preview server older than the client no longer crashes it silently: a red bar says to reload extensions and restart.

@@ -108,6 +108,8 @@ export async function startCommentBridge({
         comment.images = [...new Set([...(comment.images || []), ...record.addImages])];
         wake = true;
       }
+      if (record.addRefs) comment.refs = [...new Set([...(comment.refs || []), ...record.addRefs])];
+      if (record.removeRefs) comment.refs = (comment.refs || []).filter(id => !record.removeRefs.includes(id));
       if (record.removeReply) comment.replies = comment.replies.filter(item => item.id !== record.removeReply);
       if (record.resolved !== undefined) comment.resolved = record.resolved;
       if (record.color !== undefined) comment.color = record.color;
@@ -201,12 +203,19 @@ export async function startCommentBridge({
       const ids = imageIds(input.addImages);
       if (ids.length) value.addImages = ids;
     }
+    for (const [key, name] of [["addRefs", "addRefs"], ["removeRefs", "removeRefs"]]) {
+      if (input[key] === undefined) continue;
+      if (!Array.isArray(input[key]) || input[key].length > 20) throw new Error(`${name} must list at most 20 comment IDs.`);
+      const ids = [...new Set(input[key].map(id => identifier(id, "Linked comment ID")))];
+      if (name === "addRefs" && ids.some(id => id === value.commentId || !comments.has(id))) throw new Error("Linked comments must be other threads in this session.");
+      if (ids.length) value[name] = ids;
+    }
     if (author === "user" && input.removeReply) value.removeReply = identifier(input.removeReply, "Reply ID");
     if (author === "user" && typeof input.removed === "boolean") value.removed = input.removed;
     if (value.reply === undefined && value.resolved === undefined && value.color === undefined && value.removed === undefined && !value.clear &&
         !value.promote && value.editComment === undefined && !value.editReply && !value.removeReply &&
-        !value.addImages) {
-      throw new Error("An update needs a reply, resolved state, colour, image, edit or removal.");
+        !value.addImages && !value.addRefs && !value.removeRefs) {
+      throw new Error("An update needs a reply, resolved state, colour, image, link, edit or removal.");
     }
     const previous = updates.get(value.id);
     if (previous && JSON.stringify(previous.input) !== JSON.stringify(value)) {
@@ -317,8 +326,9 @@ export async function startCommentBridge({
       });
       const proposal = input.proposal && typeof input.proposal === "object"
         ? { before: String(input.proposal.before ?? "").slice(0, 8000), after: String(input.proposal.after ?? "").slice(0, 8000) } : undefined;
+      const refs = Array.isArray(input.refs) ? [...new Set(input.refs.filter(id => comments.has(id)))].slice(0, 20) : [];
       const record = {
-        ...value, ...(proposal ? { proposal } : {}), input: value, event: "comment", author: "copilot", at: new Date().toISOString(), seen: true,
+        ...value, ...(proposal ? { proposal } : {}), ...(refs.length ? { refs } : {}), input: value, event: "comment", author: "copilot", at: new Date().toISOString(), seen: true,
         sourceHash: createHash("sha256").update(readFileSync(value.source)).digest("hex"),
       };
       append(log, record);
