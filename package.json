@@ -18,7 +18,8 @@
     "test": "node --test tests/*.test.mjs",
     "example:paper": "python3 tools/fetch_arxiv.py 2211.08416v3 --root examples",
     "preview": "node bin/preview.mjs",
-    "readme": "node bin/preview.mjs examples/index.md 5180"
+    "readme": "node bin/preview.mjs examples/index.md 5180",
+    "build:site": "vitepress build examples"
   },
   "dependencies": {
     "cytoscape": "3.35.0",

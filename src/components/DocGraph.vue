@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import cytoscape from 'cytoscape'
+import { withBase } from 'vitepress'
 
 // src: URL of the graph JSON (served from the document's public/ folder).
 // Local edits are autosaved in the browser under storageKey.
@@ -193,7 +194,7 @@ onMounted(async () => {
   let data = null
   try { data = JSON.parse(localStorage.getItem(STORE)) } catch (_) { /* fall back to the file */ }
   const fromFile = !data
-  if (!data) data = await (await fetch(props.src)).json()
+  if (!data) data = await (await fetch(withBase(props.src))).json()
 
   TOPICS.value = [...new Set(data.nodes.flatMap(n => n.topics || []))].sort()
   document.addEventListener('preview-comment-vim', onVim)

@@ -3,8 +3,8 @@
 Read Markdown, equations, arXiv papers and graphs in your browser, and comment
 on anything. A GitHub Copilot CLI session reads the comments and replies.
 
-**[Landing page](https://github.com/EternalGoldenBraid/agent-doc-review)**
-· see it locally with `npm run readme`.
+**[Live demo](https://eternalgoldenbraid.github.io/agent-doc-review/)**
+· or locally with `npm run readme`. The hosted demo is static, so comments need the local preview.
 
 ## Quick start
 

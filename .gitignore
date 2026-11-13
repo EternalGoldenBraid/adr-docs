@@ -5,3 +5,5 @@ connection.json
 comments.jsonl
 examples/public/papers/
 examples/papers/
+examples/.vitepress/cache/
+examples/.vitepress/dist/

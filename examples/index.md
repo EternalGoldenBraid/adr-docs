@@ -6,11 +6,8 @@ hero:
   tagline: Live Markdown, papers and graphs in your browser. Select anything, comment, and your Copilot session picks it up.
   actions:
     - theme: brand
-      text: Read a paper
-      link: /papers/2211.08416v3.html
-    - theme: alt
       text: Explore a graph
-      link: /graph
+      link: graph
     - theme: alt
       text: GitHub
       link: https://github.com/EternalGoldenBraid/agent-doc-review
