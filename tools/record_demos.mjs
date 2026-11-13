@@ -107,12 +107,39 @@ try {
     await caption(page, "Threads can link to each other: -h opens the thread list");
     await leader(page, "h");
     await wait(1000);
-    await page.locator(".thread-card", { hasText: "Sense node" }).click();
+    await caption(page, "j / k pick a thread, l opens it");
+    await page.keyboard.press("l");
+    await wait(600);
     await caption(page, "→ links to a related thread, ← is a backlink");
     await page.locator(".link-row button").first().click();
     await wait(4500);
     await caption(page, "It opened the other page's thread, with a backlink");
     await wait(1500);
+  });
+  for (const text of ["Typo in the second paragraph", "Which unit is this in?", "Add a reference here", "Rename this heading"]) {
+    preview.bridge.add({ page: "/", kind: "page", quote: "Agent Doc Review", comment: text });
+  }
+  await record("thread-triage", async page => {
+    await open(page, "/");
+    await caption(page, "-h opens the thread list; [ and ] switch tabs");
+    await leader(page, "h");
+    await wait(1500);
+    await caption(page, "j / k move, l opens a thread");
+    await page.keyboard.press("j");
+    await wait(700);
+    await page.keyboard.press("l");
+    await wait(1800);
+    await caption(page, "r resolves and returns to the list");
+    await page.keyboard.press("r");
+    await wait(1800);
+    await caption(page, "In the list, r clears the next ones too");
+    await page.keyboard.press("r");
+    await wait(1100);
+    await page.keyboard.press("r");
+    await wait(1800);
+    await caption(page, "Esc closes the panel");
+    await page.keyboard.press("Escape");
+    await wait(1000);
   });
 } finally {
   await browser.close();

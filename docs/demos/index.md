@@ -22,5 +22,12 @@ Select text, press `c`, write, send. The highlight stays; `-h` lists threads.
 A thread links to related threads (`→`) and shows backlinks (`←`). Following a
 link opens the target, on another page if needed.
 
+## Triage threads from the keyboard
+
+<video controls src="/thread-triage.webm"></video>
+
+In the thread list `j`/`k` move, `l` opens, `r` resolves and moves to the next
+thread, `[`/`]` switch tabs, `h` goes back and `Esc` closes.
+
 Preview this page with
 `npm run preview -- docs/demos/index.md`.
