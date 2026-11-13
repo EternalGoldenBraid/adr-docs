@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.17.0 - 2026-11-13
+
+- Videos in pages get a bar with frame-back, frame-forward, the current time and "Comment at this time". The comment quote reads `Video clip.mp4 @ 0:12.48` and marks the video.
+
 ## 0.16.4 - 2026-11-13
 
 - Resolving a thread closes it and returns to the thread list.
