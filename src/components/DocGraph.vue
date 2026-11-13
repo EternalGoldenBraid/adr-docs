@@ -21,12 +21,16 @@ const connecting = ref(false)
 const editMode = ref(false)
 const help = ref(false)
 const mode = ref('normal')
+// The page owns the keys until the graph is clicked; Esc in normal mode hands them back.
+const active = ref(false)
+const uid = Math.random().toString(36).slice(2)
+const main = ref(null)
 const vimOn = ref(typeof localStorage === 'undefined' || localStorage.getItem('preview-comments-vim') !== 'off')
 const cmd = ref(null)
 const cmdInput = ref(null)
 const flash = ref('')
 const selTitle = computed(() => (selected.value && cy ? cy.getElementById(selected.value).data('title') || '' : ''))
-const HELP = "DOC-GRAPH(1)\n\nMODES\n  NORMAL  fly the view         VISUAL  walk node to node\n  INSERT  edit the graph       Esc     back to NORMAL\nNORMAL\n  h j k l   pan (H J K L: faster)\n  + - 0     zoom in / out / fit\n  v  visual     i  insert     u  up one layer\n  Enter     open the selected \u25b8 layer or \u2197 page\nVISUAL\n  h j k l   nearest node in that direction\n  Enter     open \u25b8 layer or \u2197 page, else zoom to node\n  c         comment on the node\n  s         attach a region screenshot\nINSERT\n  h j k l   select neighbour\n  arrows    nudge node (shift: x5)\n  Enter     edit text    o  new node    x  delete\nCOMMANDS\n  :help :man   this page     :w  export JSON\n  :fit         fit all       :q  close\nMOUSE / TRACKPAD\n  swipe pans \u00b7 pinch or shift+swipe zooms\n  dbl-click: \u2197 opens page, \u25b8 opens layer,\n    node/lane zooms, empty fits\nLINKS\n  a node with a \"link\" (e.g. \"/autonomy\") shows \u2197;\n  external URLs open as normal links"
+const HELP = "DOC-GRAPH(1)\n\nLAYERS\n  The page owns the keys. Click the graph to enter it\n  (mode line: GRAPH); Esc in NORMAL returns to the page.\nMODES\n  NORMAL  fly the view         VISUAL  walk node to node\n  INSERT  edit the graph       Esc     back to NORMAL\nNORMAL\n  h j k l   pan (H J K L: faster)\n  + - 0     zoom in / out / fit\n  v  visual     i  insert     u  up one layer\n  Enter     open the selected \u25b8 layer or \u2197 page\nVISUAL\n  h j k l   nearest node in that direction\n  Enter     open \u25b8 layer or \u2197 page, else zoom to node\n  c         comment on the node\n  s         attach a region screenshot\nINSERT\n  h j k l   select neighbour\n  arrows    nudge node (shift: x5)\n  Enter     edit text    o  new node    x  delete\nCOMMANDS\n  :help :man   this page     :w  export JSON\n  :fit         fit all       :q  close\nMOUSE / TRACKPAD\n  swipe pans \u00b7 pinch or shift+swipe zooms\n  dbl-click: \u2197 opens page, \u25b8 opens layer,\n    node/lane zooms, empty fits\nLINKS\n  a node with a \"link\" (e.g. \"/autonomy\") shows \u2197;\n  external URLs open as normal links"
 const topic = ref('')
 const activeTab = ref('')
 const TOPICS = ref([])
@@ -222,13 +226,32 @@ function pickTab(t) {
   else fitAll()
 }
 
+function announce() {
+  document.dispatchEvent(new CustomEvent('preview-comment-mode', { detail: { mode: active.value ? 'GRAPH · ' + mode.value.toUpperCase() : null } }))
+}
+function activate() {
+  if (active.value) return
+  active.value = true
+  document.dispatchEvent(new CustomEvent('adr-graph-active', { detail: { uid } }))
+  announce()
+}
+function deactivate() {
+  if (!active.value) return
+  active.value = false
+  help.value = false
+  cmd.value = null
+  announce()
+}
+const onOther = e => { if (e.detail.uid !== uid) deactivate() }
+const onOutside = e => { if (!e.composedPath().includes(main.value)) deactivate() }
+
 function setMode(m) {
   mode.value = m
   const on = m === 'insert'
   editMode.value = on
   cy.autoungrabify(!on)
   if (!on) { editor.value = null; connecting.value = false }
-  document.dispatchEvent(new CustomEvent('preview-comment-mode', { detail: { mode: m.toUpperCase() } }))
+  announce()
   if (m === 'visual' && !selected.value) {
     const c = { x: cy.width() / 2, y: cy.height() / 2 }
     const near = cy.nodes().filter(isNav).sort((p, q) => dist(p, c) - dist(q, c))[0]
@@ -325,7 +348,7 @@ onMounted(async () => {
   cy.on('tap', 'edge', pick)
   cy.on('viewport drag position', () => document.dispatchEvent(new CustomEvent('preview-comment-reflow')))
 
-  document.dispatchEvent(new CustomEvent('preview-comment-mode', { detail: { mode: 'NORMAL' } }))
+
   showLayer(null)
   ro = new ResizeObserver(() => { cy.resize(); if (!moved) { cy.fit(cy.nodes().filter(n => n.style('display') !== 'none'), 40); moved = false } })
   ro.observe(host.value)
@@ -411,12 +434,14 @@ function runCmd() {
 
 function onKey(e) {
   if ((e.composedPath?.()[0] || e.target).matches?.('input,textarea,select') || e.ctrlKey || e.metaKey || e.altKey) return
+  if (!active.value) return
   if (e.key === '?') { help.value = !help.value; return }
   if (!vimOn.value) return
   const k = e.key
   if (k === 'Escape') {
-    help.value = false
+    if (help.value) { help.value = false; return }
     if (mode.value !== 'normal') setMode('normal')
+    else deactivate()
     return
   }
   if (k === ':') { e.preventDefault(); cmd.value = ''; nextTick(() => cmdInput.value && cmdInput.value.focus()); return }
@@ -469,8 +494,17 @@ function onKey(e) {
   else if (k === 'x' && selected.value) { done(); removeSelected() }
 }
 const onVim = e => { vimOn.value = e.detail.enabled }
-onMounted(() => window.addEventListener('keydown', onKey))
-onUnmounted(() => window.removeEventListener('keydown', onKey))
+onMounted(() => {
+  window.addEventListener('keydown', onKey)
+  document.addEventListener('adr-graph-active', onOther)
+  document.addEventListener('pointerdown', onOutside, true)
+})
+onUnmounted(() => {
+  window.removeEventListener('keydown', onKey)
+  document.removeEventListener('adr-graph-active', onOther)
+  document.removeEventListener('pointerdown', onOutside, true)
+  deactivate()
+})
 
 onUnmounted(() => { document.removeEventListener('preview-comment-vim', onVim); delete window.previewCommentTargets; if (ro) ro.disconnect(); if (cy) cy.destroy() })
 </script>
@@ -502,9 +536,9 @@ onUnmounted(() => { document.removeEventListener('preview-comment-vim', onVim); 
       <button @click="reset">Reset to file</button>
     </template>
   </div>
-  <div class="xp-main">
+  <div ref="main" class="xp-main" :class="{ active }" @pointerdown="activate">
     <div class="xp-canvas" :style="height ? { height } : null"><div ref="host" class="xp-host"></div><div ref="labelHost" class="xp-labels"></div></div>
-    <div class="xp-status"><span class="xp-mode" :data-mode="mode">{{ vimOn ? '-- ' + mode.toUpperCase() + ' --' : mode.toUpperCase() }}</span>
+    <div class="xp-status"><span class="xp-mode" :data-mode="mode">{{ !active ? 'PAGE  (click graph for graph keys)' : vimOn ? 'GRAPH -- ' + mode.toUpperCase() + ' --' : mode.toUpperCase() }}</span>
       <span v-if="selected" class="xp-sel">{{ selTitle }}</span><span class="xp-flash">{{ flash }}</span><span class="xp-hint">:help</span></div>
     <div v-if="cmd !== null" class="xp-cmd">:<input ref="cmdInput" v-model="cmd" spellcheck="false" @keydown.enter="runCmd" @keydown.esc="cmd = null" @keydown.backspace="!cmd && (cmd = null)" /></div>
     <div v-if="help" class="xp-help"><pre v-text="HELP"></pre></div>
@@ -539,6 +573,7 @@ onUnmounted(() => { document.removeEventListener('preview-comment-vim', onVim); 
 .xp-help { position: absolute; right: 12px; bottom: 30px; z-index: 6; padding: 8px 14px; background: #0b1220; color: #cbd5e1; border: 1px solid #475569; border-radius: 4px; font: 12px/1.4 ui-monospace, 'JetBrains Mono', Menlo, monospace; pointer-events: none; }
 .xp-help pre { margin: 6px 0 0; font: inherit; background: none; padding: 0; }
 .xp-status { position: absolute; left: 0; right: 0; bottom: 0; z-index: 4; display: flex; gap: 14px; align-items: center; padding: 2px 170px 2px 10px; background: #111827; color: #cbd5e1; border-radius: 0 0 12px 12px; font: 12px/1.6 ui-monospace, Menlo, monospace; pointer-events: none; }
+.xp-main:not(.active) .xp-mode { opacity: .5; font-weight: 400; }
 .xp-mode { font-weight: 700; color: #4ade80; }
 .xp-mode[data-mode="visual"] { color: #c084fc; }
 .xp-mode[data-mode="insert"] { color: #facc15; }

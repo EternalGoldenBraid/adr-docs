@@ -852,7 +852,7 @@
       showCaret();
       return;
     }
-    if (!vimEnabled || !panel.hidden || !history.hidden || event.ctrlKey || event.metaKey || event.altKey ||
+    if (!vimEnabled || externalMode || !panel.hidden || !history.hidden || event.ctrlKey || event.metaKey || event.altKey ||
         event.composedPath().some(node => node.matches?.("input, textarea, select, button, [contenteditable]:not([contenteditable='false']), [role='textbox']")) ||
         !document.querySelector(".vp-doc")) return;
     const previous = prefix;
