@@ -59,6 +59,8 @@ native input.
 | `Space` inside a caveat | Open or close its details. |
 | `Esc` | Leave visual mode or close a panel, preserving drafts. |
 
+Scroll gutter: unresolved comments appear as coloured ticks along the right edge, at their relative position in the page. Click a tick to scroll to it.
+
 Key layers: the page owns the keys by default. Clicking a `<DocGraph>` enters the graph layer (mode line `Vim · GRAPH · NORMAL`), where graph keys apply and page motions do not; `Esc` in graph normal mode returns to the page.
 
 The leader is `-`. Word and line motions use the browser's text-selection

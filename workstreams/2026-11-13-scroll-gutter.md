@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: done
 title: Scroll gutter ticks
 summary: Scrollbar-style tick marks showing unresolved comments on long pages.
 ---

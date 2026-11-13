@@ -40,6 +40,7 @@
       .dock{display:flex;flex-direction:column;align-items:flex-end;transform-origin:bottom right;transform:translate(var(--dx,0px),var(--dy,0px)) scale(var(--ds,1))}
       .rail{position:fixed;top:0;right:0;width:0;height:100vh;pointer-events:none}
       .bubble{position:fixed;transform:scale(var(--s,1));transform-origin:center;width:24px;height:24px;padding:0;border-radius:50%;pointer-events:auto;border:2px solid #0006;font-size:11px;line-height:1;opacity:.8}
+      .tick{position:fixed;right:0;width:12px;height:5px;padding:0;border-radius:2px;border:1px solid #0008;pointer-events:auto;cursor:pointer;opacity:.95}.tick:hover{width:18px}
       .bubble:hover{opacity:1}.bubble.fresh{box-shadow:0 0 0 3px #fff8}
       .bubble.resolved{opacity:.35}
       .bubble.fresh::after,.pill.alert::before{content:"";position:absolute;top:-5px;right:-5px;width:10px;height:10px;border-radius:50%;background:#ff5a4f;border:2px solid #1b1d22;animation:ping 1.6s ease-out infinite}
@@ -1099,8 +1100,20 @@
     const top = viewportTop();
     const taken = [];
     const size = 24 * uiScale();
+    const total = Math.max(document.documentElement.scrollHeight, 1);
     for (const mark of marks) {
       if (mark.comment.resolved) continue;
+      const rect = mark.range.getBoundingClientRect();
+      if (Number.isFinite(rect.top)) {
+        const docY = rect.top + scrollY;
+        const tick = document.createElement("button");
+        tick.type = "button";
+        tick.className = `tick c-${mark.comment.color || "yellow"}`;
+        tick.title = (mark.comment.comment || mark.comment.quote || "Comment").slice(0, 80);
+        tick.style.top = `${Math.min(innerHeight - 4, docY / total * innerHeight)}px`;
+        tick.addEventListener("click", event => { event.stopPropagation(); scrollTo({ top: Math.max(0, docY - innerHeight / 3), behavior: "smooth" }); });
+        rail.append(tick);
+      }
       const spot = bubbleSpot(mark);
       if (!spot || !(spot.y >= top) || spot.y > innerHeight - 40) continue;
       let { x, y } = spot;
