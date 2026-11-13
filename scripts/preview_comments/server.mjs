@@ -156,7 +156,7 @@ export async function startCommentBridge({
     if (isAbsolute(within) || within === ".." || within.startsWith(".." + sep)) {
       throw new Error("The document is outside the preview root.");
     }
-    if (!["text", "equation", "figure", "node", "edge"].includes(input.kind)) throw new Error("Invalid comment target.");
+    if (!["text", "equation", "figure", "node", "edge", "page", "session"].includes(input.kind)) throw new Error("Invalid comment target.");
     const images = imageIds(input.images);
     return {
       id, url: url.href, source,

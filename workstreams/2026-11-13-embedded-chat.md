@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: in-progress
 title: Embedded agent chat (low priority)
 summary: Thin chat client in the page: threads as chat plus an unanchored message box. After tree nav, markers, agent comments.
 ---
@@ -47,3 +47,6 @@ Three scopes of conversation, one thread model:
 - Agent actions as first-class cards in a thread: "propose edit" with a diff the
   user accepts/rejects in the page; "ask" with choices; "pointer" (already red).
 - Embedded terminal is optional, last.
+
+## Progress
+- 0.13.0: page and session scopes landed (discardable commit). Next: agent status line, proposed-edit cards.

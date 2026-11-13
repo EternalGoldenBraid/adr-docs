@@ -69,7 +69,7 @@
       <button class="history-close" type="button">Close</button></div>
       <small class="history-counts"></small>
       <label for="history-filter">Show</label>
-      <select id="history-filter"><option value="page">This page · open</option><option value="all">All comments</option>
+      <select id="history-filter"><option value="page">This page · open</option><option value="chat">Page &amp; chat · open</option><option value="all">All comments</option>
       <option value="unresolved">Unresolved</option><option value="resolved">Resolved</option></select>
       <button class="history-refresh" type="button">Refresh</button>
       <div class="thread-list"></div>
@@ -90,7 +90,8 @@
     <div class="vim-caret" hidden aria-hidden="true"></div>
     <div class="contextual" hidden><button class="ctx-comment" type="button">Comment</button><span class="swatches" style="display:flex;gap:5px"></span></div><div class="rail"></div>
     <div class="dock"><div class="toolbar" hidden>
-    <button class="vim-mode" type="button" title="h/j/k/l: move · v: select · c or -c: comment · s: region screenshot · -h: history · Esc: normal">Vim</button>
+    <button class="vim-mode" type="button" title="h/j/k/l: move · v: select · c: comment (page if nothing selected) · -m: session chat · s: region screenshot · -h: history · Esc: normal">Vim</button>
+    <button class="chat-toggle" type="button" title="Message about the whole page (c) or the session (-m)">Page</button><button class="session-toggle" type="button">Chat</button>
     <button class="history-toggle" type="button">History</button>
     <button class="toggle" type="button">Comment</button></div>
     <button class="pill" type="button" aria-expanded="false"><span class="dot"></span><span class="pill-label">Comments</span></button></div>`;
@@ -269,10 +270,11 @@
     showCaret(true);
   }
   function commentSelection() {
-    const chosen = selection() || (textarea.value.trim() && target);
-    if (chosen) open(chosen);
-    else message("Press v and move to select text, then c to comment.");
+    const chosen = selection() || (textarea.value.trim() && target) || pageTarget();
+    open(chosen);
   }
+  const pageTarget = () => ({ kind: "page", quote: document.title, anchor: "", url: location.href, section: "Whole page" });
+  const sessionTarget = () => ({ kind: "session", quote: "General message to Copilot", anchor: "", url: location.href, section: "Session chat" });
   vimButton.addEventListener("mousedown", event => event.preventDefault());
   vimButton.addEventListener("click", () => {
     vimEnabled = !vimEnabled;
@@ -417,7 +419,8 @@
     const rows = [...historyComments].sort((a, b) => new Date(b.updatedAt || b.at) - new Date(a.updatedAt || a.at));
     for (const comment of rows) {
       if (comment.removed) continue;
-      if (filter === "page" ? comment.resolved || pagePath(comment.url) !== pagePath(location.href)
+      if (filter === "chat" ? comment.resolved || (comment.kind !== "page" && comment.kind !== "session")
+        : filter === "page" ? comment.resolved || (comment.kind !== "session" && pagePath(comment.url) !== pagePath(location.href))
         : filter !== "all" && comment.resolved !== (filter === "resolved")) continue;
       const card = document.createElement("button");
       card.type = "button";
@@ -523,6 +526,8 @@
       replyInput.readOnly = false;
     }
   }
+  find(".chat-toggle").addEventListener("click", () => open(pageTarget()));
+  find(".session-toggle").addEventListener("click", () => open(sessionTarget()));
   find(".history-toggle").addEventListener("click", () => history.hidden ? openHistory() : closeHistory());
   find(".history-close").addEventListener("click", closeHistory);
   find(".history-refresh").addEventListener("click", () => refreshHistory().catch(historyError));
@@ -891,7 +896,12 @@
       openHistory();
       return;
     }
-    if (event.key === KM.page.comment && (visual || previous === KM.leader)) {
+    if (event.key === KM.leaderKeys.chat && previous === KM.leader) {
+      event.preventDefault();
+      open(sessionTarget());
+      return;
+    }
+    if (event.key === KM.page.comment) {
       event.preventDefault();
       commentSelection();
       return;

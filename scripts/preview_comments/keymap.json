@@ -17,6 +17,6 @@
       "0": ["backward", "lineboundary"], "$": ["forward", "lineboundary"]
     }
   },
-  "leaderKeys": { "history": "h" },
+  "leaderKeys": { "history": "h", "chat": "m" },
   "resize": { "narrower": "A-h", "wider": "A-l", "shorter": "A-j", "taller": "A-k", "step": 40 }
 }

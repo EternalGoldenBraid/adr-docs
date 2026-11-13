@@ -87,7 +87,7 @@ export async function connectPreviewComments(config) {
         type: "object", required: ["page", "kind", "quote", "comment"],
         properties: {
           page: { type: "string", description: "Preview page path, e.g. /review or /graph." },
-          kind: { type: "string", enum: ["text", "equation", "figure", "node", "edge"], description: "What the comment points at." },
+          kind: { type: "string", enum: ["text", "equation", "figure", "node", "edge", "page", "session"], description: "What the comment points at. page: the whole page (quote: its title). session: general chat not tied to a page." },
           quote: { type: "string", description: "text: exact passage as rendered. equation: 'Equation (1)'. node/edge: the target's quote from its comment or title." },
           anchor: { type: "string", description: "node/edge only: 'node-<id>' or 'edge-<id>'." },
           comment: { type: "string", description: "What you want the user to look at, and why." },
