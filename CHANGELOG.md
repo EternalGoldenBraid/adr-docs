@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.22.2 - 2026-11-14
+
+- The page tree now includes Markdown files in sub-folders (slug = path, e.g. `docs/preview-comments`). A page in a folder defaults to that folder's `index` (else the root `index`) as its parent; `parent:` still overrides. Fixes the Tree popup and "Pages below" doing nothing on sites whose pages are not all top-level. Added a repo-root `index.md` hub.
+
 ## 0.22.1 - 2026-11-14
 
 - Links to a workstream page (`/workstreams/<id>`) get a status chip after them (status, owner, steps done/total), coloured by status. Data comes from the `workstreams/` folder under the document root and refreshes with the page tree.
