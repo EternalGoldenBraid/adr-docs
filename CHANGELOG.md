@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.11.1 - 2026-11-13
+
+- Comment panel, history and bubble popover are wider (540 / 720 / 480 px), so long comments read comfortably.
+
 ## 0.11.0 - 2026-11-13
 
 - Page tree: front matter `parent: <slug>` and `order: <n>` (with `nav:` for the label) build a hierarchy. Only pages without a parent stay in the top bar; every page with a place in the tree shows a breadcrumb, its child pages and a `☰ Tree` popover. Vim: `t` opens the tree, `j/k` move, `h/l` fold, Enter opens, `t`/Esc close (page layer only).

@@ -10,7 +10,7 @@
       button{border:1px solid #59616d;border-radius:8px;padding:8px 14px;cursor:pointer;background:#292d35;color:#eee}
       button:hover{background:#363e4b}button:focus-visible,textarea:focus-visible{outline:2px solid #74c0fc;outline-offset:3px}
       button:disabled{opacity:.6;cursor:wait}button.primary{background:#164a75;border-color:#74c0fc}
-      [hidden]{display:none!important}.panel{width:min(390px,calc(100vw - 48px));padding:20px;background:#1b1d22;border:1px solid #59616d;border-radius:12px;box-shadow:0 12px 40px #0008;margin-bottom:12px}
+      [hidden]{display:none!important}.panel{width:min(540px,calc(100vw - 48px));padding:20px;background:#1b1d22;border:1px solid #59616d;border-radius:12px;box-shadow:0 12px 40px #0008;margin-bottom:12px}
       h2{font-size:17px;margin:0 0 4px}small{color:#b7c1ce}.quote{margin:12px 0;padding:10px;border-left:3px solid #74c0fc;background:#252a32;max-height:120px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}
       label{display:block;margin:12px 0 6px}textarea{width:100%;min-height:110px;max-height:240px;resize:vertical;padding:10px;background:#111318;color:#eee;border:1px solid #59616d;border-radius:6px}
       .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}.status{max-width:390px;margin:8px 0;padding:10px 12px;border:1px solid #59616d;border-radius:8px;background:#1b1d22;white-space:pre-wrap}.status:empty{display:none}.error{color:#ffb4a9}
@@ -19,7 +19,7 @@
       .panel.contextual-panel{position:fixed;margin:0;max-height:calc(100vh - 140px);overflow:auto}
       .vim-caret{position:fixed;width:2px;background:#74c0fc;pointer-events:none}
       .toolbar{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;max-width:calc(100vw - 48px)}
-      .history{width:min(520px,calc(100vw - 48px));max-height:calc(100vh - 120px);overflow:auto}
+      .history{width:min(720px,calc(100vw - 48px));max-height:calc(100vh - 120px);overflow:auto}
       .history-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
       select{font:inherit;padding:6px;background:#292d35;color:#eee;border:1px solid #59616d;border-radius:6px}
       .thread-card{display:block;width:100%;text-align:left;margin:10px 0;padding:12px}
@@ -970,7 +970,7 @@
   markStyle.textContent += "[data-adr-point]{outline:2px solid #ff5a4f;outline-offset:4px;border-radius:6px}";
   document.head.append(markStyle);
   const popStyle = document.createElement("style");
-  popStyle.textContent = ".mark-pop{position:fixed;transform:scale(var(--s,1));transform-origin:top left;width:min(340px,calc(100vw - 24px));max-height:60vh;overflow:auto;" +
+  popStyle.textContent = ".mark-pop{position:fixed;transform:scale(var(--s,1));transform-origin:top left;width:min(480px,calc(100vw - 24px));max-height:70vh;overflow:auto;" +
     "padding:12px;background:#1b1d22;border:1px solid #59616d;border-radius:12px;box-shadow:0 12px 40px #0008;margin:0}" +
     ".mark-pop .note{margin:8px 0}.mark-pop textarea{width:100%;min-height:54px;box-sizing:border-box}" +
     ".mark-pop .row{display:flex;gap:6px;align-items:center;margin:6px 0}" +
