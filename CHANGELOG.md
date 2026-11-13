@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.16.3 - 2026-11-13
+
+- The "new reply" pill opens the thread itself, not the history list.
+- The status bar shows a short hint of the keys that matter right now (select, comment, threads, commands).
+
 ## 0.16.2 - 2026-11-13
 
 - DocGraph scrolling: zoom-out stops at half the fit level, a swipe pans only while some content stays in view, and at either limit the gesture falls through so the page scrolls.
