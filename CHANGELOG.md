@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.0 - 2026-11-13
+
+- Comment markers sit at the comment: in the left margin beside commented text, on the top-right corner of a commented graph node, above a commented edge label. Overlapping markers are nudged apart; the fixed right-hand rail is gone.
+
 ## 0.7.1 - 2026-11-13
 
 - Vim focus layers: the page owns the keys by default; clicking a `<DocGraph>` enters it (mode line `GRAPH · NORMAL`), and Esc in normal mode returns to the page. Only the clicked graph is active, and page motions no longer run while a graph is active.

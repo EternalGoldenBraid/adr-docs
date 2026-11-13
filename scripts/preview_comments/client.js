@@ -39,7 +39,7 @@
       .toolbar[hidden]{display:none!important}.toolbar{margin-bottom:8px}
       .dock{display:flex;flex-direction:column;align-items:flex-end;transform-origin:bottom right;transform:translate(var(--dx,0px),var(--dy,0px)) scale(var(--ds,1))}
       .rail{position:fixed;top:0;right:0;width:0;height:100vh;pointer-events:none}
-      .bubble{position:fixed;right:10px;transform:scale(var(--s,1));transform-origin:right center;width:24px;height:24px;padding:0;border-radius:50%;pointer-events:auto;border:2px solid #0006;font-size:11px;line-height:1;opacity:.8}
+      .bubble{position:fixed;transform:scale(var(--s,1));transform-origin:center;width:24px;height:24px;padding:0;border-radius:50%;pointer-events:auto;border:2px solid #0006;font-size:11px;line-height:1;opacity:.8}
       .bubble:hover{opacity:1}.bubble.fresh{box-shadow:0 0 0 3px #fff8}
       .bubble.resolved{opacity:.35}
       .bubble.fresh::after,.pill.alert::before{content:"";position:absolute;top:-5px;right:-5px;width:10px;height:10px;border-radius:50%;background:#ff5a4f;border:2px solid #1b1d22;animation:ping 1.6s ease-out infinite}
@@ -1079,22 +1079,43 @@
     if (item) open(item.chosen, item.anchor);
   });
   document.addEventListener("preview-comment-reflow", () => { if (marks.length) requestAnimationFrame(placeBubbles); });
+  // Bubbles sit at the comment: left of the text block, on a graph node's top-right
+  // corner, above an edge label. Overlapping bubbles are nudged apart.
+  function bubbleSpot(mark) {
+    const rect = mark.range.getBoundingClientRect();
+    if (!(rect.top >= 0) && !(rect.top < 0)) return null;
+    const size = 24 * uiScale();
+    if (mark.custom) {
+      const edge = mark.comment.kind === "edge";
+      return edge ? { x: (rect.left + rect.right) / 2 - size / 2, y: rect.top - size - 4, dx: 0, dy: -size - 2 }
+        : { x: rect.right - size / 2, y: rect.top - size / 2, dx: size + 2, dy: 0 };
+    }
+    const doc = document.querySelector(".vp-doc");
+    const left = doc ? doc.getBoundingClientRect().left : rect.left;
+    return { x: Math.max(4, left - size - 6), y: rect.top, dx: 0, dy: size + 2 };
+  }
   function placeBubbles() {
     rail.replaceChildren();
     const top = viewportTop();
-    let last = -100;
+    const taken = [];
+    const size = 24 * uiScale();
     for (const mark of marks) {
       if (mark.comment.resolved) continue;
-      const y = mark.range.getBoundingClientRect().top;
-      if (!(y >= top) || y > innerHeight - 40) continue;
+      const spot = bubbleSpot(mark);
+      if (!spot || !(spot.y >= top) || spot.y > innerHeight - 40) continue;
+      let { x, y } = spot;
+      while (taken.some(t => Math.abs(t.x - x) < size && Math.abs(t.y - y) < size)) {
+        x += spot.dx; y += spot.dy;
+        if (y > innerHeight - 40 || y < top || x > innerWidth - size) break;
+      }
+      taken.push({ x, y });
       const bubble = document.createElement("button");
       bubble.type = "button";
       bubble.className = `bubble c-${mark.comment.color || "yellow"}${hasFresh(mark.comment) ? " fresh" : ""}`;
       const count = mark.comment.replies.length + (mark.comment.comment ? 1 : 0);
       bubble.textContent = count ? String(count) : "";
-      const gap = 28 * uiScale();
-      bubble.style.top = `${Math.max(y, last + gap)}px`;
-      last = Math.max(y, last + gap);
+      bubble.style.left = `${x}px`;
+      bubble.style.top = `${y}px`;
       bubble.addEventListener("click", event => { event.stopPropagation(); showMark(mark, bubble.getBoundingClientRect()); });
       rail.append(bubble);
     }
