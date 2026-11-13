@@ -10,7 +10,7 @@
       button{border:1px solid #59616d;border-radius:8px;padding:8px 14px;cursor:pointer;background:#292d35;color:#eee}
       button:hover{background:#363e4b}button:focus-visible,textarea:focus-visible{outline:2px solid #74c0fc;outline-offset:3px}
       button:disabled{opacity:.6;cursor:wait}button.primary{background:#164a75;border-color:#74c0fc}
-      [hidden]{display:none!important}.panel{width:min(540px,calc(100vw - 48px));padding:20px;background:#1b1d22;border:1px solid #59616d;border-radius:12px;box-shadow:0 12px 40px #0008;margin-bottom:12px}
+      [hidden]{display:none!important}.panel{width:min(var(--pw,540px),calc(100vw - 48px));padding:20px;background:#1b1d22;border:1px solid #59616d;border-radius:12px;box-shadow:0 12px 40px #0008;margin-bottom:12px}
       h2{font-size:17px;margin:0 0 4px}small{color:#b7c1ce}.quote{margin:12px 0;padding:10px;border-left:3px solid #74c0fc;background:#252a32;max-height:120px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}
       label{display:block;margin:12px 0 6px}textarea{width:100%;min-height:110px;max-height:240px;resize:vertical;padding:10px;background:#111318;color:#eee;border:1px solid #59616d;border-radius:6px}
       .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}.status{max-width:390px;margin:8px 0;padding:10px 12px;border:1px solid #59616d;border-radius:8px;background:#1b1d22;white-space:pre-wrap}.status:empty{display:none}.error{color:#ffb4a9}
@@ -19,7 +19,7 @@
       .panel.contextual-panel{position:fixed;margin:0;max-height:calc(100vh - 140px);overflow:auto}
       .vim-caret{position:fixed;width:2px;background:#74c0fc;pointer-events:none}
       .toolbar{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;max-width:calc(100vw - 48px)}
-      .history{width:min(720px,calc(100vw - 48px));max-height:calc(100vh - 120px);overflow:auto}
+      .history{width:min(var(--pw,720px),calc(100vw - 48px));max-height:min(var(--ph,100vh),calc(100vh - 120px));overflow:auto}
       .history-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
       select{font:inherit;padding:6px;background:#292d35;color:#eee;border:1px solid #59616d;border-radius:6px}
       .thread-card{display:block;width:100%;text-align:left;margin:10px 0;padding:12px}
@@ -123,6 +123,33 @@
   const vimButton = find(".vim-mode");
   const caret = find(".vim-caret");
   let vimEnabled = localStorage.getItem("preview-comments-vim") !== "off";
+  const KM = window.__adrKeymap;
+  const keyIs = (event, spec) => {
+    const m = /^((?:[ACS]-)*)(.+)$/.exec(spec || "");
+    if (!m) return false;
+    const mods = m[1];
+    return event.key === m[2] && event.altKey === mods.includes("A-") && event.ctrlKey === mods.includes("C-");
+  };
+  // Alt+hjkl resizes the open panel; sizes persist across reloads.
+  const sizes = JSON.parse(localStorage.getItem("preview-comments-size") || "{}");
+  const applySizes = () => {
+    if (sizes.w) document.documentElement.style.setProperty("--pw", sizes.w + "px");
+    if (sizes.h) document.documentElement.style.setProperty("--ph", sizes.h + "px");
+  };
+  applySizes();
+  function resizeKey(event) {
+    const r = KM.resize, step = r.step;
+    const open = [panel, history, pop].find(node => node && !node.hidden);
+    const change = keyIs(event, r.wider) ? ["w", step] : keyIs(event, r.narrower) ? ["w", -step]
+      : keyIs(event, r.taller) ? ["h", step] : keyIs(event, r.shorter) ? ["h", -step] : null;
+    if (!open || !change) return false;
+    const [axis, delta] = change;
+    const now = axis === "w" ? open.offsetWidth * uiScale() : open.offsetHeight * uiScale();
+    sizes[axis] = Math.round(Math.max(axis === "w" ? 320 : 160, Math.min(axis === "w" ? innerWidth - 48 : innerHeight - 80, (sizes[axis] || now) + delta)));
+    localStorage.setItem("preview-comments-size", JSON.stringify(sizes));
+    applySizes();
+    return true;
+  }
   let visual = false;
   let prefix;
   let prefixTimer;
@@ -685,7 +712,7 @@
   find(".thread-region").addEventListener("click", () => regionThread(ids => updateThread({ id: crypto.randomUUID(), addImages: ids })));
   let popComment;
   document.addEventListener("keydown", event => {
-    if (event.key !== "s" || event.isComposing || event.repeat || !vimEnabled || event.ctrlKey || event.metaKey || event.altKey ||
+    if (event.key !== KM.page.region || event.isComposing || event.repeat || !vimEnabled || event.ctrlKey || event.metaKey || event.altKey ||
         regioning || historySaving || find("button[type=submit]").disabled || !document.querySelector(".vp-doc") ||
         event.composedPath().some(node => node.matches?.("input, textarea, select, button, [contenteditable]:not([contenteditable='false']), [role='textbox']"))) return;
     if (!history.hidden) {
@@ -833,6 +860,7 @@
   });
   document.addEventListener("keydown", event => {
     if (event.isComposing) return;
+    if (vimEnabled && event.altKey && resizeKey(event)) { event.preventDefault(); return; }
     if (event.key === "Escape") {
       contextual.hidden = true;
       if (find("button[type=submit]").disabled || historySaving) return;
@@ -858,35 +886,30 @@
         !document.querySelector(".vp-doc")) return;
     const previous = prefix;
     clearPrefix();
-    if (event.key === "h" && previous === "-") {
+    if (event.key === KM.leaderKeys.history && previous === KM.leader) {
       event.preventDefault();
       openHistory();
       return;
     }
-    if (event.key === "c" && (visual || previous === "-")) {
+    if (event.key === KM.page.comment && (visual || previous === KM.leader)) {
       event.preventDefault();
       commentSelection();
       return;
     }
-    if (event.key === "-" || event.key === "g" && previous !== "g") {
+    if (event.key === KM.leader || event.key === KM.page.documentStart && previous !== KM.page.documentStart) {
       event.preventDefault();
       prefix = event.key;
       modeLabel();
       prefixTimer = setTimeout(clearPrefix, 1000);
       return;
     }
-    const motions = {
-      h: ["backward", "character"], l: ["forward", "character"],
-      j: ["forward", "line"], k: ["backward", "line"],
-      w: ["forward", "word"], b: ["backward", "word"],
-      "0": ["backward", "lineboundary"], "$": ["forward", "lineboundary"],
-    };
-    if (!motions[event.key] && !["v", "g", "G", "H", "L", " "].includes(event.key)) return;
+    const { motions, visual: vKey, documentStart, documentEnd, viewTop, viewBottom, details: dKey } = KM.page;
+    if (!motions[event.key] && ![vKey, documentStart, documentEnd, viewTop, viewBottom, dKey].includes(event.key)) return;
     if (typeof getSelection().modify !== "function") {
       message("Vim selection is not supported by this browser. Mouse commenting remains available.", true);
       return;
     }
-    if (event.key === " ") {
+    if (event.key === dKey) {
       const node = getSelection().focusNode;
       const element = node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement;
       const details = element?.closest(".vp-doc details");
@@ -898,8 +921,8 @@
     }
     event.preventDefault();
     if (motions[event.key]) move(...motions[event.key]);
-    else if (event.key === "g" || event.key === "G") useRange(edgeRange(event.key === "G"));
-    else if (event.key === "L" || event.key === "H") useRange(viewRange(event.key === "H"));
+    else if (event.key === documentStart || event.key === documentEnd) useRange(edgeRange(event.key === documentEnd));
+    else if (event.key === viewBottom || event.key === viewTop) useRange(viewRange(event.key === viewTop));
     else {
       if (!ensureCursor()) return;
       const selected = getSelection();
@@ -970,7 +993,7 @@
   markStyle.textContent += "[data-adr-point]{outline:2px solid #ff5a4f;outline-offset:4px;border-radius:6px}";
   document.head.append(markStyle);
   const popStyle = document.createElement("style");
-  popStyle.textContent = ".mark-pop{position:fixed;transform:scale(var(--s,1));transform-origin:top left;width:min(480px,calc(100vw - 24px));max-height:70vh;overflow:auto;" +
+  popStyle.textContent = ".mark-pop{position:fixed;transform:scale(var(--s,1));transform-origin:top left;width:min(var(--pw,480px),calc(100vw - 24px));max-height:70vh;overflow:auto;" +
     "padding:12px;background:#1b1d22;border:1px solid #59616d;border-radius:12px;box-shadow:0 12px 40px #0008;margin:0}" +
     ".mark-pop .note{margin:8px 0}.mark-pop textarea{width:100%;min-height:54px;box-sizing:border-box}" +
     ".mark-pop .row{display:flex;gap:6px;align-items:center;margin:6px 0}" +

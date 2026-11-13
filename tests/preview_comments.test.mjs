@@ -365,3 +365,19 @@ test("page tree: parent and order front matter shape the top bar and tree.json",
   assert.deepEqual(root.children.map(child => child.title), ["Alpha", "B"]);
   rmSync(directory, { recursive: true, force: true });
 });
+
+test("keymap overrides are deep-merged over defaults", async () => {
+  const { loadKeymap } = await import("../scripts/preview_comments/keymap.mjs");
+  const { mkdtempSync, writeFileSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const file = join(mkdtempSync(join(tmpdir(), "km-")), "keymap.json");
+  writeFileSync(file, JSON.stringify({ resize: { wider: "A-L" }, page: { region: "S" } }));
+  const map = loadKeymap({ ADR_KEYMAP: file });
+  assert.equal(map.resize.wider, "A-L");
+  assert.equal(map.resize.narrower, "A-h");
+  assert.equal(map.page.region, "S");
+  assert.equal(map.page.motions.h[0], "backward");
+  writeFileSync(file, "{bad");
+  assert.equal(loadKeymap({ ADR_KEYMAP: file }, () => {}).page.region, "s");
+});

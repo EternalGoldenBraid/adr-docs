@@ -1,0 +1,22 @@
+{
+  "_doc": "Default key bindings. Override any entry in ~/.config/agent-doc-review/keymap.json (or $ADR_KEYMAP); files are deep-merged, reload the page to apply. Key specs: a plain key (\"s\", \"G\", \" \"), or modifier-prefixed (\"A-h\" = Alt+h, \"C-d\" = Ctrl+d).",
+  "leader": "-",
+  "page": {
+    "visual": "v",
+    "comment": "c",
+    "region": "s",
+    "details": " ",
+    "documentStart": "g",
+    "documentEnd": "G",
+    "viewTop": "H",
+    "viewBottom": "L",
+    "motions": {
+      "h": ["backward", "character"], "l": ["forward", "character"],
+      "j": ["forward", "line"], "k": ["backward", "line"],
+      "w": ["forward", "word"], "b": ["backward", "word"],
+      "0": ["backward", "lineboundary"], "$": ["forward", "lineboundary"]
+    }
+  },
+  "leaderKeys": { "history": "h" },
+  "resize": { "narrower": "A-h", "wider": "A-l", "shorter": "A-j", "taller": "A-k", "step": 40 }
+}
