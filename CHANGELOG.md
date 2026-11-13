@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.17.3 - 2026-11-13
+
+- A preview server older than the client no longer crashes it silently: a red bar says to reload extensions and restart.
+
 ## 0.17.2 - 2026-11-13
 
 - History cards are tinted: red = waiting for you, amber = unresolved and not yet read by Copilot, blue = unresolved and read, dim = resolved.
