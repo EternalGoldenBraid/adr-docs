@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: done
 title: Vim focus layers
 summary: Page keys by default; graph keys only after click/Enter; Esc climbs back; mode line shows layer.
 ---

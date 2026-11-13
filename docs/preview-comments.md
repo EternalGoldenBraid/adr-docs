@@ -59,6 +59,8 @@ native input.
 | `Space` inside a caveat | Open or close its details. |
 | `Esc` | Leave visual mode or close a panel, preserving drafts. |
 
+Key layers: the page owns the keys by default. Clicking a `<DocGraph>` enters the graph layer (mode line `Vim · GRAPH · NORMAL`), where graph keys apply and page motions do not; `Esc` in graph normal mode returns to the page.
+
 The leader is `-`. Word and line motions use the browser's text-selection
 boundaries. Navigation stays inside the article; it does not edit the document.
 Textareas and other form controls retain their native input behavior, as do
