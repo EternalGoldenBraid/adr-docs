@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: done
 title: Embed a Rerun viewer on a page
 summary: A page component that plays a .rrd file (timeline, video-like playback) inside the preview, so ML runs can be reviewed and commented on in place.
 ---

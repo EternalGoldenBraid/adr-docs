@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.21.0 - 2026-11-14
+
+- **`<RerunViewer src="…/x.rrd" :height="560" />`:** embeds the hosted Rerun web viewer (timeline and playback inside the page, dark theme). `src` is an absolute URL or a path served from `public/`; optional `version` (default `latest`). Example page: `examples/rerun.md`.
+
 ## 0.20.1 - 2026-11-14
 
 - **Link landing highlight:** following a link to `#anchor` (also in-app and from comments) scrolls the target below the nav bar and flashes it for 2 s; `/graph#node-<id>` opens the node's layer, centres, selects and flashes it. Reduced-motion users get no animation.
