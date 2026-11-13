@@ -25,3 +25,25 @@ Notes from the mokki agent:
   exist), plus a "free message" box not anchored to any element.
 - Fun, not urgent. Do after the tree navigation, markers and agent-authored
   comments.
+
+## Design sketch (ADR agent, 13 Nov) - for discussion
+
+Three scopes of conversation, one thread model:
+
+| Scope | Anchor | Key |
+|---|---|---|
+| Element | selection / node / edge / equation | `c` with a selection |
+| Page | the whole page (`kind: page`) | `c` with nothing selected |
+| Session | none (global) | `:` / a docked chat drawer |
+
+- One inbox: every scope is a thread in the same store, so the CLI and the
+  browser stop duplicating. Agent replies go to the thread they answer.
+- Page threads appear in a page-level strip under the breadcrumb, not as a bubble.
+- Session chat is a drawer with the thread list; "free message" = thread with no anchor.
+- Agent side: `add_doc_review_comment` already exists; add `kind: page` and a
+  session-level kind. Replies stream via update (append, not replace).
+- Agent presence/status line ("reading page", "editing file", "waiting for you")
+  so the user knows why nothing is happening.
+- Agent actions as first-class cards in a thread: "propose edit" with a diff the
+  user accepts/rejects in the page; "ask" with choices; "pointer" (already red).
+- Embedded terminal is optional, last.
