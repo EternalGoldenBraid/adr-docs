@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.16.1 - 2026-11-13
+
+- Agent threads about the whole page or the session show as a red banner at the top; clicking opens the thread.
+- The "new reply" pill opens History directly. The toolbar loses its Page and Chat buttons (use `c` with nothing selected, `-m` or `:chat`).
+
 ## 0.16.0 - 2026-11-13
 
 - Vim mode now shows as a status bar at the bottom (`-- NORMAL --`, with the agent status beside it); the toolbar button is just `Vim`.
