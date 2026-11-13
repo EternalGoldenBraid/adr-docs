@@ -78,6 +78,21 @@ export async function connectDocumentReview({
         return JSON.stringify(requirePreview().bridge.update(input));
       },
     }, {
+      name: "add_doc_review_comment",
+      description: "Start a new comment thread on a page, to point the user at a passage, equation, figure, graph node or edge. Appears red in their browser; the user can reply to continue the thread.",
+      parameters: {
+        type: "object", required: ["page", "kind", "quote", "comment"],
+        properties: {
+          page: { type: "string", description: "Preview page path, e.g. /review or /graph." },
+          kind: { type: "string", enum: ["text", "equation", "figure", "node", "edge"], description: "What the comment points at." },
+          quote: { type: "string", description: "text: exact passage as rendered. equation: 'Equation (1)'. node/edge: the target's quote from its comment or title." },
+          anchor: { type: "string", description: "node/edge only: 'node-<id>' or 'edge-<id>'." },
+          comment: { type: "string", description: "What you want the user to look at, and why." },
+          color: { type: "string", enum: ["red", "yellow", "green", "blue", "pink"], description: "Defaults to red (the agent colour)." },
+        },
+      },
+      handler: args => JSON.stringify(requirePreview().bridge.add(args)),
+    }, {
       name: "stop_doc_review",
       description: "Stop this session's document preview. Saved feedback remains on disk.",
       parameters: { type: "object", properties: {} },

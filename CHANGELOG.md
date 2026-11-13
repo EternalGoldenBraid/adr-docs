@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.10.0 - 2026-11-13
+
+- Agent-authored comments: the new `add_doc_review_comment` tool (`add_preview_comment` in the standalone extension) starts a thread on a text passage, equation, figure, graph node or edge. It is red, authored by Copilot, quiet for the agent, and the user's reply continues the thread. Commented equations get a red ring.
+- Commented equations now get a marker and gutter tick too, for user comments as well.
+
 ## 0.9.0 - 2026-11-13
 
 - Scroll gutter: a tick at the right edge for every unresolved comment, positioned by its place in the whole page (text, graph nodes and edges). Click a tick to scroll to the comment; hover shows its text.

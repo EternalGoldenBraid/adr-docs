@@ -28,7 +28,7 @@ function field(value, name, limit) {
   return value.trim();
 }
 
-const COLORS = ["yellow", "green", "blue", "pink"];
+const COLORS = ["yellow", "green", "blue", "pink", "red"];
 
 function identifier(value, name) {
   const id = field(value, name, 36);
@@ -63,7 +63,7 @@ export async function startCommentBridge({
   let latestFeedbackId;
   function apply(record) {
     if (record.event === "comment") {
-      const quiet = Boolean(record.highlight || record.note);
+      const quiet = Boolean(record.highlight || record.note || record.author === "copilot");
       comments.set(record.id, { ...record, seen: quiet, resolved: false, replies: [] });
       if (!quiet) latestFeedbackId = record.id;
     }
@@ -308,6 +308,20 @@ export async function startCommentBridge({
   return {
     connectionFile,
     list: () => [...comments.values()].map(withFiles),
+    // Agent-authored thread: quiet (the agent already knows), red by default, shown in the browser.
+    add: input => {
+      const value = normalize({
+        ...input, sessionId, id: randomUUID(), color: input.color || "red", section: input.section || input.page,
+        url: new URL(field(input.page, "Page", 2048), previewOrigin).href,
+      });
+      const record = {
+        ...value, input: value, event: "comment", author: "copilot", at: new Date().toISOString(), seen: true,
+        sourceHash: createHash("sha256").update(readFileSync(value.source)).digest("hex"),
+      };
+      append(log, record);
+      apply(record);
+      return { id: record.id, saved: true, url: record.url };
+    },
     update: (input, author = "copilot") => saveUpdate(normalizeUpdate(input, author)),
     pending: () => {
       const rows = unread();
