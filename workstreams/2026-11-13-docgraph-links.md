@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: done
 title: DocGraph drill-down links
 summary: Node `link` field: double-click/Enter opens a page, badge, back link, newline-preserving node bodies.
 ---
