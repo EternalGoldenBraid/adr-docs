@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.19.3 - 2026-11-13
+
+- The sidebar, top bar and Tree popup follow the document root live: adding, removing or re-parenting a `.md` page (or changing `nav`/`order`/`parent`) reloads the VitePress config and server on the same port. No preview restart needed.
+
 ## 0.19.2 - 2026-11-13
 
 - Inside a thread `j`/`k` step through its messages (and scroll long ones); `g`/`G` jump to first/last message. Next/previous thread moved to `J`/`K`.
