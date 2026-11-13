@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.0 - 2026-11-13
+
+- `<DocGraph>`: a node `link` (e.g. `"/autonomy"`) opens that page on double-click or Enter, is withBase-aware, shows a `↗` badge, and can be edited in edit mode. External URLs also work.
+- `<DocGraph back-to="/" back-label="Home">` adds an optional back link.
+- `<DocGraph>`: node bodies keep line breaks, so `•` bullet lines render. `:help` documents links.
+
 ## 0.6.0 - 2026-11-13
 
 - Region screenshots: `s` selects a region of the page and attaches the crop to a new comment or the open thread; images reach the agent as file paths (`imageFiles`).

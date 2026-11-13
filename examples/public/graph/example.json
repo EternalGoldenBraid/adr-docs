@@ -41,12 +41,13 @@
       "kind": "node",
       "id": "act",
       "title": "Act",
-      "body": "Motors",
+      "body": "\u2022 Motors\n\u2022 Opens the Review page",
       "x": 560,
       "y": 0,
       "w": 180,
-      "h": 70,
-      "topics": []
+      "h": 90,
+      "topics": [],
+      "link": "/review"
     },
     {
       "fill": "#1e293b",

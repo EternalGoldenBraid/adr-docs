@@ -1,13 +1,16 @@
 <script setup>
 import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import cytoscape from 'cytoscape'
-import { withBase } from 'vitepress'
+import { withBase, useRouter } from 'vitepress'
 
 // src: URL of the graph JSON (served from the document's public/ folder).
 // Local edits are autosaved in the browser under storageKey.
 const props = defineProps({ src: { type: String, required: true }, storageKey: { type: String, default: '' }, title: { type: String, default: 'Graph' }, height: { type: String, default: '' },
   // Optional tabs: [{ label, topic, lane }]; defaults to one tab per topic in the data
-  tabs: { type: Array, default: () => [] } })
+  tabs: { type: Array, default: () => [] },
+  // Optional link back to the parent page, e.g. back="/" back-label="Plan"
+  backTo: { type: String, default: '' }, backLabel: { type: String, default: 'Back' } })
+const router = useRouter()
 const STORE = props.storageKey || 'doc-graph:' + props.src
 const host = ref(null)
 const titleInput = ref(null)
@@ -23,7 +26,7 @@ const cmd = ref(null)
 const cmdInput = ref(null)
 const flash = ref('')
 const selTitle = computed(() => (selected.value && cy ? cy.getElementById(selected.value).data('title') || '' : ''))
-const HELP = "DOC-GRAPH(1)\n\nMODES\n  NORMAL  fly the view         VISUAL  walk node to node\n  INSERT  edit the graph       Esc     back to NORMAL\nNORMAL\n  h j k l   pan (H J K L: faster)\n  + - 0     zoom in / out / fit\n  v  visual     i  insert     u  up one layer\n  Enter     open the selected \u25b8 layer\nVISUAL\n  h j k l   nearest node in that direction\n  Enter     open \u25b8 layer, or zoom to node\n  c         comment on the node\n  s         attach a region screenshot\nINSERT\n  h j k l   select neighbour\n  arrows    nudge node (shift: x5)\n  Enter     edit text    o  new node    x  delete\nCOMMANDS\n  :help :man   this page     :w  export JSON\n  :fit         fit all       :q  close\nMOUSE / TRACKPAD\n  swipe pans \u00b7 pinch or shift+swipe zooms\n  dbl-click: \u25b8 opens, node/lane zooms, empty fits"
+const HELP = "DOC-GRAPH(1)\n\nMODES\n  NORMAL  fly the view         VISUAL  walk node to node\n  INSERT  edit the graph       Esc     back to NORMAL\nNORMAL\n  h j k l   pan (H J K L: faster)\n  + - 0     zoom in / out / fit\n  v  visual     i  insert     u  up one layer\n  Enter     open the selected \u25b8 layer or \u2197 page\nVISUAL\n  h j k l   nearest node in that direction\n  Enter     open \u25b8 layer or \u2197 page, else zoom to node\n  c         comment on the node\n  s         attach a region screenshot\nINSERT\n  h j k l   select neighbour\n  arrows    nudge node (shift: x5)\n  Enter     edit text    o  new node    x  delete\nCOMMANDS\n  :help :man   this page     :w  export JSON\n  :fit         fit all       :q  close\nMOUSE / TRACKPAD\n  swipe pans \u00b7 pinch or shift+swipe zooms\n  dbl-click: \u2197 opens page, \u25b8 opens layer,\n    node/lane zooms, empty fits\nLINKS\n  a node with a \"link\" (e.g. \"/autonomy\") shows \u2197;\n  external URLs open as normal links"
 const topic = ref('')
 const activeTab = ref('')
 const TOPICS = ref([])
@@ -72,7 +75,7 @@ function drawLabels() {
 const scheduleLabels = () => { if (!labelFrame) labelFrame = requestAnimationFrame(drawLabels) }
 
 function nodeEl(n) {
-  const d = { id: n.id, title: n.title, body: n.body, status: n.status, kind: n.kind, topics: n.topics,
+  const d = { id: n.id, title: n.title, body: n.body, status: n.status, kind: n.kind, topics: n.topics, link: n.link || '',
     w: n.w, h: n.h, fill: n.fill, stroke: n.stroke, font: n.font }
   if (n.parent) d.parent = n.parent
   if (n.inside) d.inside = n.inside
@@ -89,7 +92,7 @@ function serialise() {
       const d = n.data()
       return { id: d.id, title: d.title, body: d.body, status: d.status, kind: d.kind, parent: d.parent || null, inside: d.inside || null,
         x: Math.round(n.position('x')), y: Math.round(n.position('y')), w: d.w, h: d.h,
-        fill: d.fill, stroke: d.stroke, font: d.font, topics: d.topics }
+        fill: d.fill, stroke: d.stroke, font: d.font, topics: d.topics, ...(d.link ? { link: d.link } : {}) }
     }),
     edges: cy.edges().map(e => ({ id: e.id(), source: e.data('source'), target: e.data('target'),
       color: e.data('color'), dashed: !!e.data('dashed'), label: e.data('label') || '' })),
@@ -103,6 +106,13 @@ const layerTitle = ref('')
 
 const childrenOf = id => cy.nodes().filter(n => n.data('inside') === id)
 
+function showBadges() {
+  cy.nodes().forEach(n => {
+    const k = childrenOf(n.id()).length
+    n.data('badge', (k ? `  ▸ ${k}` : '') + (n.data('link') ? '  ↗' : ''))
+  })
+}
+
 function showLayer(id) {
   layer.value = id
   layerTitle.value = id ? cy.getElementById(id).data('title') : ''
@@ -111,11 +121,8 @@ function showLayer(id) {
     cy.elements().style('display', 'none')
     visible.style('display', 'element')
     visible.edgesWith(visible).style('display', 'element')
-    cy.nodes().forEach(n => {
-      const k = childrenOf(n.id()).length
-      n.data('badge', k ? `  ▸ ${k}` : '')
-    })
   })
+  showBadges()
   select(null)
   cy.resize()
   cy.fit(visible, 40)
@@ -133,14 +140,15 @@ function startEdit() {
   const p = n.renderedPosition()
   const w = Math.max(240, n.renderedWidth())
   editorBox.value = { left: p.x - w / 2, top: p.y - n.renderedHeight() / 2, width: w }
-  editor.value = { title: n.data('title') || '', body: n.data('body') || '', status: n.data('status') || '' }
+  editor.value = { title: n.data('title') || '', body: n.data('body') || '', status: n.data('status') || '', link: n.data('link') || '' }
   nextTick(() => titleInput.value && titleInput.value.focus())
 }
 
 function commitEdit() {
   if (!editor.value) return
   const n = cy.getElementById(selected.value)
-  if (n.length) n.data({ title: editor.value.title, body: editor.value.body, status: editor.value.status })
+  if (n.length) n.data({ title: editor.value.title, body: editor.value.body, status: editor.value.status, link: editor.value.link.trim() })
+  showBadges()
   editor.value = null
   save()
 }
@@ -177,6 +185,14 @@ function openSelected() {
   if (id) showLayer(id)
 }
 
+function openLink(n) {
+  const link = n.data('link')
+  if (!link) return false
+  if (/^[a-z][a-z\d+.-]*:/i.test(link)) location.href = link
+  else router.go(withBase(link))
+  return true
+}
+const hasLink = () => Boolean(selected.value && cy.getElementById(selected.value).data('link'))
 const hasLayer = () => selected.value && childrenOf(selected.value).length > 0
 const back = () => { const o = cy.getElementById(layer.value); showLayer(o.data('inside') || null) }
 
@@ -333,6 +349,7 @@ onMounted(async () => {
       cy.animate({ fit: { eles: e.target, padding: 30 }, duration: 250 })
       return
     }
+    if (openLink(e.target)) return
     if (childrenOf(e.target.id()).length) showLayer(e.target.id())
     else if (editMode.value) { select(e.target); startEdit() }
     else cy.animate({ fit: { eles: e.target, padding: 120 }, duration: 250 })
@@ -421,14 +438,16 @@ function onKey(e) {
   if (mode.value === 'normal') {
     const d = dirs[k.toLowerCase()]
     if (d) { done(); const step = k === k.toUpperCase() ? 240 : 60; cy.panBy({ x: -d[0] * step, y: -d[1] * step }); return }
-    if (k === 'Enter' && hasLayer()) { done(); openSelected() }
+    if (k === 'Enter' && hasLink()) { done(); openLink(sel()) }
+    else if (k === 'Enter' && hasLayer()) { done(); openSelected() }
     return
   }
   if (mode.value === 'visual') {
     if (dirs[k]) { done(); const n = neighbour(...dirs[k]); if (n) selectNode(n); return }
     if (k === 'Enter' && selected.value) {
       done()
-      if (hasLayer()) openSelected()
+      if (hasLink()) openLink(sel())
+      else if (hasLayer()) openSelected()
       else cy.animate({ fit: { eles: sel(), padding: 120 }, duration: 250 })
       return
     }
@@ -460,6 +479,7 @@ onUnmounted(() => { document.removeEventListener('preview-comment-vim', onVim); 
 <div class="xp">
   <div class="xp-bar">
     <strong>{{ title }}</strong>
+    <a v-if="backTo" class="xp-back" :href="withBase(backTo)">← {{ backLabel }}</a>
     <button v-if="layer" @click="back">← Back</button>
     <strong v-if="layer">{{ layerTitle }}</strong>
     <span v-if="tabList.length" class="xp-tabs">
@@ -492,6 +512,7 @@ onUnmounted(() => { document.removeEventListener('preview-comment-vim', onVim); 
       @keydown.esc="editor = null">
       <input ref="titleInput" v-model="editor.title" placeholder="Title" @keydown.enter="commitEdit" />
       <input v-model="editor.status" placeholder="Status, e.g. ● MVP" @keydown.enter="commitEdit" />
+      <input v-model="editor.link" placeholder="Link, e.g. /autonomy" @keydown.enter="commitEdit" />
       <textarea v-model="editor.body" rows="4" placeholder="Description" @keydown.ctrl.enter="commitEdit"></textarea>
       <div class="xp-actions"><button @click="commitEdit">Save</button><button @click="editor = null">Cancel</button></div>
     </div>
@@ -510,7 +531,8 @@ onUnmounted(() => { document.removeEventListener('preview-comment-vim', onVim); 
 .xp-labels { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
 .xp-label { position: absolute; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; overflow: hidden; line-height: 1.25; }
 .xp-label b { font-weight: 700; }
-.xp-label span { font-weight: 400; font-size: 0.92em; opacity: .9; overflow: hidden; -webkit-box-orient: vertical; }
+.xp-label span { white-space: pre-line; font-weight: 400; font-size: 0.92em; opacity: .9; overflow: hidden; -webkit-box-orient: vertical; }
+.xp-back { font-size: 13px; text-decoration: none; padding: 5px 10px; border: 1px solid var(--vp-c-divider); border-radius: 8px; }
 .xp-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
 .xp-tabs .on { background: var(--vp-c-brand-soft); border-color: var(--vp-c-brand-1); }
 .xp-edit { position: absolute; z-index: 5; display: flex; flex-direction: column; gap: 6px; padding: 10px; background: var(--vp-c-bg); border: 1px solid var(--vp-c-divider); border-radius: 12px; box-shadow: 0 8px 28px #0009; font-size: 13px; }
