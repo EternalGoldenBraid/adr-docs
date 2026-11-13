@@ -522,9 +522,9 @@
     markSeen(comment);
     find(".thread-messages").replaceChildren(...threadNodes(comment, values => updateThread(values)));
   }
-  // A thread awaits the user when it is open and its last message is from the agent.
-  const awaiting = comment => !comment.resolved && !comment.removed && !comment.note &&
-    (comment.replies.at(-1)?.author ?? comment.author) === "copilot";
+  // Awaiting: a thread the agent started, still open, with the agent's message last.
+  const awaiting = comment => !comment.resolved && !comment.removed && comment.author === "copilot" &&
+    (comment.replies.at(-1)?.author ?? "copilot") === "copilot";
     function announceAwaiting() {
     const pages = {};
     for (const comment of historyComments) if (awaiting(comment)) {
