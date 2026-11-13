@@ -23,7 +23,7 @@
       .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}.status{max-width:390px;margin:8px 0;padding:10px 12px;border:1px solid #59616d;border-radius:8px;background:#1b1d22;white-space:pre-wrap}.status:empty{display:none}.error{color:#ffb4a9}
       .hint{margin:10px 0 0;color:#b7c1ce}
       .proposal{margin:10px 0;border:1px solid #59616d;border-radius:8px;padding:8px}.proposal pre{margin:0 0 6px;padding:6px;white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.4 ui-monospace,monospace;border-radius:4px}.proposal .del{background:#4a1d24}.proposal .add{background:#16402a}
-      .banners{position:fixed;top:72px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;z-index:5}.banner{max-width:min(640px,90vw);padding:8px 14px;border:1px solid #ff5a4f;border-radius:10px;background:#2a1517;color:#eee;text-align:left}.banner small{color:#ffb3ae;display:block}
+      .banners[hidden]{display:none}.banners{position:fixed;top:72px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;z-index:5}.banner{max-width:min(640px,90vw);padding:8px 14px;border:1px solid #ff5a4f;border-radius:10px;background:#2a1517;color:#eee;text-align:left}.banner small{color:#ffb3ae;display:block}
       .statusbar{position:fixed;left:0;right:0;bottom:0;display:flex;gap:18px;align-items:center;padding:3px 14px;background:#111318;border-top:1px solid #3a404a;font:12px/1.4 ui-monospace,monospace;color:#b7c1ce;pointer-events:none}.sb-mode{font-weight:700;color:#74c0fc}.sb-hint{order:3;margin-left:auto}.agent-status::before{content:"● ";color:#51cf66}.agent-status.await::before{color:#ff6b6b}
       .cmdbar{position:fixed;left:0;right:0;bottom:0;display:flex;gap:6px;padding:6px 14px;background:#111318;border-top:1px solid #59616d;font:14px/1.4 ui-monospace,monospace}.cmdbar input{flex:1;background:none;border:0;color:#eee;font:inherit;outline:0}
       .contextual{position:fixed}
@@ -584,6 +584,10 @@
     replyInput.value = replyDrafts.get(id)?.text || "";
     renderHistory();
   }
+  const syncBanners = () => {
+    const banners = find(".banners"), hide = !history.hidden || !panel.hidden;
+    if (banners.hidden !== hide) banners.hidden = hide;
+  };
   function announceAwaiting() {
     const pages = {};
     for (const comment of historyComments) if (awaiting(comment)) {
@@ -603,6 +607,7 @@
       banner.addEventListener("click", () => openThreadById(c.id));
       return banner;
     }));
+    syncBanners();
     document.title = total ? `(${total}) ${base}` : base;
     document.dispatchEvent(new CustomEvent("preview-comment-awaiting", { detail: { pages, total } }));
   }
@@ -1042,8 +1047,9 @@
       return;
     }
     if (!vimEnabled || externalMode || !panel.hidden || !history.hidden || event.ctrlKey || event.metaKey || event.altKey ||
-        event.composedPath().some(node => node.matches?.("input, textarea, select, button, [contenteditable]:not([contenteditable='false']), [role='textbox']")) ||
-        !document.querySelector(".vp-doc")) return;
+        event.composedPath().some(node => node.matches?.("input, textarea, select, button, [contenteditable]:not([contenteditable='false']), [role='textbox']"))) return;
+    // Pages without a prose body (layout: page, e.g. graphs) still get threads, chat and commands.
+    const hasDoc = Boolean(document.querySelector(".vp-doc"));
     const previous = prefix;
     clearPrefix();
     if (event.key === KM.leaderKeys.history && previous === KM.leader) {
@@ -1058,7 +1064,7 @@
     }
     if (event.key === KM.page.comment) {
       event.preventDefault();
-      commentSelection();
+      if (hasDoc) commentSelection(); else open(pageTarget());
       return;
     }
     if (event.key === KM.leader || event.key === KM.page.documentStart && previous !== KM.page.documentStart) {
@@ -1069,6 +1075,7 @@
       return;
     }
     if (event.key === ":") { event.preventDefault(); openCmdline(); return; }
+    if (!hasDoc) return;
     const { motions, visual: vKey, documentStart, documentEnd, viewTop, viewBottom, details: dKey } = KM.page;
     if (!motions[event.key] && ![vKey, documentStart, documentEnd, viewTop, viewBottom, dKey].includes(event.key)) return;
     if (typeof getSelection().modify !== "function") {
@@ -1528,8 +1535,9 @@
     announceAwaiting();
   }
   let markTimer;
-  new MutationObserver(() => { clearTimeout(markTimer); markTimer = setTimeout(applyMarks, 150); })
+  new MutationObserver(() => { syncBanners(); clearTimeout(markTimer); markTimer = setTimeout(applyMarks, 150); })
     .observe(document.body, { attributes: true, attributeFilter: ["hidden"], subtree: true });
+  new MutationObserver(syncBanners).observe(shadow, { attributes: true, attributeFilter: ["hidden"], subtree: true });
   addEventListener("scroll", () => { if (marks.length) requestAnimationFrame(placeBubbles); }, { passive: true });
   addEventListener("resize", applyMarks);
   applyScale();
