@@ -86,7 +86,7 @@
       .bubble.fresh::after,.pill.alert::before{content:"";position:absolute;top:-5px;right:-5px;width:10px;height:10px;border-radius:50%;background:#ff5a4f;border:2px solid #1b1d22;animation:ping 1.6s ease-out infinite}
       .pill{position:relative}.pill.alert{border-color:#ff5a4f}.pill.alert::before{top:-4px;right:-2px}
       @keyframes ping{0%{box-shadow:0 0 0 0 #ff5a4faa}100%{box-shadow:0 0 0 9px #ff5a4f00}}
-      .note{position:relative}.note .tools{display:flex;gap:6px;position:absolute;top:4px;right:8px;margin:0}.note .tools button{padding:2px 8px;font-size:12px}
+      .note{position:relative}.thread-messages>*:focus-visible{outline:2px solid #74c0fc;outline-offset:1px}.note .tools{display:flex;gap:6px;position:absolute;top:4px;right:8px;margin:0}.note .tools button{padding:2px 8px;font-size:12px}
       .note.private{border-left:3px solid #ffb02e}.note textarea{width:100%;box-sizing:border-box;min-height:54px}
       .shots{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.shots:empty{display:none}
       .shot{position:relative}.shot img{display:block;max-width:120px;max-height:90px;border:1px solid #59616d;border-radius:6px}
@@ -206,7 +206,7 @@
     const bar = find(".statusbar");
     bar.hidden = !vimEnabled;
     find(".sb-hint").textContent = !history.hidden ? (selectedThread
-      ? "j/k next/prev thread · r resolve · i reply · o open page · s region · h back · Esc"
+      ? "j/k scroll messages · J/K next/prev thread · r resolve · i reply · o page · h back · Esc"
       : "j/k move (k at top → tabs) · l open · r resolve · [ ] tabs · Esc close") : visual ? "c comment · Esc cancel · hjkl extend" : `${KM.page.visual} select text · ${KM.page.comment} comment · ${KM.leader}${KM.leaderKeys.history} threads · : commands · :help`;
     find(".sb-mode").textContent = `-- ${mode}${prefix ? " " + prefix : ""} --`;
     vimButton.setAttribute("aria-pressed", String(vimEnabled));
@@ -216,7 +216,7 @@
     `h/j/k/l/w/b/0/$ move · ${KM.page.visual} select · ${KM.page.comment} comment (page if nothing selected)`,
     `${KM.page.region} region screenshot · ${KM.leader}${KM.leaderKeys.history} history · ${KM.leader}${KM.leaderKeys.chat} session chat`,
     `${KM.resize.narrower}/${KM.resize.wider}/${KM.resize.shorter}/${KM.resize.taller} resize panel · t page tree`,
-    "In history: j/k move · l open · r resolve · h back · [ ] tabs · i reply · o page",
+    "In history: j/k move · l open · r resolve · h back · [ ] tabs · i reply · o page · J/K thread",
     "Commands: :help :history :chat :comment :tree :vim off|on :keys",
     "Keys are configured in ~/.config/agent-doc-review/keymap.json",
   ].join("\n");
@@ -579,6 +579,7 @@
     markSeen(comment);
     renderLinks(comment);
     find(".thread-messages").replaceChildren(...threadNodes(comment, values => updateThread(values)));
+    for (const item of find(".thread-messages").children) item.tabIndex = -1;
   }
   function selectThread(id) {
     selectedThread = id;
@@ -966,9 +967,16 @@
       else if (key === "i") replyInput.focus();
       else if (key === "o") find(".thread-source").click();
       else if (key === KM.page.region) find(".thread-region").click();
-      else if ((key === "j" || key === "ArrowDown") && ids[here + 1]) selectThread(ids[here + 1]);
-      else if ((key === "k" || key === "ArrowUp") && here > 0) selectThread(ids[here - 1]);
-      else handled = key === "j" || key === "k";
+      else if (key === "J" && ids[here + 1]) selectThread(ids[here + 1]);
+      else if (key === "K" && here > 0) selectThread(ids[here - 1]);
+      else if (key === "j" || key === "k" || key === "ArrowDown" || key === "ArrowUp") {
+        const items = [...find(".thread-messages").children];
+        const down = key === "j" || key === "ArrowDown";
+        const next = items[items.indexOf(field) + (down ? 1 : -1)] || (field === find(".thread-back") && down ? items[0] : undefined);
+        if (next) { next.focus(); next.scrollIntoView({ block: "nearest" }); }
+        else find(".history").scrollBy({ top: down ? 120 : -120 });
+      } else if (key === "g" || key === "G") (key === "g" ? find(".thread-messages").firstElementChild : find(".thread-messages").lastElementChild)?.focus();
+      else handled = false;
       if (key === "o") event.preventDefault();
     } else if (key === "j" || key === "ArrowDown") step(1);
     else if (key === "k" || key === "ArrowUp") { if (at <= 0) find(`.tab[data-filter="${historyFilter}"]`)?.focus(); else step(-1); }
