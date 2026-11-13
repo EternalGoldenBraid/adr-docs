@@ -11,7 +11,7 @@ threads, replies and explicit resolved/unresolved state.
 ## A mathematical step
 
 For a point in homogeneous coordinates, the mapping divides by its third
-component:
+(scale) component:
 
 $$
 \begin{aligned}
