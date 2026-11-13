@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.11.0 - 2026-11-13
+
+- Page tree: front matter `parent: <slug>` and `order: <n>` (with `nav:` for the label) build a hierarchy. Only pages without a parent stay in the top bar; every page with a place in the tree shows a breadcrumb, its child pages and a `☰ Tree` popover. Vim: `t` opens the tree, `j/k` move, `h/l` fold, Enter opens, `t`/Esc close (page layer only).
+- `/tree.json` (preview and static build) lists the nested structure for agents.
+- The example site nests Review and Graph under Home.
+
 ## 0.10.0 - 2026-11-13
 
 - Agent-authored comments: the new `add_doc_review_comment` tool (`add_preview_comment` in the standalone extension) starts a thread on a text passage, equation, figure, graph node or edge. It is red, authored by Copilot, quiet for the agent, and the user's reply continues the thread. Commented equations get a red ring.

@@ -61,6 +61,10 @@ native input.
 
 Agents can start threads too with `add_doc_review_comment` (page, kind, quote, comment). They appear red and signed Copilot; an equation is pointed at with `kind: equation, quote: "Equation (1)"` and gets a red ring. Your reply wakes the agent as usual.
 
+## Page tree
+
+Top-level `.md` files are pages. Front matter `parent: <slug>`, `order: <n>` and `nav: <label>` arrange them: only parentless pages stay in the top bar, and each page shows a breadcrumb, its child pages and a `☰ Tree` popover (Vim `t`; `j/k` move, `h/l` fold, Enter open). `/tree.json` lists the nested structure for agents, in the preview and the static build. A graph node `link` can point at the same slug.
+
 Scroll gutter: unresolved comments appear as coloured ticks along the right edge, at their relative position in the page. Click a tick to scroll to it.
 
 Key layers: the page owns the keys by default. Clicking a `<DocGraph>` enters the graph layer (mode line `Vim · GRAPH · NORMAL`), where graph keys apply and page motions do not; `Esc` in graph normal mode returns to the page.

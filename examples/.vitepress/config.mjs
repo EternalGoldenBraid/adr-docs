@@ -1,4 +1,8 @@
 import { defineConfig } from "vitepress";
+import { fileURLToPath } from "node:url";
+import { treeThemeConfig, treeJsonPlugin } from "../../src/page-tree.mjs";
+
+const root = fileURLToPath(new URL("..", import.meta.url));
 
 // Static build of the example site for GitHub Pages (no comment bridge).
 export default defineConfig({
@@ -6,5 +10,6 @@ export default defineConfig({
   base: process.env.SITE_BASE || "/",
   appearance: "force-dark",
   srcExclude: ["papers/**"],
-  vite: { optimizeDeps: { include: ["cytoscape"] } },
+  themeConfig: treeThemeConfig(root),
+  vite: { optimizeDeps: { include: ["cytoscape"] }, plugins: [treeJsonPlugin(root)] },
 });

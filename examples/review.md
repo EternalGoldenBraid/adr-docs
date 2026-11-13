@@ -1,3 +1,7 @@
+---
+parent: index
+order: 1
+---
 # Review a document together
 
 Edit this Markdown file to see the page update. Select text and choose

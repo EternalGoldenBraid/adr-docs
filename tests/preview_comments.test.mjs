@@ -351,3 +351,17 @@ test("agent-authored threads are red, quiet, listed, and wake the agent only on 
   await bridge.close();
   rmSync(directory, { recursive: true, force: true });
 });
+
+test("page tree: parent and order front matter shape the top bar and tree.json", async () => {
+  const { readPageTree, topBar, nestedTree } = await import("../src/page-tree.mjs");
+  const directory = mkdtempSync(join(tmpdir(), "page-tree-"));
+  writeFileSync(join(directory, "index.md"), "# Plan\n");
+  writeFileSync(join(directory, "b.md"), "---\nparent: index\norder: 2\n---\n# B\n");
+  writeFileSync(join(directory, "a.md"), "---\nparent: index\nnav: Alpha\norder: 1\n---\n# A\n");
+  writeFileSync(join(directory, "lost.md"), "---\nparent: missing\n---\n# Lost\n");
+  const pages = readPageTree(directory);
+  assert.deepEqual(topBar(pages).map(item => item.text), ["Plan", "Lost"]);
+  const [root] = nestedTree(pages);
+  assert.deepEqual(root.children.map(child => child.title), ["Alpha", "B"]);
+  rmSync(directory, { recursive: true, force: true });
+});
