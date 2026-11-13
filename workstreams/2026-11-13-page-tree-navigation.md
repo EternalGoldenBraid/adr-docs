@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: done
 title: Page tree navigation
 summary: parent/order front matter, breadcrumbs, child list, collapsible tree, tree.json; works in static build.
 ---

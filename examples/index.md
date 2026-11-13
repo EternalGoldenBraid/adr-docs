@@ -1,5 +1,6 @@
 ---
 layout: home
+nav: Home
 hero:
   name: Agent Doc Review
   text: Think on the page. Let the agent read your margin.
