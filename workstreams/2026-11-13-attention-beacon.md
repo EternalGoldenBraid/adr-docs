@@ -26,5 +26,6 @@ Open: whether "awaiting" means every unresolved agent-authored thread or only
 those the agent flags as needing an answer.
 
 ## Plan
+- (Done in 0.16.0: awaiting counts, tab title, tree markers. Remaining: jump key, live tree refresh.)
 - "Awaiting" = unresolved thread whose last message is from the agent (root included); replying or resolving clears it.
 - Also: live page-tree refresh (watch the markdown files, reload `/tree.json`) so new pages need no restart.
