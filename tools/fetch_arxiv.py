@@ -41,7 +41,10 @@ html = html.replace('<article class="', '<article class="vp-doc ', 1)
 scripts = '<script src="/__preview_comments/client.js" defer></script>'
 if os.path.exists(os.path.join(root, "public/papers/edition.js")):
     scripts += f'<script src="/papers/edition.js" data-paper="{arxiv_id}" defer></script>'
-html = html.replace("</body>", scripts + "</body>", 1)
+back = ('<a href="/" style="position:fixed;bottom:12px;left:12px;z-index:50;padding:4px 10px;'
+        'background:#111827;color:#e5e7eb;border:1px solid #475569;border-radius:6px;'
+        'font:13px system-ui;text-decoration:none">&larr; Back</a>')
+html = html.replace("</body>", back + scripts + "</body>", 1)
 
 title = re.search(r"<title>(.*?)</title>", html, re.S).group(1).strip()
 os.makedirs(os.path.join(root, "public/papers"), exist_ok=True)

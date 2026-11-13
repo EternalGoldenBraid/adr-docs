@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.0 - 2026-11-13
+
+- Preview top bar links every top-level Markdown file (`nav:` front matter sets the label); fetched papers get a Back link.
+
 ## 0.4.0 - 2026-11-13
 
 - `<DocGraph>`: tabs for lanes/topics (optional `tabs` prop) instead of a dropdown.

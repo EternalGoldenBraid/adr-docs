@@ -1,3 +1,5 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { basename, join } from "node:path";
 import mathjax from "markdown-it-mathjax3";
 import { previewComments } from "../scripts/preview_comments/vite-plugin.mjs";
 
@@ -22,6 +24,17 @@ function stderrLogger() {
   return logger;
 }
 
+// Top bar: one link per top-level Markdown file. Label: `nav:` front matter, else first heading.
+function navLinks(documentRoot) {
+  return readdirSync(documentRoot).filter(f => f.endsWith(".md")).sort().map(file => {
+    const stem = basename(file, ".md");
+    const text = readFileSync(join(documentRoot, file), "utf8");
+    const label = text.match(/^---\n[\s\S]*?^nav:\s*(.+)$/m)?.[1]
+      ?? text.match(/^# (.+)$/m)?.[1] ?? stem;
+    return { text: label.trim(), link: stem === "index" ? "/" : "/" + encodeURIComponent(stem) };
+  }).sort((a, b) => (a.link === "/" ? -1 : b.link === "/" ? 1 : 0));
+}
+
 export function previewConfig({ documentRoot, connectionFile, workspace, packageRoot }) {
   return {
     srcDir: `${workspace}/source`,
@@ -35,7 +48,7 @@ export function previewConfig({ documentRoot, connectionFile, workspace, package
     appearance: "force-dark",
     markdown: { config: md => md.use(mathjax, { tex: { tags: "ams" } }) },
     vue: { template: { compilerOptions: { isCustomElement: tag => tag.startsWith("mjx-") } } },
-    themeConfig: { outline: "deep" },
+    themeConfig: { outline: "deep", nav: navLinks(documentRoot) },
     vite: {
       resolve: { preserveSymlinks: true },
       // VitePress supplies fixed optimizer inputs; the document tree needs no dependency scan.
