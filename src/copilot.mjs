@@ -68,6 +68,7 @@ export async function connectDocumentReview({
         properties: {
           comment_id: { type: "string" }, reply: { type: "string" },
           resolved: { type: "boolean" },
+          link_comment_ids: { type: "array", items: { type: "string" }, description: "Link this thread to other threads (ids); the user sees them as jumpable links with backlinks." },
           update_id: { type: "string", description: "UUID reused for an unchanged retry." },
         },
       },
@@ -75,6 +76,7 @@ export async function connectDocumentReview({
         const input = { id: args.update_id ?? randomUUID(), commentId: args.comment_id };
         if (args.reply !== undefined) input.reply = args.reply;
         if (args.resolved !== undefined) input.resolved = args.resolved;
+        if (args.link_comment_ids !== undefined) input.addRefs = args.link_comment_ids;
         return JSON.stringify(requirePreview().bridge.update(input));
       },
     }, {
@@ -89,6 +91,7 @@ export async function connectDocumentReview({
           anchor: { type: "string", description: "node/edge only: 'node-<id>' or 'edge-<id>'." },
           comment: { type: "string", description: "What you want the user to look at, and why." },
           proposal: { type: "object", description: "Optional proposed edit shown as a diff card with Accept/Reject buttons. Accepting replies to you; apply the edit yourself then.", properties: { before: { type: "string" }, after: { type: "string" } } },
+          refs: { type: "array", items: { type: "string" }, description: "Ids of existing threads this one relates to; shown as links with backlinks." },
           color: { type: "string", enum: ["red", "yellow", "green", "blue", "pink"], description: "Defaults to red (the agent colour)." },
         },
       },

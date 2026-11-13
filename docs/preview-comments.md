@@ -199,3 +199,7 @@ and restores the original tab and Vim preference.
 Embed with `<video controls src="/x.mp4">` (files in `public/`, or a symlink under the doc root). Each video gets frame-step buttons and **Comment at this time**, which pauses and attaches a timestamped comment.
 
 Click the quote of a video comment to jump to its time. Pages with `publish: false` front matter are left out of `npm run build:site`.
+
+## Linking threads
+
+Open a thread and use **Link to another thread…** to reference another thread. Links (`→`) and backlinks (`←`) are clickable and jump across pages. Agents pass `refs` when adding a thread or `link_comment_ids` when updating one.
