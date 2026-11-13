@@ -18,6 +18,9 @@ const trail = computed(() => {
 const children = computed(() => childrenOf(current.value))
 const hasTree = computed(() => pages.value.some(p => p.parent))
 
+const awaiting = ref({})
+const waits = slug => awaiting.value[slug === 'index' ? '/' : '/' + slug] || 0
+const onAwait = e => { awaiting.value = e.detail?.pages || {} }
 const open = ref(false)
 const cursor = ref(0)
 const collapsed = ref(new Set())
@@ -71,28 +74,30 @@ function onKey(e) {
 onMounted(() => {
   window.addEventListener('keydown', onKey, true)
   document.addEventListener('preview-comment-mode', onMode)
+  document.addEventListener('preview-comment-awaiting', onAwait)
 })
 onUnmounted(() => {
   window.removeEventListener('keydown', onKey, true)
   document.removeEventListener('preview-comment-mode', onMode)
+  document.removeEventListener('preview-comment-awaiting', onAwait)
 })
 </script>
 
 <template>
 <div v-if="hasTree && bySlug[current]" class="pt-bar" :class="{ pad }">
   <nav v-if="trail.length" class="pt-crumbs" aria-label="Breadcrumb">
-    <template v-for="p in trail" :key="p.slug"><a :href="withBase(p.link)">{{ p.title }}</a><span>›</span></template>
-    <strong>{{ bySlug[current].title }}</strong>
+    <template v-for="p in trail" :key="p.slug"><a :href="withBase(p.link)">{{ p.title }}</a><b v-if="waits(p.slug)" class="pt-dot" title="Agent awaits you">{{ waits(p.slug) }}</b><span>›</span></template>
+    <strong>{{ bySlug[current].title }}</strong><b v-if="waits(current)" class="pt-dot" title="Agent awaits you">{{ waits(current) }}</b>
   </nav>
   <span v-if="children.length" class="pt-children">
-    Pages below: <a v-for="c in children" :key="c.slug" :href="withBase(c.link)">{{ c.title }}</a>
+    Pages below: <a v-for="c in children" :key="c.slug" :href="withBase(c.link)">{{ c.title }}<b v-if="waits(c.slug)" class="pt-dot">{{ waits(c.slug) }}</b></a>
   </span>
-  <button class="pt-open" title="Page tree (t)" @click="open ? (open = false) : show()">☰ Tree</button>
+  <button class="pt-open" title="Page tree (t)" @click="open ? (open = false) : show()">☰ Tree<b v-if="awaiting['*'] || Object.keys(awaiting).length" class="pt-dot">{{ Object.values(awaiting).reduce((a, b) => a + b, 0) }}</b></button>
   <div v-if="open" class="pt-pop" ref="list" tabindex="0" role="tree">
     <div v-for="(r, i) in rows" :key="r.slug" class="pt-row" :class="{ cur: r.slug === current, at: i === cursor }"
       :style="{ paddingLeft: 10 + r.depth * 18 + 'px' }" role="treeitem" @click="go(r.link)">
       <button v-if="r.kids" class="pt-fold" tabindex="-1" @click.stop="fold(r, !collapsed.has(r.slug))">{{ collapsed.has(r.slug) ? '▸' : '▾' }}</button>
-      <span v-else class="pt-fold"></span>{{ r.title }}
+      <span v-else class="pt-fold"></span>{{ r.title }}<b v-if="waits(r.slug)" class="pt-dot" title="Agent awaits you">{{ waits(r.slug) }}</b>
     </div>
     <div class="pt-hint">j/k move · Enter open · h/l fold · t/Esc close</div>
   </div>
@@ -111,6 +116,7 @@ onUnmounted(() => {
 .pt-row { display: flex; gap: 4px; align-items: center; padding: 4px 12px; cursor: pointer; }
 .pt-row.cur { font-weight: 700; color: var(--vp-c-brand-1); }
 .pt-row.at { background: var(--vp-c-default-soft); }
+.pt-dot { margin-left: 6px; padding: 0 6px; border-radius: 999px; background: #e03131; color: #fff; font-size: 11px; }
 .pt-fold { width: 16px; font-size: 11px; opacity: .7; }
 .pt-hint { padding: 6px 12px 2px; font-size: 11px; opacity: .55; font-family: monospace; }
 </style>

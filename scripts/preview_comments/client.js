@@ -16,7 +16,7 @@
       .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}.status{max-width:390px;margin:8px 0;padding:10px 12px;border:1px solid #59616d;border-radius:8px;background:#1b1d22;white-space:pre-wrap}.status:empty{display:none}.error{color:#ffb4a9}
       .hint{margin:10px 0 0;color:#b7c1ce}
       .proposal{margin:10px 0;border:1px solid #59616d;border-radius:8px;padding:8px}.proposal pre{margin:0 0 6px;padding:6px;white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.4 ui-monospace,monospace;border-radius:4px}.proposal .del{background:#4a1d24}.proposal .add{background:#16402a}
-      .agent-status{position:fixed;left:14px;bottom:44px;padding:4px 10px;border:1px solid #59616d;border-radius:999px;background:#1b1d22;font-size:12px;color:#b7c1ce}.agent-status::before{content:"● ";color:#51cf66}
+      .statusbar{position:fixed;left:0;right:0;bottom:0;display:flex;gap:18px;align-items:center;padding:3px 14px;background:#111318;border-top:1px solid #3a404a;font:12px/1.4 ui-monospace,monospace;color:#b7c1ce;pointer-events:none}.sb-mode{font-weight:700;color:#74c0fc}.agent-status::before{content:"● ";color:#51cf66}.agent-status.await::before{color:#ff6b6b}
       .cmdbar{position:fixed;left:0;right:0;bottom:0;display:flex;gap:6px;padding:6px 14px;background:#111318;border-top:1px solid #59616d;font:14px/1.4 ui-monospace,monospace}.cmdbar input{flex:1;background:none;border:0;color:#eee;font:inherit;outline:0}
       .contextual{position:fixed}
       .panel.contextual-panel{position:fixed;margin:0;max-height:calc(100vh - 140px);overflow:auto}
@@ -91,7 +91,7 @@
     <div class="status" role="status" aria-live="polite"></div>
     <div class="region" hidden><div class="region-box" hidden></div><div class="region-tip">Drag to select a region · Esc cancels</div></div>
     <div class="vim-caret" hidden aria-hidden="true"></div>
-    <div class="agent-status" hidden></div>
+    <div class="statusbar" hidden><span class="sb-mode"></span><span class="agent-status" hidden></span></div>
     <form class="cmdbar" hidden><span>:</span><input class="cmdinput" autocomplete="off" spellcheck="false" aria-label="Command"></form>
     <div class="contextual" hidden><button class="ctx-comment" type="button">Comment</button><span class="swatches" style="display:flex;gap:5px"></span></div><div class="rail"></div>
     <div class="dock"><div class="toolbar" hidden>
@@ -164,7 +164,10 @@
 
   function modeLabel() {
     const mode = !vimEnabled ? "OFF" : !history.hidden ? "HISTORY" : !panel.hidden ? "COMMENT" : externalMode || (visual ? "VISUAL" : "NORMAL");
-    vimButton.textContent = `Vim · ${mode}${prefix ? " " + prefix : ""}`;
+    vimButton.textContent = "Vim";
+    const bar = find(".statusbar");
+    bar.hidden = !vimEnabled;
+    find(".sb-mode").textContent = `-- ${mode}${prefix ? " " + prefix : ""} --`;
     vimButton.setAttribute("aria-pressed", String(vimEnabled));
   }
   const cmdbar = find(".cmdbar"), cmdinput = find(".cmdinput");
@@ -519,6 +522,20 @@
     markSeen(comment);
     find(".thread-messages").replaceChildren(...threadNodes(comment, values => updateThread(values)));
   }
+  // A thread awaits the user when it is open and its last message is from the agent.
+  const awaiting = comment => !comment.resolved && !comment.removed && !comment.note &&
+    (comment.replies.at(-1)?.author ?? comment.author) === "copilot";
+    function announceAwaiting() {
+    const pages = {};
+    for (const comment of historyComments) if (awaiting(comment)) {
+      const key = comment.kind === "session" ? "*" : pagePath(comment.url);
+      pages[key] = (pages[key] || 0) + 1;
+    }
+    const total = Object.values(pages).reduce((a, b) => a + b, 0);
+    const base = document.title.replace(/^\(\d+\) /, "");
+    document.title = total ? `(${total}) ${base}` : base;
+    document.dispatchEvent(new CustomEvent("preview-comment-awaiting", { detail: { pages, total } }));
+  }
   async function refreshHistory() {
     const result = await api("history");
     sessionId = result.sessionId;
@@ -527,6 +544,7 @@
       historyRevision = result.revision;
       historyComments = result.comments;
       renderHistory();
+      announceAwaiting();
     }
   }
   function historyError(error) {
@@ -1373,6 +1391,7 @@
   async function syncMarks() {
     try { await refreshHistory(); } catch { /* the bridge may be offline; keep the last marks */ }
     applyMarks();
+    announceAwaiting();
   }
   let markTimer;
   new MutationObserver(() => { clearTimeout(markTimer); markTimer = setTimeout(applyMarks, 150); })
