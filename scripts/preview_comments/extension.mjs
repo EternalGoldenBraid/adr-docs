@@ -91,10 +91,16 @@ export async function connectPreviewComments(config) {
           quote: { type: "string", description: "text: exact passage as rendered. equation: 'Equation (1)'. node/edge: the target's quote from its comment or title." },
           anchor: { type: "string", description: "node/edge only: 'node-<id>' or 'edge-<id>'." },
           comment: { type: "string", description: "What you want the user to look at, and why." },
+          proposal: { type: "object", description: "Optional proposed edit shown as a diff card with Accept/Reject buttons. Accepting replies to you; apply the edit yourself then.", properties: { before: { type: "string" }, after: { type: "string" } } },
           color: { type: "string", enum: ["red", "yellow", "green", "blue", "pink"], description: "Defaults to red (the agent colour)." },
         },
       },
       handler: args => JSON.stringify(bridge.add(args)),
+    }, {
+      name: "set_preview_status",
+      description: "Show a short status line in the user's browser (e.g. state 'reading', text 'Reading the methods section'). Use state 'idle' with empty text to clear it.",
+      parameters: { type: "object", required: ["state"], properties: { state: { type: "string", description: "idle, reading, thinking, editing or waiting." }, text: { type: "string", description: "Up to 120 characters." } } },
+      handler: args => JSON.stringify({ bridge }.bridge.setStatus(args)),
     }],
   });
   attention = commentAttention(session, () => bridge?.pending() ?? { count: 0 });

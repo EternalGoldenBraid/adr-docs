@@ -61,6 +61,7 @@ export async function startCommentBridge({
   const updates = new Map();
   let revision = 0;
   let latestFeedbackId;
+  let agentStatus = { state: "idle", text: "" };
   function apply(record) {
     if (record.event === "comment") {
       const quiet = Boolean(record.highlight || record.note || record.author === "copilot");
@@ -233,7 +234,7 @@ export async function startCommentBridge({
         return reply(response, 403, { error: "Unauthorized comment bridge request." });
       }
       if (request.method === "GET" && request.url === "/status") {
-        return reply(response, 200, { sessionId, pendingCount: unread().length });
+        return reply(response, 200, { sessionId, pendingCount: unread().length, agent: agentStatus });
       }
       if (request.method === "GET" && request.url === "/history") {
         return reply(response, 200, { sessionId, revision, comments: [...comments.values()] });
@@ -314,13 +315,19 @@ export async function startCommentBridge({
         ...input, sessionId, id: randomUUID(), color: input.color || "red", section: input.section || input.page,
         url: new URL(field(input.page, "Page", 2048), previewOrigin).href,
       });
+      const proposal = input.proposal && typeof input.proposal === "object"
+        ? { before: String(input.proposal.before ?? "").slice(0, 8000), after: String(input.proposal.after ?? "").slice(0, 8000) } : undefined;
       const record = {
-        ...value, input: value, event: "comment", author: "copilot", at: new Date().toISOString(), seen: true,
+        ...value, ...(proposal ? { proposal } : {}), input: value, event: "comment", author: "copilot", at: new Date().toISOString(), seen: true,
         sourceHash: createHash("sha256").update(readFileSync(value.source)).digest("hex"),
       };
       append(log, record);
       apply(record);
       return { id: record.id, saved: true, url: record.url };
+    },
+    setStatus: ({ state = "working", text = "" }) => {
+      agentStatus = { state: String(state).slice(0, 24), text: String(text).slice(0, 120), at: new Date().toISOString() };
+      return { saved: true };
     },
     update: (input, author = "copilot") => saveUpdate(normalizeUpdate(input, author)),
     pending: () => {
