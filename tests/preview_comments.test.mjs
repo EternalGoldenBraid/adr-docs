@@ -329,3 +329,25 @@ test("PNG attachments attach to new comments and threads and reach the agent as 
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test("agent-authored threads are red, quiet, listed, and wake the agent only on a user reply", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "preview-comments-"));
+  const sessionId = randomUUID();
+  writeFileSync(join(directory, "page.md"), "# Page\n\nEquation here.");
+  let wakes = 0;
+  const bridge = await startCommentBridge({
+    sessionId, documentRoot: directory, storageRoot: directory, previewOrigin: "http://127.0.0.1:8767",
+    onError: error => assert.fail(error.message), notify: async () => { wakes++; },
+  });
+  const { id } = bridge.add({ page: "/page", kind: "equation", quote: "Equation (1)", comment: "Check this step." });
+  const [thread] = bridge.list();
+  assert.equal(thread.author, "copilot");
+  assert.equal(thread.color, "red");
+  assert.equal(thread.resolved, false);
+  assert.deepEqual(bridge.pending(), { count: 0, latestId: undefined });
+  assert.throws(() => bridge.add({ page: "/missing", kind: "text", quote: "x", comment: "y" }));
+  bridge.update({ id: randomUUID(), sessionId, commentId: id, reply: "Looked at it" }, "user");
+  assert.equal(bridge.pending().count, 1);
+  await bridge.close();
+  rmSync(directory, { recursive: true, force: true });
+});

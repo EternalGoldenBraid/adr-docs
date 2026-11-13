@@ -31,7 +31,7 @@
       .contextual{display:flex;gap:6px;align-items:center;padding:6px;background:#1b1d22;border:1px solid #59616d;border-radius:10px;box-shadow:0 8px 24px #0008}
       .contextual button{padding:5px 10px;border-radius:7px}
       .swatch{width:22px;height:22px;padding:0!important;border-radius:50%!important;border:2px solid #0006!important}
-      .c-yellow{background:#ffd000!important}.c-green{background:#58c97a!important}.c-blue{background:#5aa9ff!important}.c-pink{background:#ff7eb6!important}
+      .c-yellow{background:#ffd000!important}.c-green{background:#58c97a!important}.c-blue{background:#5aa9ff!important}.c-pink{background:#ff7eb6!important}.c-red{background:#ff5a4f!important}
       .swatch.on{outline:2px solid #fff;outline-offset:1px}
       .pill{display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;opacity:.75}
       .pill:hover,.pill[aria-expanded=true]{opacity:1}
@@ -360,7 +360,7 @@
   function threadNodes(comment, run) {
     const nodes = [];
     if (comment.comment) {
-      nodes.push(renderNote("You", comment.comment, comment.at, {
+      nodes.push(renderNote(comment.author === "copilot" ? "Copilot" : "You", comment.comment, comment.at, {
         note: comment.note, edited: comment.commentEdited,
         onEdit: text => run({ editComment: text }),
       }));
@@ -962,11 +962,12 @@
     }
   });
 
-  const COLORS = { yellow: "255,208,0", green: "88,201,122", blue: "90,169,255", pink: "255,126,182" };
+  const COLORS = { yellow: "255,208,0", green: "88,201,122", blue: "90,169,255", pink: "255,126,182", red: "255,90,79" };
   const markStyle = document.createElement("style");
   markStyle.textContent = Object.entries(COLORS).map(([name, rgb]) =>
     `::highlight(preview-comment-${name}){background:rgba(${rgb},.4)}`).join("") +
     "";
+  markStyle.textContent += "[data-adr-point]{outline:2px solid #ff5a4f;outline-offset:4px;border-radius:6px}";
   document.head.append(markStyle);
   const popStyle = document.createElement("style");
   popStyle.textContent = ".mark-pop{position:fixed;transform:scale(var(--s,1));transform-origin:top left;width:min(340px,calc(100vw - 24px));max-height:60vh;overflow:auto;" +
@@ -1008,14 +1009,20 @@
   const SEEN_KEY = "preview-comments-seen-replies";
   const firstRun = localStorage.getItem(SEEN_KEY) === null;
   const seenReplies = JSON.parse(localStorage.getItem(SEEN_KEY) || "{}");
-  const hasFresh = comment => {
+  // The newest thing the agent said: its latest reply, or the opening comment of an agent-authored thread.
+  const lastFromCopilot = comment => {
     const last = comment.replies.at(-1);
-    return Boolean(last && last.author === "copilot" && seenReplies[comment.id] !== last.id);
+    if (last) return last.author === "copilot" ? last.id : undefined;
+    return comment.author === "copilot" ? "root" : undefined;
+  };
+  const hasFresh = comment => {
+    const key = lastFromCopilot(comment);
+    return Boolean(key && seenReplies[comment.id] !== key);
   };
   function markSeen(comment) {
-    const last = comment.replies.at(-1);
-    if (!last || seenReplies[comment.id] === last.id) return;
-    seenReplies[comment.id] = last.id;
+    const key = lastFromCopilot(comment);
+    if (!key || seenReplies[comment.id] === key) return;
+    seenReplies[comment.id] = key;
     localStorage.setItem(SEEN_KEY, JSON.stringify(seenReplies));
     placeBubbles();
     applyMarks();
@@ -1133,15 +1140,28 @@
       rail.append(bubble);
     }
   }
+  function findEquation(doc, quote) {
+    return [...doc.querySelectorAll("mjx-container")].find(el => {
+      const label = el.querySelector("mlabeledtr > mtd")?.textContent;
+      return (label ? `Equation ${label}` : el.textContent.trim()) === quote;
+    });
+  }
   function applyMarks() {
     const doc = document.querySelector(".vp-doc");
     marks = [];
     const here = pagePath(location.href);
+    document.querySelectorAll("[data-adr-point]").forEach(el => delete el.dataset.adrPoint);
     for (const comment of historyComments) {
       if (comment.removed || pagePath(comment.url) !== here) continue;
       if (comment.kind === "node" || comment.kind === "edge") {
         const id = comment.anchor.replace(/^(node|edge)-/, "");
         marks.push({ custom: true, comment, range: { getBoundingClientRect: () => customTarget(id)?.rect || { top: NaN } } });
+      } else if (comment.kind === "equation" && doc) {
+        const el = findEquation(doc, comment.quote);
+        if (el) {
+          if (comment.author === "copilot" && !comment.resolved) el.dataset.adrPoint = "";
+          marks.push({ custom: true, comment, range: { getBoundingClientRect: () => el.getBoundingClientRect() } });
+        }
       } else if (doc && CSS.highlights) {
         const range = locate(doc, comment.quote);
         if (range) marks.push({ range, comment });

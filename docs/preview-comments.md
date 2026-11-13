@@ -59,6 +59,8 @@ native input.
 | `Space` inside a caveat | Open or close its details. |
 | `Esc` | Leave visual mode or close a panel, preserving drafts. |
 
+Agents can start threads too with `add_doc_review_comment` (page, kind, quote, comment). They appear red and signed Copilot; an equation is pointed at with `kind: equation, quote: "Equation (1)"` and gets a red ring. Your reply wakes the agent as usual.
+
 Scroll gutter: unresolved comments appear as coloured ticks along the right edge, at their relative position in the page. Click a tick to scroll to it.
 
 Key layers: the page owns the keys by default. Clicking a `<DocGraph>` enters the graph layer (mode line `Vim · GRAPH · NORMAL`), where graph keys apply and page motions do not; `Esc` in graph normal mode returns to the page.
