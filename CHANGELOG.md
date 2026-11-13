@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.0 - 2026-11-13
+
+- Region screenshots: `s` selects a region of the page and attaches the crop to a new comment or the open thread; images reach the agent as file paths (`imageFiles`).
+- `<DocGraph>`: typing in the comment panel no longer drives the graph's keys.
+
 ## 0.5.1 - 2026-11-13
 
 - `<DocGraph>`: edge labels are larger and use the edge colour.

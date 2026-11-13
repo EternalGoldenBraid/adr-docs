@@ -292,3 +292,40 @@ test("migration withdraws only saved legacy comment prompts by stable queue ID",
   }, [{ id, queued: true }]);
   assert.deepEqual(removed, ["owned"]);
 });
+
+test("PNG attachments attach to new comments and threads and reach the agent as file paths", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "preview-comment-images-"));
+  const sessionId = randomUUID();
+  writeFileSync(join(directory, "state.md"), "# State");
+  const origin = "http://127.0.0.1:8766";
+  const bridge = await startCommentBridge({
+    sessionId, documentRoot: directory, storageRoot: directory, previewOrigin: origin,
+    onError: () => {}, notify: async () => {},
+  });
+  const connection = JSON.parse(readFileSync(bridge.connectionFile));
+  const call = (path, init = {}) => fetch(`http://127.0.0.1:${connection.port}${path}`, {
+    ...init, headers: { Authorization: `Bearer ${connection.token}`, ...init.headers },
+  });
+  const png = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.from("pixels")]);
+  try {
+    assert.equal((await call("/attachments", { method: "POST", body: Buffer.from("not a png") })).status, 400);
+    const { id } = await (await call("/attachments", { method: "POST", body: png })).json();
+    assert.match(id, /^[\da-f]{64}$/);
+    assert.deepEqual(Buffer.from(await (await call(`/attachments/${id}`)).arrayBuffer()), png);
+    const commentId = randomUUID();
+    const post = (path, body) => call(path, { method: "POST", body: JSON.stringify(body) });
+    const base = { id: commentId, sessionId, url: origin + "/state", section: "State", kind: "figure", quote: "Region screenshot", comment: "See this." };
+    assert.equal((await post("/comments", { ...base, images: ["f".repeat(64)] })).status, 400);
+    assert.equal((await post("/comments", { ...base, images: [id] })).status, 200);
+    const second = (await (await call("/attachments", { method: "POST", body: Buffer.concat([png, Buffer.from("2")]) })).json()).id;
+    bridge.read();
+    assert.equal((await post("/updates", { id: randomUUID(), sessionId, commentId, addImages: [second] })).status, 200);
+    assert.equal(bridge.pending().count, 1);
+    const [comment] = bridge.read();
+    assert.deepEqual(comment.images, [id, second]);
+    assert.deepEqual(comment.imageFiles, [id, second].map(name => join(directory, sessionId, "attachments", name + ".png")));
+  } finally {
+    await bridge.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});

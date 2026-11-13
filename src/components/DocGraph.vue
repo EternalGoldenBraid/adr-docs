@@ -23,7 +23,7 @@ const cmd = ref(null)
 const cmdInput = ref(null)
 const flash = ref('')
 const selTitle = computed(() => (selected.value && cy ? cy.getElementById(selected.value).data('title') || '' : ''))
-const HELP = "DOC-GRAPH(1)\n\nMODES\n  NORMAL  fly the view         VISUAL  walk node to node\n  INSERT  edit the graph       Esc     back to NORMAL\nNORMAL\n  h j k l   pan (H J K L: faster)\n  + - 0     zoom in / out / fit\n  v  visual     i  insert     u  up one layer\n  Enter     open the selected \u25b8 layer\nVISUAL\n  h j k l   nearest node in that direction\n  Enter     open \u25b8 layer, or zoom to node\n  c         comment on the node\nINSERT\n  h j k l   select neighbour\n  arrows    nudge node (shift: x5)\n  Enter     edit text    o  new node    x  delete\nCOMMANDS\n  :help :man   this page     :w  export JSON\n  :fit         fit all       :q  close\nMOUSE / TRACKPAD\n  swipe pans \u00b7 pinch or shift+swipe zooms\n  dbl-click: \u25b8 opens, node/lane zooms, empty fits"
+const HELP = "DOC-GRAPH(1)\n\nMODES\n  NORMAL  fly the view         VISUAL  walk node to node\n  INSERT  edit the graph       Esc     back to NORMAL\nNORMAL\n  h j k l   pan (H J K L: faster)\n  + - 0     zoom in / out / fit\n  v  visual     i  insert     u  up one layer\n  Enter     open the selected \u25b8 layer\nVISUAL\n  h j k l   nearest node in that direction\n  Enter     open \u25b8 layer, or zoom to node\n  c         comment on the node\n  s         attach a region screenshot\nINSERT\n  h j k l   select neighbour\n  arrows    nudge node (shift: x5)\n  Enter     edit text    o  new node    x  delete\nCOMMANDS\n  :help :man   this page     :w  export JSON\n  :fit         fit all       :q  close\nMOUSE / TRACKPAD\n  swipe pans \u00b7 pinch or shift+swipe zooms\n  dbl-click: \u25b8 opens, node/lane zooms, empty fits"
 const topic = ref('')
 const activeTab = ref('')
 const TOPICS = ref([])
@@ -393,7 +393,7 @@ function runCmd() {
 }
 
 function onKey(e) {
-  if (e.target.matches?.('input,textarea,select') || e.ctrlKey || e.metaKey || e.altKey) return
+  if ((e.composedPath?.()[0] || e.target).matches?.('input,textarea,select') || e.ctrlKey || e.metaKey || e.altKey) return
   if (e.key === '?') { help.value = !help.value; return }
   if (!vimOn.value) return
   const k = e.key

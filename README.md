@@ -42,7 +42,9 @@ Reading or replying never resolves a thread; only you do.
 ## Commenting
 
 Select text, or click an equation, figure, graph node or edge, and choose
-**Comment here**. **History** lists threads, replies and Resolve/Reopen.
+**Comment here**. **History** lists threads, replies and Resolve/Reopen. Press `s` and drag
+to attach a screenshot of a region to a comment or thread (one-time "share
+this tab" prompt).
 
 ## Graphs
 

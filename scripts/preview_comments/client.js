@@ -47,13 +47,21 @@
       @keyframes ping{0%{box-shadow:0 0 0 0 #ff5a4faa}100%{box-shadow:0 0 0 9px #ff5a4f00}}
       .note .tools{display:flex;gap:6px;margin-top:6px}.note .tools button{padding:2px 8px;font-size:12px}
       .note.private{border-left:3px solid #ffb02e}.note textarea{width:100%;box-sizing:border-box;min-height:54px}
+      .shots{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.shots:empty{display:none}
+      .shot{position:relative}.shot img{display:block;max-width:120px;max-height:90px;border:1px solid #59616d;border-radius:6px}
+      .shot button{position:absolute;top:2px;right:2px;padding:0 6px;border-radius:50%;font-size:12px;line-height:18px}
+      .thumbs{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.thumbs img{display:block;max-width:100%;max-height:200px;border:1px solid #59616d;border-radius:6px;cursor:zoom-in;background:#fff}
+      .region{position:fixed;inset:0;cursor:crosshair;background:rgba(0,0,0,.3);touch-action:none;user-select:none}
+      .region-box{position:fixed;border:2px dashed #74c0fc;background:rgba(116,192,252,.15);pointer-events:none}
+      .region-tip{position:fixed;top:12px;left:50%;transform:translateX(-50%);padding:6px 12px;border-radius:999px;background:#1b1d22;border:1px solid #59616d;pointer-events:none}
     </style>
     <section class="panel" hidden aria-labelledby="comment-title">
       <h2 id="comment-title">Comment to Copilot</h2><small class="receiver"></small>
       <div class="quote"></div>
       <form><label for="comment-body">Your comment</label>
       <textarea id="comment-body" required maxlength="4000"></textarea>
-      <div class="actions"><button type="button" class="cancel">Cancel</button><button type="button" class="note-save">Save as note</button><button class="primary" type="submit">Send</button></div></form>
+      <div class="shots"></div>
+      <div class="actions"><button type="button" class="attach-region" title="Attach a screenshot of a region (s)">Region</button><button type="button" class="cancel">Cancel</button><button type="button" class="note-save">Save as note</button><button class="primary" type="submit">Send</button></div></form>
     </section>
     <section class="panel history" hidden aria-labelledby="history-title">
       <div class="history-head"><h2 id="history-title">Comment history</h2>
@@ -72,15 +80,16 @@
         <div class="thread-messages"></div>
         <form class="reply-form"><label for="thread-reply">Your reply</label>
         <textarea id="thread-reply" required maxlength="4000"></textarea>
-        <div class="actions"><button class="thread-resolve" type="button">Resolve</button>
+        <div class="actions"><button class="thread-region" type="button" title="Attach a screenshot of a region (s)">Region</button><button class="thread-resolve" type="button">Resolve</button>
         <button class="primary reply-send" type="submit">Reply</button></div></form>
       </section>
     </section>
     <div class="status" role="status" aria-live="polite"></div>
+    <div class="region" hidden><div class="region-box" hidden></div><div class="region-tip">Drag to select a region · Esc cancels</div></div>
     <div class="vim-caret" hidden aria-hidden="true"></div>
     <div class="contextual" hidden><button class="ctx-comment" type="button">Comment</button><span class="swatches" style="display:flex;gap:5px"></span></div><div class="rail"></div>
     <div class="dock"><div class="toolbar" hidden>
-    <button class="vim-mode" type="button" title="h/j/k/l: move · v: select · c or -c: comment · -h: history · Esc: normal">Vim</button>
+    <button class="vim-mode" type="button" title="h/j/k/l: move · v: select · c or -c: comment · s: region screenshot · -h: history · Esc: normal">Vim</button>
     <button class="history-toggle" type="button">History</button>
     <button class="toggle" type="button">Comment</button></div>
     <button class="pill" type="button" aria-expanded="false"><span class="dot"></span><span class="pill-label">Comments</span></button></div>`;
@@ -324,6 +333,29 @@
     }
     return note;
   }
+  const imageUrls = new Map();
+  function imageUrl(id) {
+    if (!imageUrls.has(id)) {
+      imageUrls.set(id, fetch(`/__preview_comments/attachments/${id}`, { headers: { "X-Preview-Comment": "1" } })
+        .then(response => response.ok ? response.blob() : Promise.reject(new Error("Image unavailable.")))
+        .then(blob => URL.createObjectURL(blob))
+        .catch(error => { imageUrls.delete(id); throw error; }));
+    }
+    return imageUrls.get(id);
+  }
+  function thumbnails(ids) {
+    const row = document.createElement("div");
+    row.className = "thumbs";
+    for (const id of ids) {
+      const image = document.createElement("img");
+      image.alt = "Attached region screenshot";
+      image.addEventListener("click", () => image.src && open_(image.src));
+      imageUrl(id).then(url => { image.src = url; }, () => { image.alt = "Screenshot unavailable"; });
+      row.append(image);
+    }
+    return row;
+  }
+  const open_ = url => window.open(url, "_blank", "noopener");
   function threadNodes(comment, run) {
     const nodes = [];
     if (comment.comment) {
@@ -332,6 +364,7 @@
         onEdit: text => run({ editComment: text }),
       }));
     }
+    if (comment.images?.length) nodes.push(thumbnails(comment.images));
     for (const reply of comment.replies) {
       const mine = reply.author !== "copilot";
       nodes.push(renderNote(mine ? "You" : "Copilot", reply.comment, reply.at, {
@@ -492,6 +525,184 @@
   find(".thread-resolve").addEventListener("click", () => {
     updateThread({ id: crypto.randomUUID(), resolved: !currentThread().resolved });
   });
+  let draftImages = [];
+  const shots = find(".shots");
+  function renderShots() {
+    shots.replaceChildren(...draftImages.map(shot => {
+      const item = document.createElement("div");
+      item.className = "shot";
+      const image = document.createElement("img");
+      image.src = shot.url;
+      image.alt = "Region screenshot to attach";
+      image.addEventListener("load", () => { if (!panel.hidden && targetAnchor) position(panel, targetAnchor); });
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.title = "Remove screenshot";
+      remove.textContent = "×";
+      remove.addEventListener("click", () => { draftImages = draftImages.filter(other => other !== shot); renderShots(); });
+      item.append(image, remove);
+      return item;
+    }));
+    if (!panel.hidden && targetAnchor) position(panel, targetAnchor);
+  }
+  const regionLayer = find(".region");
+  const regionBox = find(".region-box");
+  let regioning = false;
+  let displayStream;
+  let displayVideo;
+  async function frameSource() {
+    const live = displayStream?.getVideoTracks()[0]?.readyState === "live";
+    if (!live) {
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: { displaySurface: "browser" }, audio: false, preferCurrentTab: true, selfBrowserSurface: "include",
+      });
+      const track = stream.getVideoTracks()[0];
+      const surface = track.getSettings().displaySurface;
+      if (surface && surface !== "browser") {
+        stream.getTracks().forEach(item => item.stop());
+        throw new Error("Share this browser tab (not a window or screen) so the region matches the page.");
+      }
+      displayStream = stream;
+      displayVideo = document.createElement("video");
+      displayVideo.muted = true;
+      displayVideo.srcObject = stream;
+      track.addEventListener("ended", () => { displayStream = undefined; });
+      await displayVideo.play();
+    }
+    return displayVideo;
+  }
+  function pickRegion() {
+    return new Promise(resolve => {
+      let start;
+      const finish = rect => {
+        document.removeEventListener("keydown", onKey, true);
+        regionLayer.hidden = true;
+        regionBox.hidden = true;
+        resolve(rect);
+      };
+      const onKey = event => {
+        if (event.key !== "Escape") return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        finish(null);
+      };
+      const rectOf = event => ({
+        x: Math.min(start.x, event.clientX), y: Math.min(start.y, event.clientY),
+        width: Math.abs(event.clientX - start.x), height: Math.abs(event.clientY - start.y),
+      });
+      regionLayer.onpointerdown = event => {
+        start = { x: event.clientX, y: event.clientY };
+        regionLayer.setPointerCapture(event.pointerId);
+        regionBox.hidden = false;
+        regionLayer.onpointermove(event);
+      };
+      regionLayer.onpointermove = event => {
+        if (!start) return;
+        const rect = rectOf(event);
+        Object.assign(regionBox.style, { left: rect.x + "px", top: rect.y + "px", width: rect.width + "px", height: rect.height + "px" });
+      };
+      regionLayer.onpointerup = event => {
+        if (!start) return;
+        const rect = rectOf(event);
+        finish(rect.width >= 8 && rect.height >= 8 ? rect : null);
+      };
+      regionLayer.onpointercancel = () => finish(null);
+      document.addEventListener("keydown", onKey, true);
+      regionLayer.hidden = false;
+    });
+  }
+  const nextFrame = video => new Promise(done => {
+    const timer = setTimeout(done, 400);
+    video.requestVideoFrameCallback?.(() => { clearTimeout(timer); done(); });
+  });
+  // Resolves to { id, url, element } once the cropped PNG is stored, or null if cancelled.
+  async function captureRegion() {
+    if (regioning) return null;
+    if (!navigator.mediaDevices?.getDisplayMedia) {
+      message("Region screenshots need a browser with screen capture (getDisplayMedia).", true);
+      return null;
+    }
+    regioning = true;
+    try {
+      const video = await frameSource();
+      message("");
+      const rect = await pickRegion();
+      if (!rect) return null;
+      host.style.visibility = "hidden";
+      await new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done)));
+      await nextFrame(video);
+      await new Promise(done => setTimeout(done, 60));
+      const scale = video.videoWidth / innerWidth;
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(rect.width * scale);
+      canvas.height = Math.round(rect.height * scale);
+      canvas.getContext("2d").drawImage(video, rect.x * scale, rect.y * scale, rect.width * scale, rect.height * scale, 0, 0, canvas.width, canvas.height);
+      const element = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+      host.style.visibility = "";
+      const blob = await new Promise(done => canvas.toBlob(done, "image/png"));
+      if (!blob) throw new Error("The region could not be captured.");
+      const response = await fetch("/__preview_comments/attachments", {
+        method: "POST", headers: { "Content-Type": "image/png", "X-Preview-Comment": "1" }, body: blob,
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error);
+      imageUrls.set(result.id, Promise.resolve(URL.createObjectURL(blob)));
+      return { id: result.id, url: await imageUrls.get(result.id), element };
+    } catch (error) {
+      message(error.name === "NotAllowedError" ? "Screen capture was not allowed." : error.message, true);
+      return null;
+    } finally {
+      host.style.visibility = "";
+      regioning = false;
+    }
+  }
+  function addDraftImage(shot) {
+    if (draftImages.length >= 4) { message("A comment can carry at most 4 screenshots.", true); return; }
+    draftImages.push(shot);
+    renderShots();
+  }
+  async function regionComment() {
+    const shot = await captureRegion();
+    if (!shot) return;
+    const doc = document.querySelector(".vp-doc");
+    const element = shot.element && doc.contains(shot.element) ? shot.element : doc;
+    const text = selection();
+    open(text || context(element, "figure", "Region screenshot"), text ? undefined : element);
+    addDraftImage(shot);
+  }
+  async function regionDraft() {
+    const shot = await captureRegion();
+    if (!shot) return;
+    addDraftImage(shot);
+    textarea.focus();
+  }
+  async function regionThread(addTo) {
+    const shot = await captureRegion();
+    if (shot) await addTo([shot.id]);
+  }
+  find(".attach-region").addEventListener("click", regionDraft);
+  find(".thread-region").addEventListener("click", () => regionThread(ids => updateThread({ id: crypto.randomUUID(), addImages: ids })));
+  let popComment;
+  document.addEventListener("keydown", event => {
+    if (event.key !== "s" || event.isComposing || event.repeat || !vimEnabled || event.ctrlKey || event.metaKey || event.altKey ||
+        regioning || historySaving || find("button[type=submit]").disabled || !document.querySelector(".vp-doc") ||
+        event.composedPath().some(node => node.matches?.("input, textarea, select, button, [contenteditable]:not([contenteditable='false']), [role='textbox']"))) return;
+    if (!history.hidden) {
+      if (!selectedThread) return;
+      event.preventDefault();
+      find(".thread-region").click();
+    } else if (!panel.hidden) {
+      event.preventDefault();
+      regionDraft();
+    } else if (!pop.hidden && popComment) {
+      event.preventDefault();
+      const comment = popComment;
+      regionThread(ids => update(comment, { addImages: ids }));
+    } else {
+      event.preventDefault();
+      regionComment();
+    }
+  });
   function context(element, kind, quote) {
     const doc = element.closest(".vp-doc");
     const before = node => node === element || node.contains(element) ||
@@ -574,7 +785,7 @@
   async function open(chosen, anchor) {
     if (historySaving) return;
     closeHistory();
-    if (JSON.stringify(chosen) !== JSON.stringify(target)) draftId = undefined;
+    if (JSON.stringify(chosen) !== JSON.stringify(target)) { draftId = undefined; draftImages = []; renderShots(); }
     targetAnchor = anchor || (selection() && getSelection().getRangeAt(0).cloneRange()) ||
       (JSON.stringify(chosen) === JSON.stringify(target) ? targetAnchor : undefined);
     target = chosen;
@@ -729,11 +940,13 @@
       if (!sessionId) sessionId = (await api("status")).sessionId;
       const asNote = noteRequested;
       noteRequested = false;
-      await api("comments", { ...target, id: draftId, sessionId, comment: submittedText, ...(asNote ? { note: true } : {}) });
+      await api("comments", { ...target, id: draftId, sessionId, comment: submittedText, ...(draftImages.length ? { images: draftImages.map(shot => shot.id) } : {}), ...(asNote ? { note: true } : {}) });
       message(asNote ? "Saved as private note" : "Saved · awaiting review");
       statusTimer = setTimeout(() => message(""), 5000);
       textarea.value = "";
       draftId = undefined;
+      draftImages = [];
+      renderShots();
       shadow.activeElement?.blur();
       panel.hidden = true;
       getSelection()?.removeAllRanges();
@@ -926,6 +1139,7 @@
   }
   function showMark(mark, at) {
     const { comment } = mark;
+    popComment = comment;
     setTimeout(() => markSeen(comment), 0);
     const state = document.createElement("small");
     const replies = comment.replies.length;
@@ -968,7 +1182,8 @@
     }
     actions.append(button("Remove highlight", () => update(comment, { removed: true }).then(() => { pop.hidden = true; })));
     if (comment.note) actions.append(button("Send to Copilot", () => redo({ promote: true })));
-    actions.append(button("Note", () => send(true)), button("Send", () => send()));
+    actions.append(button("Region", () => regionThread(ids => redo({ addImages: ids }))),
+      button("Note", () => send(true)), button("Send", () => send()));
     pop.replaceChildren(state, colors, ...notes, input, actions);
     pop.hidden = false;
     pop.style.left = `${Math.max(12, Math.min(at.left, innerWidth - pop.offsetWidth * uiScale() - 12))}px`;

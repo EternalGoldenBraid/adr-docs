@@ -39,13 +39,16 @@ export function previewComments({ connectionFile }) {
           return fail(403, "Only the configured preview may access comments.");
         }
         const path = request.url.slice(base.length);
-        if (!["/status", "/comments", "/history", "/updates"].includes(path)) return fail(404, "Unknown comment endpoint.");
+        const known = ["/status", "/comments", "/history", "/updates", "/attachments"].includes(path) ||
+          request.method === "GET" && /^\/attachments\/[\da-f]{64}$/.test(path);
+        if (!known) return fail(404, "Unknown comment endpoint.");
         const upstream = httpRequest({
           hostname: "127.0.0.1", port: connection.port, path, method: request.method,
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${connection.token}` },
+          headers: { "Content-Type": request.headers["content-type"] || "application/json", Authorization: `Bearer ${connection.token}` },
         }, result => {
           response.writeHead(result.statusCode, {
-            "Content-Type": "application/json", "Cache-Control": "no-store",
+            "Content-Type": result.headers["content-type"] || "application/json",
+            "Cache-Control": result.headers["cache-control"] || "no-store",
           });
           result.pipe(response);
         });
