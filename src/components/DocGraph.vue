@@ -314,14 +314,29 @@ onMounted(async () => {
 
   // Same controls as the static graph: two-finger swipe pans, pinch (ctrl+wheel) zooms.
   host.value.addEventListener('wheel', e => {
-    e.preventDefault()
     if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) {
       // Some systems turn Shift+swipe into horizontal scroll, hence the deltaX fallback
       const dy = e.deltaY || e.deltaX
       const r = host.value.getBoundingClientRect()
-      const level = Math.min(cy.maxZoom(), Math.max(cy.minZoom(), cy.zoom() * Math.exp(-dy * (e.ctrlKey || e.metaKey ? 0.01 : 0.006))))
+      const model = cy.nodes().filter(n => n.style('display') !== 'none').boundingBox()
+      const floor = Math.max(cy.minZoom(), 0.5 * Math.min((cy.width() - 80) / Math.max(model.w, 1), (cy.height() - 80) / Math.max(model.h, 1)))
+      const level = Math.min(cy.maxZoom(), Math.max(floor, cy.zoom() * Math.exp(-dy * (e.ctrlKey || e.metaKey ? 0.01 : 0.006))))
+      // At a zoom limit the gesture falls through to the browser instead of being swallowed
+      if (level === cy.zoom()) return
+      e.preventDefault()
       cy.zoom({ level, renderedPosition: { x: e.clientX - r.left, y: e.clientY - r.top } })
-    } else cy.panBy({ x: -e.deltaX, y: -e.deltaY })
+      return
+    }
+    // Keep some content in view; once panned to the edge, the page scrolls instead.
+    const bb = cy.nodes().filter(n => n.style('display') !== 'none').renderedBoundingBox()
+    const keep = 60
+    const pan = cy.pan()
+    const x = Math.min(Math.max(-e.deltaX, keep - bb.x2), cy.width() - keep - bb.x1)
+    const y = Math.min(Math.max(-e.deltaY, keep - bb.y2), cy.height() - keep - bb.y1)
+    const moves = (e.deltaX && Math.abs(x) > 0.5 && Math.sign(x) === Math.sign(-e.deltaX)) || (e.deltaY && Math.abs(y) > 0.5 && Math.sign(y) === Math.sign(-e.deltaY))
+    if (!moves) return
+    e.preventDefault()
+    cy.pan({ x: pan.x + x, y: pan.y + y })
   }, { passive: false })
 
   // Lets the doc-review overlay comment on canvas nodes and edges

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.16.2 - 2026-11-13
+
+- DocGraph scrolling: zoom-out stops at half the fit level, a swipe pans only while some content stays in view, and at either limit the gesture falls through so the page scrolls.
+
 ## 0.16.1 - 2026-11-13
 
 - Agent threads about the whole page or the session show as a red banner at the top; clicking opens the thread.
