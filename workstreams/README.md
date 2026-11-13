@@ -8,8 +8,14 @@ Front matter:
 ```
 ---
 status: proposed
+title: Short name
+summary: One line saying what is asked.
 ---
 ```
+
+`index.md` is generated from this front matter (`npm run workstreams`) and is
+what the preview shows; open it with `npm run preview -- workstreams/index.md`
+to browse and comment on the backlog.
 
 | status | meaning |
 | --- | --- |

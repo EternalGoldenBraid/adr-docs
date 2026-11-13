@@ -1,5 +1,7 @@
 ---
 status: done
+title: Selection tool
+summary: `s` region screenshot attached to comments/threads (done in 0.6.0, unpushed).
 ---
 # Selection tool (region-select attach)
 

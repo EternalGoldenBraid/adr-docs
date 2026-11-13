@@ -1,5 +1,7 @@
 ---
 status: accepted
+title: Markers at comment location
+summary: Place comment markers at the commented element instead of a right-hand column.
 ---
 # Comment markers at the comment location
 

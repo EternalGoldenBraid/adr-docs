@@ -1,5 +1,7 @@
 ---
 status: accepted
+title: Agent-authored comments
+summary: Let agents open new threads on a page, node or edge.
 ---
 # Agent-authored comment threads
 
