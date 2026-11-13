@@ -1,5 +1,6 @@
-import { readdirSync, readFileSync, utimesSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, utimesSync } from "node:fs";
 import { basename, join, relative } from "node:path";
+import { readBoard } from "./workstreams.mjs";
 
 const frontOf = text => text.match(/^---\n([\s\S]*?)\n---/)?.[1] ?? "";
 const isUnpublished = text => /^publish:\s*false\s*$/m.test(frontOf(text));
@@ -86,7 +87,14 @@ export function treeJsonPlugin(documentRoot) {
   };
 }
 
+// Status chips for links to workstream pages: id -> { status, owner, done, total }.
+function workstreamSummary(documentRoot) {
+  const directory = join(documentRoot, "workstreams");
+  if (!existsSync(directory)) return {};
+  return Object.fromEntries(readBoard(directory).items.map(i => [i.id, { status: i.status, owner: i.owner, done: i.steps.done, total: i.steps.total }]));
+}
+
 export function treeThemeConfig(documentRoot, options) {
   const pages = readPageTree(documentRoot, options);
-  return { nav: topBar(pages), pageTree: pages };
+  return { nav: topBar(pages), pageTree: pages, workstreams: workstreamSummary(documentRoot) };
 }
