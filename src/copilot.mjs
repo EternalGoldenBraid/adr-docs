@@ -3,6 +3,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { commentAttention } from "../scripts/preview_comments/extension.mjs";
 import { startDocumentPreview } from "./preview.mjs";
+import { readBoard } from "./workstreams.mjs";
 
 export async function connectDocumentReview({
   joinSession: joinOverride, startPreview = startDocumentPreview,
@@ -52,6 +53,11 @@ export async function connectDocumentReview({
         finally { starting = undefined; }
         return JSON.stringify({ url: active.url, document: active.document, feedback: "Attached to this Copilot session." });
       },
+    }, {
+      name: "list_workstreams",
+      description: "Return the workstream board as JSON: front matter (title, status, owner, summary, requester, date, depends_on) and checklist step progress for each workstreams/*.md file, plus counts per status.",
+      parameters: { type: "object", properties: { directory: { type: "string", description: "Absolute path of the workstreams directory (default: ./workstreams)." } } },
+      handler: args => JSON.stringify(readBoard(args.directory ?? join(process.cwd(), "workstreams"))),
     }, {
       name: "read_doc_review_comments",
       description: "Fetch unread document feedback and persist read receipts. Reading does not resolve threads.",

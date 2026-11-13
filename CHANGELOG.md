@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.22.0 - 2026-11-14
+
+- **Native workstreams:** one front-matter schema (`title`, `status` = proposed/queued/active/blocked/done/declined, `owner`, `requester`, `date`, `summary`, `depends_on`), checklist steps counted as progress, and a generated index grouped by status (owner, steps, dependency links). `npm run workstreams -- --json` and the new `list_workstreams` agent tool return the board as JSON. Legacy `accepted`/`in-progress` read as `queued`/`active`.
+
 ## 0.21.0 - 2026-11-14
 
 - **`<RerunViewer src="…/x.rrd" :height="560" />`:** embeds the hosted Rerun web viewer (timeline and playback inside the page, dark theme). `src` is an absolute URL or a path served from `public/`; optional `version` (default `latest`). Example page: `examples/rerun.md`.
