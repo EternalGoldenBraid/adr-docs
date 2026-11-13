@@ -36,6 +36,11 @@ function identifier(value, name) {
   return id;
 }
 
+const MAX_IMAGES = 4;
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const IMAGE_ID = /^[\da-f]{64}$/;
+const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
 class CommentConflict extends Error {}
 
 export async function startCommentBridge({
@@ -44,6 +49,9 @@ export async function startCommentBridge({
   const root = realpathSync(documentRoot);
   const directory = join(storageRoot, sessionId);
   mkdirSync(directory, { recursive: true, mode: 0o700 });
+  const attachments = join(directory, "attachments");
+  mkdirSync(attachments, { recursive: true, mode: 0o700 });
+  const imageFile = id => join(attachments, id + ".png");
   const log = join(directory, "comments.jsonl");
   const connectionFile = join(directory, "connection.json");
   const records = existsSync(log)
@@ -95,6 +103,10 @@ export async function startCommentBridge({
           wake ||= !target.note && !comment.note;
         }
       }
+      if (record.addImages) {
+        comment.images = [...new Set([...(comment.images || []), ...record.addImages])];
+        wake = true;
+      }
       if (record.removeReply) comment.replies = comment.replies.filter(item => item.id !== record.removeReply);
       if (record.resolved !== undefined) comment.resolved = record.resolved;
       if (record.color !== undefined) comment.color = record.color;
@@ -109,6 +121,23 @@ export async function startCommentBridge({
   }
   for (const record of records) apply(record);
   const token = randomUUID();
+
+  function imageIds(value) {
+    if (value === undefined) return [];
+    if (!Array.isArray(value) || value.length > MAX_IMAGES) throw new Error(`images must list at most ${MAX_IMAGES} attachments.`);
+    return [...new Set(value.map(id => {
+      if (typeof id !== "string" || !IMAGE_ID.test(id) || !existsSync(imageFile(id))) throw new Error("Unknown image attachment.");
+      return id;
+    }))];
+  }
+  function saveImage(bytes) {
+    if (bytes.length < PNG.length || !bytes.subarray(0, PNG.length).equals(PNG)) throw new Error("Attachments must be PNG images.");
+    const id = createHash("sha256").update(bytes).digest("hex");
+    if (!existsSync(imageFile(id))) writeFileSync(imageFile(id), bytes, { mode: 0o600 });
+    return id;
+  }
+  const withFiles = comment => comment.images?.length
+    ? { ...comment, imageFiles: comment.images.map(imageFile) } : comment;
 
   function unread() {
     return [...comments.values()].filter(comment => !comment.seen);
@@ -128,6 +157,7 @@ export async function startCommentBridge({
       throw new Error("The document is outside the preview root.");
     }
     if (!["text", "equation", "figure", "node", "edge"].includes(input.kind)) throw new Error("Invalid comment target.");
+    const images = imageIds(input.images);
     return {
       id, url: url.href, source,
       section: field(input.section, "Section", 512),
@@ -138,6 +168,7 @@ export async function startCommentBridge({
       ...(input.highlight === true ? { highlight: true } : {}),
       ...(input.note === true && input.highlight !== true ? { note: true } : {}),
       color: COLORS.includes(input.color) ? input.color : "yellow",
+      ...(images.length ? { images } : {}),
     };
   }
 
@@ -165,11 +196,16 @@ export async function startCommentBridge({
     if (author === "user" && input.editReply) {
       value.editReply = { id: identifier(input.editReply.id, "Reply ID"), text: field(input.editReply.text, "Reply", 8192) };
     }
+    if (author === "user" && input.addImages !== undefined) {
+      const ids = imageIds(input.addImages);
+      if (ids.length) value.addImages = ids;
+    }
     if (author === "user" && input.removeReply) value.removeReply = identifier(input.removeReply, "Reply ID");
     if (author === "user" && typeof input.removed === "boolean") value.removed = input.removed;
     if (value.reply === undefined && value.resolved === undefined && value.color === undefined && value.removed === undefined && !value.clear &&
-        !value.promote && value.editComment === undefined && !value.editReply && !value.removeReply) {
-      throw new Error("An update needs a reply, resolved state, colour, edit or removal.");
+        !value.promote && value.editComment === undefined && !value.editReply && !value.removeReply &&
+        !value.addImages) {
+      throw new Error("An update needs a reply, resolved state, colour, image, edit or removal.");
     }
     const previous = updates.get(value.id);
     if (previous && JSON.stringify(previous.input) !== JSON.stringify(value)) {
@@ -202,17 +238,30 @@ export async function startCommentBridge({
       if (request.method === "GET" && request.url === "/history") {
         return reply(response, 200, { sessionId, revision, comments: [...comments.values()] });
       }
-      if (request.method !== "POST" || !["/comments", "/updates"].includes(request.url)) {
+      const download = request.method === "GET" && /^\/attachments\/([\da-f]{64})$/.exec(request.url);
+      if (download) {
+        if (!existsSync(imageFile(download[1]))) return reply(response, 404, { error: "Unknown image attachment." });
+        response.writeHead(200, { "Content-Type": "image/png", "Cache-Control": "private, max-age=31536000, immutable" });
+        return response.end(readFileSync(imageFile(download[1])));
+      }
+      if (request.method !== "POST" || !["/comments", "/updates", "/attachments"].includes(request.url)) {
         return reply(response, 404, { error: "Unknown comment endpoint." });
       }
       const chunks = [];
       let size = 0;
       for await (const chunk of request) {
         size += chunk.length;
-        if (size > 24_576) {
+        if (size > (request.url === "/attachments" ? MAX_IMAGE_BYTES : 24_576)) {
           return reply(response, 413, { error: "Comment request is too large." });
         }
         chunks.push(chunk);
+      }
+      if (request.url === "/attachments") {
+        try {
+          return reply(response, 200, { id: saveImage(Buffer.concat(chunks)) });
+        } catch (error) {
+          return reply(response, 400, { error: error.message });
+        }
       }
       let input;
       try {
@@ -258,7 +307,7 @@ export async function startCommentBridge({
   }), { mode: 0o600 });
   return {
     connectionFile,
-    list: () => [...comments.values()],
+    list: () => [...comments.values()].map(withFiles),
     update: (input, author = "copilot") => saveUpdate(normalizeUpdate(input, author)),
     pending: () => {
       const rows = unread();
@@ -266,7 +315,7 @@ export async function startCommentBridge({
     },
     read: ({ includeSeen = false } = {}) => {
       const rows = unread();
-      const result = includeSeen ? [...comments.values()] : rows;
+      const result = (includeSeen ? [...comments.values()] : rows).map(withFiles);
       if (rows.length) {
         const receipt = { event: "seen", ids: rows.map(comment => comment.id), at: new Date().toISOString() };
         append(log, receipt);

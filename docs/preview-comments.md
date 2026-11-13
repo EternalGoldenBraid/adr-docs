@@ -54,6 +54,7 @@ native input.
 | `L` / `H` | Move to the top or bottom of the visible document. |
 | `v` | Enter visual selection; motions extend the selection. Press again to return to normal mode. |
 | `c` in visual mode, or `-c` | Open a comment on the selection. `-c` also resumes an unsent draft. |
+| `s` | Select a region and attach its screenshot (see below). |
 | `-h` | Open comment history. |
 | `Space` inside a caveat | Open or close its details. |
 | `Esc` | Leave visual mode or close a panel, preserving drafts. |
@@ -64,6 +65,21 @@ Textareas and other form controls retain their native input behavior, as do
 modified browser shortcuts. Mouse selection and equation/figure commenting
 remain available. A browser without `Selection.modify` reports that keyboard
 selection is unsupported.
+
+## Region screenshots
+
+Press `s` in normal mode, drag a rectangle, and the crop opens a comment
+with the image attached (up to four; **Region** in the panel adds more and
+× removes one). With a history thread open, or a margin bubble's popover
+showing, and no text box focused, `s` (or **Region**) attaches the crop to
+that thread instead. `Esc` cancels the selection.
+
+Capture uses the browser's screen capture (`getDisplayMedia`): choose **this
+tab** in the one-time sharing prompt; later crops reuse it until sharing
+stops. The overlay is hidden while the frame is taken. Crops are stored as
+PNGs under `<session>/attachments/` and referenced from the comment
+record; `get_preview_comments` returns each image's absolute path in
+`imageFiles`, which the agent can open with its image viewer.
 
 ## Connecting a session
 
