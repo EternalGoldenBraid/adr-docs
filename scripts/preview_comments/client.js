@@ -33,17 +33,39 @@
       .history{width:min(var(--pw,720px),calc(100vw - 48px));max-height:min(var(--ph,100vh),calc(100vh - 120px));overflow:auto}
       .history-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
       select{font:inherit;padding:6px;background:#292d35;color:#eee;border:1px solid #59616d;border-radius:6px}
-      .thread-card{display:block;width:100%;text-align:left;margin:10px 0;padding:12px}
-      .thread-links{margin:8px 0;display:grid;gap:4px}.thread-links .link-row{display:flex;gap:4px}
-      .thread-links .link-row button:first-child{flex:1;text-align:left}.thread-links select{width:100%}
-      .thread-card{border-left:4px solid #444c56}
-      .thread-card.unread{border-left-color:#e3b341;background:rgba(227,179,65,.14)}
-      .thread-card.waiting{border-left-color:#f85149;background:rgba(248,81,73,.16)}
+      .history{padding:0}.history>*{margin-left:20px;margin-right:20px}
+      .history-head{margin:0!important;padding:14px 20px 8px;position:sticky;top:0;background:#1b1d22;z-index:2}
+      .thread{margin:0!important}.thread>*{margin-left:20px;margin-right:20px}
+      .history-head h2{margin:0}.history-head .history-counts{margin-left:auto;margin-right:12px}
+      .icon{padding:2px 9px;border-radius:6px;line-height:1.4}
+      .tabs{display:flex;gap:2px;margin-top:4px!important;margin-bottom:6px!important;border-bottom:1px solid #3a404a}
+      .tab{border:0;border-bottom:2px solid transparent;border-radius:0;background:none;padding:6px 10px;color:#b7c1ce}
+      .tab[aria-selected=true]{color:#fff;border-bottom-color:#74c0fc}
+      .thread-list{padding-bottom:12px}.thread-list:empty{display:none}
+      .thread-card{display:block;width:100%;text-align:left;margin:3px 0;padding:7px 10px;border-radius:6px;border:1px solid transparent;background:#22262d;border-left:4px solid #444c56}
+      .thread-card:focus-visible{outline:0;border-color:#74c0fc;background:#2a3140}
+      .thread-card .row-top{display:flex;gap:8px;align-items:baseline}.thread-card .row-top strong{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .badge{font-size:11px;color:#b7c1ce;white-space:nowrap}
+      .thread-card.unread{border-left-color:#e3b341;background:rgba(227,179,65,.12)}
+      .thread-card.waiting{border-left-color:#f85149;background:rgba(248,81,73,.14)}
       .thread-card.open{border-left-color:#58a6ff}
       .thread-card.done{opacity:.55}
-      .thread-card small{display:block}.preview{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
-      .thread-state{margin:12px 0;color:#b7c1ce}.thread-state.resolved{color:#a2d8b1}
-      .note{margin:12px 0;padding:12px;background:#252a32;border-radius:6px}
+      .thread-card:focus-visible.unread,.thread-card:focus-visible.waiting{border-color:#74c0fc}
+      .thread-card small{display:block}.preview{display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;color:#c9d1d9}
+      .thread-head{display:flex;gap:8px;align-items:center;margin:0 0 8px!important;padding:10px 20px;position:sticky;top:44px;background:#1b1d22;z-index:1;border-bottom:1px solid #3a404a}
+      .thread-title{flex:1;min-width:0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .thread-head a{white-space:nowrap}.thread-head button{padding:4px 10px}
+      .thread-state{display:block;width:max-content;margin:2px 20px 8px;padding:1px 10px;border-radius:999px;background:#2a2f38;color:#b7c1ce;font-size:12px}.thread-state.resolved{color:#a2d8b1}
+      .thread-links{display:flex;flex-wrap:wrap;gap:6px;margin:4px 20px 8px}
+      .chip{padding:2px 10px;border-radius:999px;font-size:12px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .chip-x{margin-left:-6px;padding:2px 7px}
+      .thread-links select{width:auto;max-width:180px;border-radius:999px;padding:2px 8px;font-size:12px}
+      details.quote-box{margin-bottom:8px}details.quote-box summary{cursor:pointer;color:#b7c1ce;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .reply-form{position:sticky;bottom:0;margin:0!important;padding:10px 20px 14px;background:#1b1d22;border-top:1px solid #3a404a}
+      .reply-form textarea{min-height:56px}.reply-form .actions{margin-top:8px}
+      .thread-messages{padding-bottom:6px}
+      .note{margin:8px 0;padding:8px 12px;background:#252a32;border-radius:10px}.note.copilot{background:#1e2a3a;margin-right:36px}.note.mine{margin-left:36px}
+      .note .tools{opacity:0;transition:opacity .1s}.note:hover .tools,.note:focus-within .tools{opacity:1}
       .note p{margin:6px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
       a{color:#74c0fc}
       .contextual{display:flex;gap:6px;align-items:center;padding:6px;background:#1b1d22;border:1px solid #59616d;border-radius:10px;box-shadow:0 8px 24px #0008}
@@ -64,7 +86,7 @@
       .bubble.fresh::after,.pill.alert::before{content:"";position:absolute;top:-5px;right:-5px;width:10px;height:10px;border-radius:50%;background:#ff5a4f;border:2px solid #1b1d22;animation:ping 1.6s ease-out infinite}
       .pill{position:relative}.pill.alert{border-color:#ff5a4f}.pill.alert::before{top:-4px;right:-2px}
       @keyframes ping{0%{box-shadow:0 0 0 0 #ff5a4faa}100%{box-shadow:0 0 0 9px #ff5a4f00}}
-      .note .tools{display:flex;gap:6px;margin-top:6px}.note .tools button{padding:2px 8px;font-size:12px}
+      .note{position:relative}.note .tools{display:flex;gap:6px;position:absolute;top:4px;right:8px;margin:0}.note .tools button{padding:2px 8px;font-size:12px}
       .note.private{border-left:3px solid #ffb02e}.note textarea{width:100%;box-sizing:border-box;min-height:54px}
       .shots{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.shots:empty{display:none}
       .shot{position:relative}.shot img{display:block;max-width:120px;max-height:90px;border:1px solid #59616d;border-radius:6px}
@@ -83,24 +105,22 @@
       <div class="actions"><button type="button" class="attach-region" title="Attach a screenshot of a region (s)">Region</button><button type="button" class="cancel">Cancel</button><button type="button" class="note-save">Save as note</button><button class="primary" type="submit">Send</button></div></form>
     </section>
     <section class="panel history" hidden aria-labelledby="history-title">
-      <div class="history-head"><h2 id="history-title">Comment history</h2>
-      <button class="history-close" type="button">Close</button></div>
-      <small class="history-counts"></small>
-      <label for="history-filter">Show</label>
-      <select id="history-filter"><option value="page">This page · open</option><option value="chat">Page &amp; chat · open</option><option value="all">All comments</option>
-      <option value="unresolved">Unresolved</option><option value="resolved">Resolved</option></select>
-      <button class="history-refresh" type="button">Refresh</button>
-      <div class="thread-list"></div>
+      <div class="history-head"><h2 id="history-title">Comment history</h2><small class="history-counts"></small>
+      <button class="history-refresh icon" type="button" title="Refresh">↻</button>
+      <button class="history-close icon" type="button" title="Close (Esc)" aria-label="Close">✕</button></div>
+      <div class="tabs" role="tablist"></div>
+      <div class="thread-list" role="listbox"></div>
       <section class="thread" hidden>
-        <div class="actions"><button class="thread-back" type="button">Back</button>
-        <a class="thread-source">Open page</a></div>
+        <div class="thread-head"><button class="thread-back icon" type="button" title="Back (h)">‹</button>
+        <span class="thread-title"></span>
+        <a class="thread-source" title="Open page (o)">↗ page</a>
+        <button class="thread-resolve" type="button" title="Resolve / reopen (r)">Resolve</button></div>
         <div class="thread-state"></div>
-        <details><summary>Selected content</summary><div class="quote thread-quote"></div></details>
+        <details class="quote-box"><summary class="quote-summary">Selected content</summary><div class="quote thread-quote"></div></details>
         <div class="thread-links"></div>
         <div class="thread-messages"></div>
-        <form class="reply-form"><label for="thread-reply">Your reply</label>
-        <textarea id="thread-reply" required maxlength="4000"></textarea>
-        <div class="actions"><button class="thread-region" type="button" title="Attach a screenshot of a region (s)">Region</button><button class="thread-resolve" type="button">Resolve</button>
+        <form class="reply-form"><textarea id="thread-reply" aria-label="Your reply" placeholder="Reply (i to focus · Ctrl+Enter sends · Esc leaves)" required maxlength="4000"></textarea>
+        <div class="actions"><button class="thread-region" type="button" title="Attach a screenshot of a region (s)">Region</button>
         <button class="primary reply-send" type="submit">Reply</button></div></form>
       </section>
     </section>
@@ -139,6 +159,9 @@
   let historyComments = [];
   let historyRevision = -1;
   let selectedThread;
+  let historyFilter = "page";
+  let pendingFocus;
+  const FILTERS = [["page", "This page"], ["chat", "Chat"], ["unresolved", "Open"], ["all", "All"], ["resolved", "Resolved"]];
   let historyTimer;
   let historySaving = false;
   const vimButton = find(".vim-mode");
@@ -182,7 +205,9 @@
     vimButton.textContent = "Vim";
     const bar = find(".statusbar");
     bar.hidden = !vimEnabled;
-    find(".sb-hint").textContent = visual ? "c comment · Esc cancel · hjkl extend" : `${KM.page.visual} select text · ${KM.page.comment} comment · ${KM.leader}${KM.leaderKeys.history} threads · : commands · :help`;
+    find(".sb-hint").textContent = !history.hidden ? (selectedThread
+      ? "j/k next/prev thread · r resolve · i reply · o open page · s region · h back · Esc"
+      : "j/k move · l open · r resolve · [ ] tabs · g/G ends · Esc close") : visual ? "c comment · Esc cancel · hjkl extend" : `${KM.page.visual} select text · ${KM.page.comment} comment · ${KM.leader}${KM.leaderKeys.history} threads · : commands · :help`;
     find(".sb-mode").textContent = `-- ${mode}${prefix ? " " + prefix : ""} --`;
     vimButton.setAttribute("aria-pressed", String(vimEnabled));
   }
@@ -191,6 +216,7 @@
     `h/j/k/l/w/b/0/$ move · ${KM.page.visual} select · ${KM.page.comment} comment (page if nothing selected)`,
     `${KM.page.region} region screenshot · ${KM.leader}${KM.leaderKeys.history} history · ${KM.leader}${KM.leaderKeys.chat} session chat`,
     `${KM.resize.narrower}/${KM.resize.wider}/${KM.resize.shorter}/${KM.resize.taller} resize panel · t page tree`,
+    "In history: j/k move · l open · r resolve · h back · [ ] tabs · i reply · o page",
     "Commands: :help :history :chat :comment :tree :vim off|on :keys",
     "Keys are configured in ~/.config/agent-doc-review/keymap.json",
   ].join("\n");
@@ -372,7 +398,7 @@
   }
   function renderNote(author, text, at, opts = {}) {
     const note = document.createElement("article");
-    note.className = opts.note ? "note private" : "note";
+    note.className = `${opts.note ? "note private" : "note"} ${author === "Copilot" ? "copilot" : "mine"}`;
     const label = document.createElement("small");
     label.textContent = `${author}${opts.note ? " · private note" : ""} · ${new Date(at).toLocaleString()}${opts.edited ? " · edited" : ""}`;
     const body = document.createElement("p");
@@ -492,9 +518,17 @@
     const resolved = historyComments.filter(comment => comment.resolved).length;
     find(".history-counts").textContent = `${historyComments.length - resolved} unresolved · ${resolved} resolved`;
     const list = find(".thread-list");
-    const focusedComment = shadow.activeElement?.dataset.commentId;
+    const focusedComment = pendingFocus ?? shadow.activeElement?.dataset.commentId;
+    pendingFocus = undefined;
+    find(".tabs").replaceChildren(...FILTERS.map(([value, label]) => {
+      const tab = document.createElement("button");
+      tab.type = "button"; tab.className = "tab"; tab.textContent = label; tab.dataset.filter = value;
+      tab.setAttribute("role", "tab"); tab.setAttribute("aria-selected", String(value === historyFilter));
+      tab.addEventListener("click", () => setFilter(value));
+      return tab;
+    }));
     list.replaceChildren();
-    const filter = find("#history-filter").value;
+    const filter = historyFilter;
     const rows = [...historyComments].sort((a, b) => new Date(b.updatedAt || b.at) - new Date(a.updatedAt || a.at));
     for (const comment of rows) {
       if (comment.removed) continue;
@@ -506,20 +540,22 @@
       card.className = "thread-card";
       card.dataset.commentId = comment.id;
       card.classList.add(comment.resolved ? "done" : awaiting(comment) ? "waiting" : comment.seen || comment.note ? "open" : "unread");
-      const label = document.createElement("small");
-      label.textContent = `${comment.resolved ? "Resolved" : "Unresolved"} · ${comment.seen ? "Read" : "Unread"} by Copilot · ${comment.replies.length} ${comment.replies.length === 1 ? "reply" : "replies"}`;
+      const top = document.createElement("div");
+      top.className = "row-top";
       const section = document.createElement("strong");
       section.textContent = comment.section;
+      const badge = document.createElement("span");
+      badge.className = "badge";
+      const links = (comment.refs?.length || 0) + historyComments.filter(c => !c.removed && c.refs?.includes(comment.id)).length;
+      badge.textContent = [comment.resolved ? "resolved" : awaiting(comment) ? "awaiting you" : comment.seen || comment.note ? "" : "unread",
+        comment.replies.length ? `💬${comment.replies.length}` : "", links ? `🔗${links}` : "",
+        comment.kind !== "session" && pagePath(comment.url) !== pagePath(location.href) ? pagePath(comment.url) : ""].filter(Boolean).join(" · ");
+      top.append(section, badge);
       const text = document.createElement("div");
       text.className = "preview";
       text.textContent = comment.comment || "Highlight";
-      card.append(label, section, text);
-      card.addEventListener("click", () => {
-        selectedThread = comment.id;
-        replyInput.value = replyDrafts.get(comment.id)?.text || "";
-        renderHistory();
-        find(".thread-back").focus();
-      });
+      card.append(top, text);
+      card.addEventListener("click", () => selectThread(comment.id));
       list.append(card);
     }
     if (!list.children.length) list.textContent = "No comments match this filter.";
@@ -529,16 +565,46 @@
     if (!comment && focusedComment) {
       [...list.children].find(card => card.dataset.commentId === focusedComment)?.focus();
     }
+    modeLabel();
     if (!comment) return;
+    find(".thread-title").textContent = comment.section;
     find(".thread-source").href = comment.url;
     if (find(".thread-quote").textContent !== comment.quote) find(".thread-quote").textContent = comment.quote;
     const state = find(".thread-state");
     state.textContent = `${comment.resolved ? "Resolved" : "Unresolved"} · ${comment.note ? "Private note" : comment.seen ? "Read by Copilot" : "Unread by Copilot"}`;
+    const quoteLine = (comment.quote || "").replace(/\s+/g, " ");
+    find(".quote-summary").textContent = quoteLine ? `“${quoteLine.slice(0, 90)}${quoteLine.length > 90 ? "…" : ""}”` : "Selected content";
     state.classList.toggle("resolved", comment.resolved);
     find(".thread-resolve").textContent = comment.resolved ? "Reopen" : "Resolve";
     markSeen(comment);
     renderLinks(comment);
     find(".thread-messages").replaceChildren(...threadNodes(comment, values => updateThread(values)));
+  }
+  function selectThread(id) {
+    selectedThread = id;
+    replyInput.value = replyDrafts.get(id)?.text || "";
+    renderHistory();
+    find(".thread-back").focus();
+  }
+  function setFilter(value) {
+    historyFilter = value;
+    selectedThread = undefined;
+    renderHistory();
+    find(`.tab[data-filter="${value}"]`)?.focus();
+  }
+  function leaveThread() {
+    pendingFocus = selectedThread;
+    selectedThread = undefined;
+    renderHistory();
+  }
+  // Resolve a thread and land on its neighbour so a run of `r` clears the list.
+  function triage(id) {
+    const comment = historyComments.find(c => c.id === id);
+    if (!comment || historySaving) return;
+    const ids = [...find(".thread-list").children].map(card => card.dataset.commentId);
+    const at = ids.indexOf(id);
+    pendingFocus = selectedThread === id && comment.resolved ? id : ids[at + 1] ?? ids[at - 1];
+    return updateThread({ id: crypto.randomUUID(), resolved: !comment.resolved }, id);
   }
   // Awaiting: a thread the agent started, still open, with the agent's message last.
   const awaiting = comment => !comment.resolved && !comment.removed && comment.author === "copilot" &&
@@ -556,30 +622,31 @@
     const out = (comment.refs || []).map(id => live.find(c => c.id === id)).filter(Boolean);
     const back = live.filter(c => c.refs?.includes(comment.id));
     const row = (arrow, other, removable) => {
-      const line = document.createElement("div");
+      const line = document.createElement("span");
       line.className = "link-row";
       const go = document.createElement("button");
-      go.type = "button";
-      go.textContent = `${arrow} ${linkLabel(other)}`;
+      go.type = "button"; go.className = "chip"; go.title = linkLabel(other);
+      go.textContent = `${arrow} ${linkLabel(other).slice(0, 34)}`;
       go.addEventListener("click", () => goToThread(other));
       line.append(go);
       if (removable) {
         const drop = document.createElement("button");
-        drop.type = "button"; drop.textContent = "✕"; drop.title = "Remove link";
+        drop.type = "button"; drop.className = "chip chip-x"; drop.textContent = "✕"; drop.title = "Remove link";
         drop.addEventListener("click", () => updateThread({ id: crypto.randomUUID(), removeRefs: [other.id] }));
         line.append(drop);
       }
       return line;
     };
     const picker = document.createElement("select");
-    picker.append(new Option("Link to another thread…", ""));
+    picker.append(new Option("+ link", ""));
+    picker.title = "Link to another thread";
     for (const c of live) if (!c.resolved && !out.includes(c)) picker.append(new Option(linkLabel(c), c.id));
     picker.addEventListener("change", () => picker.value && updateThread({ id: crypto.randomUUID(), addRefs: [picker.value] }));
     box.replaceChildren(...out.map(c => row("→", c, true)), ...back.map(c => row("←", c, false)), picker);
   }
   async function openThreadById(id) {
     await openHistory();
-    find("#history-filter").value = "all";
+    historyFilter = "all";
     selectedThread = id;
     replyInput.value = replyDrafts.get(id)?.text || "";
     renderHistory();
@@ -652,12 +719,11 @@
     if (history.hidden) return;
     clearInterval(historyTimer);
     historyTimer = setInterval(load, 2000);
-    find(".history-close").focus();
+    (find(".thread-list").querySelector(".thread-card") || find(".history-close")).focus();
   }
-  async function updateThread(values) {
-    const commentId = selectedThread;
+  async function updateThread(values, commentId = selectedThread) {
     historySaving = true;
-    for (const selector of [".reply-send", ".thread-resolve", ".thread-back", ".history-close", ".history-toggle", ".toggle", "#history-filter"]) find(selector).disabled = true;
+    for (const selector of [".reply-send", ".thread-resolve", ".thread-back", ".history-close", ".history-toggle", ".toggle"]) find(selector).disabled = true;
     find(".thread-source").setAttribute("aria-disabled", "true");
     replyInput.readOnly = true;
     try {
@@ -675,7 +741,7 @@
       message(error.message + (values.reply !== undefined ? " Your reply draft is kept; press Reply to retry." : ""), true);
     } finally {
       historySaving = false;
-      for (const selector of [".reply-send", ".thread-resolve", ".thread-back", ".history-close", ".history-toggle", ".toggle", "#history-filter"]) find(selector).disabled = false;
+      for (const selector of [".reply-send", ".thread-resolve", ".thread-back", ".history-close", ".history-toggle", ".toggle"]) find(selector).disabled = false;
       find(".thread-source").removeAttribute("aria-disabled");
       replyInput.readOnly = false;
     }
@@ -683,12 +749,8 @@
   find(".history-toggle").addEventListener("click", () => history.hidden ? openHistory() : closeHistory());
   find(".history-close").addEventListener("click", closeHistory);
   find(".history-refresh").addEventListener("click", () => refreshHistory().catch(historyError));
-  find("#history-filter").addEventListener("change", () => { selectedThread = undefined; renderHistory(); });
   find(".thread-back").addEventListener("click", () => {
-    const previous = selectedThread;
-    selectedThread = undefined;
-    renderHistory();
-    [...find(".thread-list").children].find(card => card.dataset.commentId === previous)?.focus();
+    leaveThread();
   });
   find(".thread-quote").addEventListener("click", () => {
     const m = find(".thread-quote").textContent.match(/^Video (.+) @ (\d+):([\d.]+)$/);
@@ -716,7 +778,7 @@
     updateThread({ id: draft.id, reply: replyInput.value });
   });
   find(".thread-resolve").addEventListener("click", () => {
-    updateThread({ id: crypto.randomUUID(), resolved: !currentThread().resolved });
+    triage(selectedThread);
   });
   let draftImages = [];
   const shots = find(".shots");
@@ -875,6 +937,43 @@
   }
   find(".attach-region").addEventListener("click", regionDraft);
   find(".thread-region").addEventListener("click", () => regionThread(ids => updateThread({ id: crypto.randomUUID(), addImages: ids })));
+  document.addEventListener("keydown", event => {
+    if (history.hidden || !vimEnabled || historySaving || event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
+    const field = shadow.activeElement;
+    if (field?.matches("textarea, input, select")) return;
+    const cards = [...find(".thread-list").querySelectorAll(".thread-card")];
+    const ids = cards.map(card => card.dataset.commentId);
+    const at = cards.indexOf(field);
+    const step = delta => {
+      const next = cards[Math.max(0, Math.min(cards.length - 1, (at < 0 ? (delta > 0 ? -1 : cards.length) : at) + delta))];
+      next?.focus();
+      next?.scrollIntoView({ block: "nearest" });
+    };
+    const key = event.key;
+    let handled = true;
+    if (selectedThread) {
+      const here = ids.indexOf(selectedThread);
+      if (key === "h" || key === "ArrowLeft") leaveThread();
+      else if (key === "r") triage(selectedThread);
+      else if (key === "i") replyInput.focus();
+      else if (key === "o") find(".thread-source").click();
+      else if (key === KM.page.region) find(".thread-region").click();
+      else if ((key === "j" || key === "ArrowDown") && ids[here + 1]) selectThread(ids[here + 1]);
+      else if ((key === "k" || key === "ArrowUp") && here > 0) selectThread(ids[here - 1]);
+      else handled = key === "j" || key === "k";
+      if (key === "o") event.preventDefault();
+    } else if (key === "j" || key === "ArrowDown") step(1);
+    else if (key === "k" || key === "ArrowUp") step(-1);
+    else if (key === "g") step(-Infinity);
+    else if (key === "G") step(Infinity);
+    else if (key === "l" || key === "ArrowRight") { if (at >= 0) cards[at].click(); }
+    else if (key === "r") { if (at >= 0) triage(ids[at]); }
+    else if (key === "[" || key === "]") {
+      const values = FILTERS.map(([value]) => value);
+      setFilter(values[(values.indexOf(historyFilter) + (key === "]" ? 1 : values.length - 1)) % values.length]);
+    } else handled = false;
+    if (handled) event.preventDefault();
+  });
   let popComment;
   document.addEventListener("keydown", event => {
     if (event.key !== KM.page.region || event.isComposing || event.repeat || !vimEnabled || event.ctrlKey || event.metaKey || event.altKey ||
@@ -1029,7 +1128,14 @@
     if (event.key === "Escape") {
       contextual.hidden = true;
       if (find("button[type=submit]").disabled || historySaving) return;
-      if (!history.hidden) { event.preventDefault(); closeHistory(); return; }
+      if (!history.hidden) {
+        event.preventDefault();
+        const field = shadow.activeElement;
+        if (field?.matches("textarea, input, select")) field.blur();
+        else if (selectedThread) leaveThread();
+        else closeHistory();
+        return;
+      }
       if (panel.hidden && !visual && !prefix && !selecting) { message(""); return; }
       if (!panel.hidden || visual || prefix || selecting) event.preventDefault();
       if (visual) {

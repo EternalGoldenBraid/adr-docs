@@ -300,7 +300,7 @@ async (page) => {
     const history = check.locator("#preview-comment-overlay .history");
     await history.waitFor({ state: "visible" });
     assert.match(await mode.textContent(), /HISTORY/);
-    await history.locator("#history-filter").selectOption("resolved");
+    await history.locator(".tab[data-filter=resolved]").click();
     await history.locator(".thread-card").waitFor();
     assert.equal(await history.locator(".thread-card").count(), 1);
     await history.locator(`.thread-card[data-comment-id="${firstThread.id}"]`).click();
@@ -337,7 +337,7 @@ async (page) => {
     await history.locator(".thread-state").filter({ hasText: /\bRead by Copilot$/ }).waitFor();
     assert.equal(await history.locator(".note").first().evaluate(element => element === window.originalHistoryNote), true);
     await history.getByRole("button", { name: "Back", exact: true }).click();
-    await history.locator("#history-filter").selectOption("all");
+    await history.locator(".tab[data-filter=all]").click();
     const otherThread = [...threads.values()].find(thread => thread.id !== firstThread.id);
     await history.locator(`.thread-card[data-comment-id="${otherThread.id}"]`).click();
     assert.equal(await replyInput.inputValue(), "");

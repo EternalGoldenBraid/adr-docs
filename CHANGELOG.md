@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.19.0 - 2026-11-13
+
+- Redesigned history/thread UI: tabs instead of a dropdown, compact rows (state, replies, links), slim thread header with Resolve and page link, link chips, chat-style messages with hover-only Edit/Delete, and a reply box pinned at the bottom.
+- Vim triage in history: `j`/`k` move, `l` open, `r` resolve and advance, `h` back, `[`/`]` tabs, `i` reply, `o` open page. The status bar hint follows the level. Esc steps out (field, thread, panel).
+- New demo clip `thread-triage`; `comment-links` clip uses the keys.
+
 ## 0.18.1 - 2026-11-13
 
 - Demo recorder: `npm run demos` records feature clips (`docs/demos/public/*.webm`) with Playwright; `docs/demos/index.md` plays them. Needs `playwright-core` (dev) and Chromium.
