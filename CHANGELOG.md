@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.19.2 - 2026-11-13
+
+- Inside a thread `j`/`k` step through its messages (and scroll long ones); `g`/`G` jump to first/last message. Next/previous thread moved to `J`/`K`.
+
 ## 0.19.1 - 2026-11-13
 
 - History opens on the **Open** tab (all unresolved threads, every page), so there is a chain to move through.
