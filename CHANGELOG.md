@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.19.4 - 2026-11-13
+
+- Unseen Copilot replies are always surfaced: a resolved thread with a reply you have not seen is listed on the **Open**/**This page**/**Chat** tabs (badge "resolved · new reply") until you view it, so the "N new replies" pill and the history agree. `r` on such a row marks it seen without reopening it.
+
 ## 0.19.3 - 2026-11-13
 
 - The sidebar, top bar and Tree popup follow the document root live: adding, removing or re-parenting a `.md` page (or changing `nav`/`order`/`parent`) reloads the VitePress config and server on the same port. No preview restart needed.

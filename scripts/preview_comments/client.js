@@ -532,14 +532,17 @@
     const rows = [...historyComments].sort((a, b) => new Date(b.updatedAt || b.at) - new Date(a.updatedAt || a.at));
     for (const comment of rows) {
       if (comment.removed) continue;
-      if (filter === "chat" ? comment.resolved || (comment.kind !== "page" && comment.kind !== "session")
-        : filter === "page" ? comment.resolved || (comment.kind !== "session" && pagePath(comment.url) !== pagePath(location.href))
-        : filter !== "all" && comment.resolved !== (filter === "resolved")) continue;
+      // A resolved thread with a reply you have not seen stays listed as open until viewed.
+      const closed = comment.resolved && !hasFresh(comment);
+      if (filter === "chat" ? closed || (comment.kind !== "page" && comment.kind !== "session")
+        : filter === "page" ? closed || (comment.kind !== "session" && pagePath(comment.url) !== pagePath(location.href))
+        : filter === "unresolved" ? closed
+        : filter === "resolved" ? !comment.resolved : false) continue;
       const card = document.createElement("button");
       card.type = "button";
       card.className = "thread-card";
       card.dataset.commentId = comment.id;
-      card.classList.add(comment.resolved ? "done" : awaiting(comment) ? "waiting" : comment.seen || comment.note ? "open" : "unread");
+      card.classList.add(comment.resolved && !hasFresh(comment) ? "done" : awaiting(comment) ? "waiting" : comment.seen || comment.note ? "open" : "unread");
       const top = document.createElement("div");
       top.className = "row-top";
       const section = document.createElement("strong");
@@ -547,7 +550,7 @@
       const badge = document.createElement("span");
       badge.className = "badge";
       const links = (comment.refs?.length || 0) + historyComments.filter(c => !c.removed && c.refs?.includes(comment.id)).length;
-      badge.textContent = [comment.resolved ? "resolved" : awaiting(comment) ? "awaiting you" : comment.seen || comment.note ? "" : "unread",
+      badge.textContent = [comment.resolved ? (hasFresh(comment) ? "resolved · new reply" : "resolved") : awaiting(comment) ? "awaiting you" : comment.seen || comment.note ? "" : "unread",
         comment.replies.length ? `💬${comment.replies.length}` : "", links ? `🔗${links}` : "",
         comment.kind !== "session" && pagePath(comment.url) !== pagePath(location.href) ? pagePath(comment.url) : ""].filter(Boolean).join(" · ");
       top.append(section, badge);
@@ -602,6 +605,13 @@
   function triage(id) {
     const comment = historyComments.find(c => c.id === id);
     if (!comment || historySaving) return;
+    if (comment.resolved && hasFresh(comment)) {
+      const rows = [...find(".thread-list").children].map(card => card.dataset.commentId);
+      pendingFocus = rows[rows.indexOf(id) + 1] ?? rows[rows.indexOf(id) - 1];
+      markSeen(comment);
+      renderHistory();
+      return;
+    }
     const ids = [...find(".thread-list").children].map(card => card.dataset.commentId);
     const at = ids.indexOf(id);
     pendingFocus = selectedThread === id && comment.resolved ? id : ids[at + 1] ?? ids[at - 1];
