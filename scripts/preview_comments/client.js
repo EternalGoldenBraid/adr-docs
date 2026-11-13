@@ -1,5 +1,12 @@
 (() => {
   if (document.getElementById("preview-comment-overlay")) return;
+  if (!window.__adrKeymap?.page) {
+    const bar = document.createElement("div");
+    bar.textContent = "Agent Doc Review: this preview server is older than its client. Reload extensions and restart the preview.";
+    bar.style.cssText = "position:fixed;left:0;right:0;bottom:0;z-index:2147483647;padding:8px 14px;background:#b62324;color:#fff;font:14px system-ui";
+    document.body.append(bar);
+    return;
+  }
   const host = document.createElement("div");
   host.id = "preview-comment-overlay";
   const shadow = host.attachShadow({ mode: "open" });
