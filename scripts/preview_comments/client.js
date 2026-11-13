@@ -1697,6 +1697,30 @@
   applyScale();
   syncMarks();
   setInterval(syncMarks, 3000);
+  // Landing on #anchor (also after SPA navigation): scroll the target clear of the nav bar and flash it.
+  const landing = document.createElement("style");
+  landing.textContent = `@keyframes adr-land{0%,60%{background:rgba(250,204,21,.38);outline:2px solid #facc15}100%{background:transparent;outline:2px solid transparent}}
+    .adr-landed{animation:adr-land 2s ease-out;border-radius:4px;scroll-margin-top:calc(var(--vp-nav-height,64px) + 56px)}
+    @media (prefers-reduced-motion:reduce){.adr-landed{animation:none;background:rgba(250,204,21,.3);transition:background 2s}}`;
+  document.head.append(landing);
+  let landed = "", landTries;
+  function land() {
+    const hash = decodeURIComponent(location.hash.slice(1));
+    const key = location.pathname + "#" + hash;
+    if (key === landed) return;
+    if (!hash || /^(node|edge)-/.test(hash)) { landed = key; return; }
+    const target = document.getElementById(hash);
+    if (!target || !target.closest(".vp-doc")) { if ((landTries = (landTries ?? 0) + 1) > 20) landed = key; return; }
+    landed = key; landTries = undefined;
+    const mark = target.textContent.trim() ? target : target.parentElement;
+    mark.classList.remove("adr-landed");
+    void mark.offsetWidth;
+    mark.classList.add("adr-landed");
+    mark.scrollIntoView({ block: "start", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    setTimeout(() => mark.classList.remove("adr-landed"), 2200);
+  }
+  addEventListener("hashchange", () => { landed = ""; });
+  setInterval(land, 250);
   const agentLine = find(".agent-status");
   async function pollAgent() {
     try {

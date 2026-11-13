@@ -36,6 +36,7 @@ const activeTab = ref('')
 const TOPICS = ref([])
 let cy = null
 let ro = null
+let landOnNode = () => {}
 let moved = false
 
 const SHOW_BODY_ZOOM = 0.55
@@ -307,6 +308,7 @@ onMounted(async () => {
       { selector: 'edge[label]', style: { label: 'data(label)', 'font-size': 14, 'font-weight': 600, color: 'data(color)', 'text-background-color': '#0b1220', 'text-background-opacity': 1, 'text-background-padding': 4, 'text-background-shape': 'round-rectangle' } },
       { selector: 'edge[?dashed]', style: { 'line-style': 'dashed' } },
       { selector: '.dim', style: { opacity: 0.12 } },
+      { selector: '.flash', style: { 'border-color': '#facc15', 'border-width': 6, 'overlay-color': '#facc15', 'overlay-opacity': 0.25, 'overlay-padding': 8 } },
       { selector: ':selected', style: { 'border-color': '#facc15', 'border-width': 4 } },
     ],
     layout: { name: 'preset' },
@@ -365,6 +367,23 @@ onMounted(async () => {
 
 
   showLayer(null)
+  // Links like /page#node-<id> open the node's layer, centre it and flash it.
+  landOnNode = () => {
+    const m = decodeURIComponent(location.hash.slice(1)).match(/^node-(.+)$/)
+    const n = m && cy.getElementById(m[1])
+    if (!n || n.empty()) return
+    const inside = n.data('inside') || null
+    if (layer.value !== inside) showLayer(inside)
+    select(n)
+    const calm = matchMedia('(prefers-reduced-motion: reduce)').matches
+    cy.animate({ center: { eles: n }, zoom: Math.max(cy.zoom(), 1) }, { duration: calm ? 0 : 300 })
+    moved = true
+    n.addClass('flash')
+    setTimeout(() => n.removeClass('flash'), 2000)
+    host.value?.scrollIntoView({ block: 'center', behavior: calm ? 'auto' : 'smooth' })
+  }
+  landOnNode()
+  addEventListener('hashchange', landOnNode)
   ro = new ResizeObserver(() => { cy.resize(); if (!moved) { cy.fit(cy.nodes().filter(n => n.style('display') !== 'none'), 40); moved = false } })
   ro.observe(host.value)
 
@@ -521,7 +540,7 @@ onUnmounted(() => {
   deactivate()
 })
 
-onUnmounted(() => { document.removeEventListener('preview-comment-vim', onVim); delete window.previewCommentTargets; if (ro) ro.disconnect(); if (cy) cy.destroy() })
+onUnmounted(() => { removeEventListener('hashchange', landOnNode); document.removeEventListener('preview-comment-vim', onVim); delete window.previewCommentTargets; if (ro) ro.disconnect(); if (cy) cy.destroy() })
 </script>
 
 <template>
