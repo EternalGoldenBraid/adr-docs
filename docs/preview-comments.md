@@ -225,3 +225,7 @@ A link to `#anchor` scrolls the heading or passage clear of the nav bar and flas
 ## Rerun viewer
 
 `<RerunViewer src="https://host/x.rrd" :height="560" />` embeds the hosted Rerun web viewer. Local files: put the `.rrd` in `public/` and use `src="/x.rrd"`. Comments attach to the page as usual; timestamp quoting is not implemented.
+
+## Workstreams
+
+Tickets in `workstreams/*.md` follow the schema in `workstreams/README.md`. The index page groups them by status; `list_workstreams` (agent tool) or `npm run workstreams -- --json` returns them as JSON.

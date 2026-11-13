@@ -1,5 +1,6 @@
 ---
-status: proposed
+status: done
+owner: agent-doc-review
 title: Workstream files as a native, queryable part of the platform
 summary: Workstream tickets render as pages, follow one front-matter schema, and can be listed and queried (status, owner, steps) without reading prose.
 ---
