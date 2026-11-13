@@ -15,6 +15,7 @@
       label{display:block;margin:12px 0 6px}textarea{width:100%;min-height:110px;max-height:240px;resize:vertical;padding:10px;background:#111318;color:#eee;border:1px solid #59616d;border-radius:6px}
       .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}.status{max-width:390px;margin:8px 0;padding:10px 12px;border:1px solid #59616d;border-radius:8px;background:#1b1d22;white-space:pre-wrap}.status:empty{display:none}.error{color:#ffb4a9}
       .hint{margin:10px 0 0;color:#b7c1ce}
+      .cmdbar{position:fixed;left:0;right:0;bottom:0;display:flex;gap:6px;padding:6px 14px;background:#111318;border-top:1px solid #59616d;font:14px/1.4 ui-monospace,monospace}.cmdbar input{flex:1;background:none;border:0;color:#eee;font:inherit;outline:0}
       .contextual{position:fixed}
       .panel.contextual-panel{position:fixed;margin:0;max-height:calc(100vh - 140px);overflow:auto}
       .vim-caret{position:fixed;width:2px;background:#74c0fc;pointer-events:none}
@@ -88,6 +89,7 @@
     <div class="status" role="status" aria-live="polite"></div>
     <div class="region" hidden><div class="region-box" hidden></div><div class="region-tip">Drag to select a region · Esc cancels</div></div>
     <div class="vim-caret" hidden aria-hidden="true"></div>
+    <form class="cmdbar" hidden><span>:</span><input class="cmdinput" autocomplete="off" spellcheck="false" aria-label="Command"></form>
     <div class="contextual" hidden><button class="ctx-comment" type="button">Comment</button><span class="swatches" style="display:flex;gap:5px"></span></div><div class="rail"></div>
     <div class="dock"><div class="toolbar" hidden>
     <button class="vim-mode" type="button" title="h/j/k/l: move · v: select · c: comment (page if nothing selected) · -m: session chat · s: region screenshot · -h: history · Esc: normal">Vim</button>
@@ -162,6 +164,35 @@
     vimButton.textContent = `Vim · ${mode}${prefix ? " " + prefix : ""}`;
     vimButton.setAttribute("aria-pressed", String(vimEnabled));
   }
+  const cmdbar = find(".cmdbar"), cmdinput = find(".cmdinput");
+  const helpText = () => [
+    `h/j/k/l/w/b/0/$ move · ${KM.page.visual} select · ${KM.page.comment} comment (page if nothing selected)`,
+    `${KM.page.region} region screenshot · ${KM.leader}${KM.leaderKeys.history} history · ${KM.leader}${KM.leaderKeys.chat} session chat`,
+    `${KM.resize.narrower}/${KM.resize.wider}/${KM.resize.shorter}/${KM.resize.taller} resize panel · t page tree`,
+    "Commands: :help :history :chat :comment :tree :vim off|on :keys",
+    "Keys are configured in ~/.config/agent-doc-review/keymap.json",
+  ].join("\n");
+  const commands = {
+    help: () => message(helpText()), man: () => message(helpText()),
+    keys: () => message(JSON.stringify(KM.resize) + "\n" + JSON.stringify(KM.leaderKeys)),
+    history: () => openHistory(), chat: () => open(sessionTarget()),
+    comment: () => commentSelection(),
+    tree: () => document.dispatchEvent(new KeyboardEvent("keydown", { key: "t", bubbles: true })),
+    vim: arg => { if ((arg === "off") === vimEnabled) vimButton.click(); },
+  };
+  function openCmdline() { cmdbar.hidden = false; cmdinput.value = ""; cmdinput.focus(); }
+  function closeCmdline() { cmdbar.hidden = true; cmdinput.blur(); }
+  cmdinput.addEventListener("keydown", event => {
+    if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); closeCmdline(); }
+  });
+  cmdbar.addEventListener("submit", event => {
+    event.preventDefault();
+    const [name, arg] = cmdinput.value.trim().replace(/^:/, "").split(/\s+/);
+    closeCmdline();
+    if (!name) return;
+    if (commands[name]) commands[name](arg);
+    else message(`Not a command: ${name} (try :help)`, true);
+  });
   function clearPrefix() {
     clearTimeout(prefixTimer);
     prefix = undefined;
@@ -913,6 +944,7 @@
       prefixTimer = setTimeout(clearPrefix, 1000);
       return;
     }
+    if (event.key === ":") { event.preventDefault(); openCmdline(); return; }
     const { motions, visual: vKey, documentStart, documentEnd, viewTop, viewBottom, details: dKey } = KM.page;
     if (!motions[event.key] && ![vKey, documentStart, documentEnd, viewTop, viewBottom, dKey].includes(event.key)) return;
     if (typeof getSelection().modify !== "function") {

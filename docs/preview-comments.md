@@ -65,6 +65,10 @@ Agents can start threads too with `add_doc_review_comment` (page, kind, quote, c
 
 `c` with nothing selected (or the `Page` button) comments on the whole page; `-m` (or `Chat`) sends a general message to the session that is not tied to a page. Both appear in History (filter "Page & chat") and are replied to like any thread.
 
+## Command line
+
+`:` opens a command line at the bottom of the page: `:help`, `:history`, `:chat`, `:comment`, `:tree`, `:keys`, `:vim on|off`.
+
 ## Resizing and key bindings
 
 In Vim mode, Alt+h/l narrow/widen and Alt+j/k shorten/heighten the open panel, history or bubble popover; sizes persist. All page-layer bindings (motions, `v`, `c`, `s`, the `-` leader, resize keys and step) are defined in `scripts/preview_comments/keymap.json`. To customise, create `~/.config/agent-doc-review/keymap.json` (or point `ADR_KEYMAP` at a file) containing only the entries to change, e.g. `{"resize": {"wider": "A-L", "step": 60}}`; `A-`/`C-` prefixes mean Alt/Ctrl. Reload the page to apply.
