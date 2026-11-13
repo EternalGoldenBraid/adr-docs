@@ -1,5 +1,7 @@
 ---
-status: proposed
+status: accepted
+title: Vim focus layers
+summary: Page keys by default; graph keys only after click/Enter; Esc climbs back; mode line shows layer.
 ---
 
 # Vim focus layers: page first, graph on click, Esc climbs back

@@ -1,5 +1,7 @@
 ---
-status: proposed
+status: accepted
+title: Embedded agent chat (low priority)
+summary: Thin chat client in the page: threads as chat plus an unanchored message box. After tree nav, markers, agent comments.
 ---
 
 # Embedded agent chat in the page (idea, low priority)
