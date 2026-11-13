@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { request as httpRequest } from "node:http";
+import { loadKeymap } from "./keymap.mjs";
 
 const base = "/__preview_comments";
 
@@ -24,7 +25,9 @@ export function previewComments({ connectionFile }) {
           response.writeHead(200, {
             "Content-Type": "text/javascript", "Cache-Control": "no-store",
           });
-          return response.end(readFileSync(new URL("./client.js", import.meta.url)));
+          const keymap = loadKeymap(process.env, message => server.config.logger.warn(message));
+          return response.end(`window.__adrKeymap=${JSON.stringify(keymap)};\n` +
+            readFileSync(new URL("./client.js", import.meta.url), "utf8"));
         }
         let connection;
         try { connection = JSON.parse(readFileSync(connectionFile, "utf8")); }

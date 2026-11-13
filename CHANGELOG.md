@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.12.0 - 2026-11-13
+
+- Resizable panels: in Vim mode, Alt+h/l narrow/widen and Alt+j/k shorten/heighten the open comment panel, history or bubble popover (mirrors Alt+hjkl split resizing in Neovim). Sizes persist in the browser.
+- Key bindings now come from `scripts/preview_comments/keymap.json` rather than the client code. Override any entry in `~/.config/agent-doc-review/keymap.json` (or `$ADR_KEYMAP`); files deep-merge and apply on page reload. The graph (`DocGraph`) and tree (`t`) keys are not configurable yet.
+
 ## 0.11.1 - 2026-11-13
 
 - Comment panel, history and bubble popover are wider (540 / 720 / 480 px), so long comments read comfortably.
