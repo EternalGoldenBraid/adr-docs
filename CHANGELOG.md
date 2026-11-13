@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.18.1 - 2026-11-13
+
+- Demo recorder: `npm run demos` records feature clips (`docs/demos/public/*.webm`) with Playwright; `docs/demos/index.md` plays them. Needs `playwright-core` (dev) and Chromium.
+- Fix: on pages without a prose body (`layout: page`, such as the graph) the keys `c`, `-h`, `-m`, `:` did nothing. They now work.
+- Fix: the red "awaiting you" banners no longer cover the history or comment panel.
+
 ## 0.18.0 - 2026-11-13
 
 - Links between comments. A thread shows `→` links to threads it references and `←` backlinks from threads that reference it; a picker ("Link to another thread…") adds a link, ✕ removes one. Following a link opens the target thread, switching page if needed.
