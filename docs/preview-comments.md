@@ -24,7 +24,7 @@ its selected content, page link, link chips and dated replies from you and
 Copilot; the reply box stays at the bottom.
 
 Keyboard triage: in the list `j`/`k` move, `l` or Enter opens, `r` resolves the
-row and moves to the next, `[`/`]` switch tabs, `g`/`G` jump to the ends. In a
+row and moves to the next, `[`/`]` (or `k` from the first row, then `h`/`l`) switch tabs, `g`/`G` jump to the ends. In a
 thread `j`/`k` go to the next or previous thread, `r` resolves (back to the list
 on the next thread), `i` focuses the reply box, `o` opens the page, `s` attaches
 a region, `h` goes back. `Esc` leaves a text field, then the thread, then closes

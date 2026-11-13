@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.19.1 - 2026-11-13
+
+- History opens on the **Open** tab (all unresolved threads, every page), so there is a chain to move through.
+- Tabs are part of the Vim navigation: `k` from the first row focuses the tab bar, `h`/`l` switch tabs, `j` returns to the list.
+
 ## 0.19.0 - 2026-11-13
 
 - Redesigned history/thread UI: tabs instead of a dropdown, compact rows (state, replies, links), slim thread header with Resolve and page link, link chips, chat-style messages with hover-only Edit/Delete, and a reply box pinned at the bottom.
