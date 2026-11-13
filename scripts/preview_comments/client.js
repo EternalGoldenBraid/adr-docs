@@ -614,6 +614,7 @@
         message("Reply saved");
       } else if (values.resolved !== undefined) message(result.resolved ? "Comment resolved" : "Comment reopened");
       else message("Saved");
+      if (values.resolved === true && result.resolved) selectedThread = undefined;
       await refreshHistory();
     } catch (error) {
       message(error.message + (values.reply !== undefined ? " Your reply draft is kept; press Reply to retry." : ""), true);

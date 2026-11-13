@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.16.4 - 2026-11-13
+
+- Resolving a thread closes it and returns to the thread list.
+
 ## 0.16.3 - 2026-11-13
 
 - The "new reply" pill opens the thread itself, not the history list.
