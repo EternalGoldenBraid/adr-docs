@@ -5,7 +5,9 @@ import { withBase } from 'vitepress'
 
 // src: URL of the graph JSON (served from the document's public/ folder).
 // Local edits are autosaved in the browser under storageKey.
-const props = defineProps({ src: { type: String, required: true }, storageKey: { type: String, default: '' }, title: { type: String, default: 'Graph' }, height: { type: String, default: '' } })
+const props = defineProps({ src: { type: String, required: true }, storageKey: { type: String, default: '' }, title: { type: String, default: 'Graph' }, height: { type: String, default: '' },
+  // Optional tabs: [{ label, topic, lane }]; defaults to one tab per topic in the data
+  tabs: { type: Array, default: () => [] } })
 const STORE = props.storageKey || 'doc-graph:' + props.src
 const host = ref(null)
 const titleInput = ref(null)
@@ -23,23 +25,51 @@ const flash = ref('')
 const selTitle = computed(() => (selected.value && cy ? cy.getElementById(selected.value).data('title') || '' : ''))
 const HELP = "DOC-GRAPH(1)\n\nMODES\n  NORMAL  fly the view         VISUAL  walk node to node\n  INSERT  edit the graph       Esc     back to NORMAL\nNORMAL\n  h j k l   pan (H J K L: faster)\n  + - 0     zoom in / out / fit\n  v  visual     i  insert     u  up one layer\n  Enter     open the selected \u25b8 layer\nVISUAL\n  h j k l   nearest node in that direction\n  Enter     open \u25b8 layer, or zoom to node\n  c         comment on the node\nINSERT\n  h j k l   select neighbour\n  arrows    nudge node (shift: x5)\n  Enter     edit text    o  new node    x  delete\nCOMMANDS\n  :help :man   this page     :w  export JSON\n  :fit         fit all       :q  close\nMOUSE / TRACKPAD\n  swipe pans \u00b7 pinch or shift+swipe zooms\n  dbl-click: \u25b8 opens, node/lane zooms, empty fits"
 const topic = ref('')
+const activeTab = ref('')
 const TOPICS = ref([])
 let cy = null
 let ro = null
 let moved = false
-let bodiesShown = true
 
 const SHOW_BODY_ZOOM = 0.55
+const labelHost = ref(null)
+const labelEls = new Map()
+let labelFrame = 0
 
 function nodeLabel(n) {
-  const head = (n.data('title') || '') + (n.data('status') ? '  ' + n.data('status') : '') + (n.data('badge') || '')
-  const body = n.data('body') || ''
-  if (!body || !cy || cy.zoom() < SHOW_BODY_ZOOM || n.data('kind') !== 'node') return head
-  const w = n.data('w'), h = n.data('h')
-  const room = Math.max(0, Math.floor((h - 38) / 14)) * Math.floor((w - 24) / 7.2)
-  const text = body.length > room ? body.slice(0, Math.max(0, room - 1)).trimEnd() + '…' : body
-  return room > 12 ? head + '\n' + text : head
+  return n.data('kind') === 'node' ? '' : (n.data('title') || '') + (n.data('status') ? '  ' + n.data('status') : '') + (n.data('badge') || '')
 }
+
+// Nodes show a bold title over a regular body, which canvas labels cannot mix.
+function drawLabels() {
+  labelFrame = 0
+  if (!cy || !labelHost.value) return
+  const z = cy.zoom()
+  const live = new Set()
+  cy.nodes('[kind = "node"]').forEach(n => {
+    if (n.style('display') === 'none') return
+    live.add(n.id())
+    let el = labelEls.get(n.id())
+    if (!el) {
+      el = document.createElement('div')
+      el.className = 'xp-label'
+      el.innerHTML = '<b></b><span></span>'
+      labelHost.value.appendChild(el)
+      labelEls.set(n.id(), el)
+    }
+    const d = n.data(), p = n.renderedPosition()
+    const lines = Math.max(0, Math.floor((d.h - 38) / 14))
+    el.style.cssText = `left:${p.x - d.w * z / 2}px;top:${p.y - d.h * z / 2}px;width:${d.w * z}px;height:${d.h * z}px;` +
+      `font-size:${13 * z}px;color:${d.font};opacity:${n.style('opacity')};padding:${6 * z}px ${8 * z}px`
+    el.firstChild.textContent = (d.title || '') + (d.status ? '  ' + d.status : '') + (d.badge || '')
+    const body = el.lastChild
+    body.textContent = d.body || ''
+    body.style.display = d.body && z >= SHOW_BODY_ZOOM && lines > 0 ? '-webkit-box' : 'none'
+    body.style.webkitLineClamp = String(lines)
+  })
+  for (const [id, el] of labelEls) if (!live.has(id)) { el.remove(); labelEls.delete(id) }
+}
+const scheduleLabels = () => { if (!labelFrame) labelFrame = requestAnimationFrame(drawLabels) }
 
 function nodeEl(n) {
   const d = { id: n.id, title: n.title, body: n.body, status: n.status, kind: n.kind, topics: n.topics,
@@ -162,6 +192,18 @@ function applyTopic() {
       if (e.source().hasClass('dim') || e.target().hasClass('dim')) e.addClass('dim')
     })
   })
+}
+
+const tabList = computed(() => props.tabs.length ? props.tabs : TOPICS.value.map(t => ({ label: t, topic: t })))
+
+function pickTab(t) {
+  activeTab.value = t ? t.label : ''
+  topic.value = t ? t.topic : ''
+  if (layer.value) showLayer(null)
+  applyTopic()
+  const lane = t && t.lane ? cy.getElementById(t.lane) : null
+  if (lane && lane.nonempty()) cy.animate({ fit: { eles: lane, padding: 60 }, duration: 300 })
+  else fitAll()
 }
 
 function setMode(m) {
@@ -301,10 +343,7 @@ onMounted(async () => {
     e.target.position({ x: Math.round(p.x / 10) * 10, y: Math.round(p.y / 10) * 10 })
     save()
   })
-  cy.on('zoom', () => {
-    const show = cy.zoom() >= SHOW_BODY_ZOOM
-    if (show !== bodiesShown) { bodiesShown = show; cy.style().update() }
-  })
+  cy.on('render', scheduleLabels)
   cy.on('viewport', () => { moved = true })
 })
 
@@ -423,7 +462,10 @@ onUnmounted(() => { document.removeEventListener('preview-comment-vim', onVim); 
     <strong>{{ title }}</strong>
     <button v-if="layer" @click="back">← Back</button>
     <strong v-if="layer">{{ layerTitle }}</strong>
-    <select v-if="TOPICS.length" v-model="topic" @change="applyTopic"><option value="">All topics</option><option v-for="t in TOPICS" :key="t" :value="t">{{ t }}</option></select>
+    <span v-if="tabList.length" class="xp-tabs">
+      <button :class="{ on: !activeTab }" @click="pickTab(null)">All</button>
+      <button v-for="t in tabList" :key="t.label" :class="{ on: activeTab === t.label }" @click="pickTab(t)">{{ t.label }}</button>
+    </span>
     <button :class="{ on: help }" title="Controls (?)" @click="help = !help">?</button>
     <button :class="{ on: editMode }" @click="setMode(editMode ? 'normal' : 'insert')">{{ editMode ? '✎ Editing' : '✎ Edit mode' }}</button>
     <template v-if="editMode && selected">
@@ -441,7 +483,7 @@ onUnmounted(() => { document.removeEventListener('preview-comment-vim', onVim); 
     </template>
   </div>
   <div class="xp-main">
-    <div ref="host" class="xp-canvas" :style="height ? { height } : null"></div>
+    <div class="xp-canvas" :style="height ? { height } : null"><div ref="host" class="xp-host"></div><div ref="labelHost" class="xp-labels"></div></div>
     <div class="xp-status"><span class="xp-mode" :data-mode="mode">{{ vimOn ? '-- ' + mode.toUpperCase() + ' --' : mode.toUpperCase() }}</span>
       <span v-if="selected" class="xp-sel">{{ selTitle }}</span><span class="xp-flash">{{ flash }}</span><span class="xp-hint">:help</span></div>
     <div v-if="cmd !== null" class="xp-cmd">:<input ref="cmdInput" v-model="cmd" spellcheck="false" @keydown.enter="runCmd" @keydown.esc="cmd = null" @keydown.backspace="!cmd && (cmd = null)" /></div>
@@ -462,8 +504,15 @@ onUnmounted(() => { document.removeEventListener('preview-comment-vim', onVim); 
 .xp-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 6px 0 10px; }
 .xp-muted { color: var(--vp-c-text-2); font-size: 13px; flex: 1; }
 .xp-main { display: flex; gap: 12px; }
-.xp-canvas { flex: 1; min-width: 0; overflow: hidden; height: calc(100vh - 150px); border: 1px solid var(--vp-c-divider); border-radius: 12px; background: #0b1220; }
+.xp-canvas { position: relative; flex: 1; min-width: 0; overflow: hidden; height: calc(100vh - 150px); border: 1px solid var(--vp-c-divider); border-radius: 12px; background: #0b1220; }
 .xp-main { position: relative; }
+.xp-host { position: absolute; inset: 0; }
+.xp-labels { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.xp-label { position: absolute; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; overflow: hidden; line-height: 1.25; }
+.xp-label b { font-weight: 700; }
+.xp-label span { font-weight: 400; font-size: 0.92em; opacity: .9; overflow: hidden; -webkit-box-orient: vertical; }
+.xp-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.xp-tabs .on { background: var(--vp-c-brand-soft); border-color: var(--vp-c-brand-1); }
 .xp-edit { position: absolute; z-index: 5; display: flex; flex-direction: column; gap: 6px; padding: 10px; background: var(--vp-c-bg); border: 1px solid var(--vp-c-divider); border-radius: 12px; box-shadow: 0 8px 28px #0009; font-size: 13px; }
 .xp-help { position: absolute; right: 12px; bottom: 30px; z-index: 6; padding: 8px 14px; background: #0b1220; color: #cbd5e1; border: 1px solid #475569; border-radius: 4px; font: 12px/1.4 ui-monospace, 'JetBrains Mono', Menlo, monospace; pointer-events: none; }
 .xp-help pre { margin: 6px 0 0; font: inherit; background: none; padding: 0; }

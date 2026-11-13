@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.0 - 2026-11-13
+
+- `<DocGraph>`: tabs for lanes/topics (optional `tabs` prop) instead of a dropdown.
+- `<DocGraph>`: bold node titles over regular body text.
+
 ## 0.3.0 - 2026-11-07
 
 - Add comments on canvas targets (graph nodes and edges) alongside text.
