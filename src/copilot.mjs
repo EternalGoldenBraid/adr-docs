@@ -1,0 +1,95 @@
+import { randomUUID } from "node:crypto";
+import { homedir } from "node:os";
+import { join } from "node:path";
+import { commentAttention } from "../scripts/preview_comments/extension.mjs";
+import { startDocumentPreview } from "./preview.mjs";
+
+export async function connectDocumentReview({
+  joinSession: joinOverride, startPreview = startDocumentPreview,
+} = {}) {
+  const joinSession = joinOverride ?? (await import("@github/copilot-sdk/extension")).joinSession;
+  let active;
+  let starting;
+  let attention;
+  const requirePreview = () => {
+    if (!active) throw new Error("Start a document preview with start_doc_review first.");
+    return active;
+  };
+  const hint = () => {
+    const additionalContext = attention?.hint();
+    if (additionalContext) return { additionalContext };
+  };
+  const stop = async () => {
+    if (starting) await starting;
+    if (active) { await active.close(); active = undefined; }
+  };
+  const session = await joinSession({
+    hooks: {
+      onSessionEnd: stop,
+      onPostToolUse: hint,
+      onPostToolUseFailure: hint,
+    },
+    tools: [{
+      name: "start_doc_review",
+      description: "Start a loopback-only live Markdown, equation and figure review attached to this session. One preview is active at a time.",
+      parameters: {
+        type: "object", required: ["document_path"],
+        properties: {
+          document_path: { type: "string", description: "Absolute path to the original Markdown document." },
+          port: { type: "integer", minimum: 0, maximum: 65535, description: "Optional HTTP port. Zero selects an available port." },
+        },
+      },
+      handler: async args => {
+        if (active || starting) throw new Error("A document preview is already open or starting. Stop it with stop_doc_review first.");
+        const storageRoot = join(process.env.XDG_STATE_HOME || join(homedir(), ".local", "state"), "agent-doc-review");
+        starting = startPreview({
+          documentPath: args.document_path, sessionId: session.sessionId,
+          storageRoot, port: args.port ?? 0,
+          notify: () => attention.wakeIfIdle(),
+          onError: error => session.log(`Document review notification failed: ${error.message}`, { level: "warning" }),
+        });
+        try { active = await starting; }
+        finally { starting = undefined; }
+        return JSON.stringify({ url: active.url, document: active.document, feedback: "Attached to this Copilot session." });
+      },
+    }, {
+      name: "read_doc_review_comments",
+      description: "Fetch unread document feedback and persist read receipts. Reading does not resolve threads.",
+      parameters: {
+        type: "object",
+        properties: { include_seen: { type: "boolean", description: "Also include previously read threads." } },
+      },
+      handler: args => JSON.stringify(requirePreview().bridge.read({ includeSeen: args.include_seen === true })),
+    }, {
+      name: "update_doc_review_comment",
+      description: "Reply to a document comment and/or explicitly resolve or reopen it. Replies alone preserve its status.",
+      parameters: {
+        type: "object", required: ["comment_id"],
+        properties: {
+          comment_id: { type: "string" }, reply: { type: "string" },
+          resolved: { type: "boolean" },
+          update_id: { type: "string", description: "UUID reused for an unchanged retry." },
+        },
+      },
+      handler: args => {
+        const input = { id: args.update_id ?? randomUUID(), commentId: args.comment_id };
+        if (args.reply !== undefined) input.reply = args.reply;
+        if (args.resolved !== undefined) input.resolved = args.resolved;
+        return JSON.stringify(requirePreview().bridge.update(input));
+      },
+    }, {
+      name: "stop_doc_review",
+      description: "Stop this session's document preview. Saved feedback remains on disk.",
+      parameters: { type: "object", properties: {} },
+      handler: async () => { await stop(); return "Document preview stopped; saved feedback retained."; },
+    }],
+  });
+  attention = commentAttention(session, () => active?.bridge.pending() ?? { count: 0 }, "read_doc_review_comments");
+  session.on("assistant.idle", event => {
+    if (!event.agentId) {
+      attention.wakeIfIdle().catch(error =>
+        session.log(`Document review notification failed: ${error.message}`, { level: "warning" }));
+    }
+  });
+  return session;
+}

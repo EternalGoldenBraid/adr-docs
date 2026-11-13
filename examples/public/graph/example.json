@@ -1,0 +1,112 @@
+{
+  "nodes": [
+    {
+      "fill": "#1e293b",
+      "stroke": "#38bdf8",
+      "font": "#f8fafc",
+      "status": "",
+      "parent": null,
+      "kind": "node",
+      "id": "sense",
+      "title": "Sense",
+      "body": "Cameras and radar",
+      "x": 0,
+      "y": 0,
+      "w": 180,
+      "h": 70,
+      "topics": []
+    },
+    {
+      "fill": "#1e293b",
+      "stroke": "#38bdf8",
+      "font": "#f8fafc",
+      "status": "",
+      "parent": null,
+      "kind": "node",
+      "id": "plan",
+      "title": "Plan",
+      "body": "Double-click to open its layer",
+      "x": 280,
+      "y": 0,
+      "w": 180,
+      "h": 70,
+      "topics": []
+    },
+    {
+      "fill": "#1e293b",
+      "stroke": "#38bdf8",
+      "font": "#f8fafc",
+      "status": "",
+      "parent": null,
+      "kind": "node",
+      "id": "act",
+      "title": "Act",
+      "body": "Motors",
+      "x": 560,
+      "y": 0,
+      "w": 180,
+      "h": 70,
+      "topics": []
+    },
+    {
+      "fill": "#1e293b",
+      "stroke": "#38bdf8",
+      "font": "#f8fafc",
+      "status": "",
+      "parent": null,
+      "kind": "node",
+      "id": "route",
+      "title": "Route",
+      "body": "Pick a path",
+      "x": 0,
+      "y": 0,
+      "w": 180,
+      "h": 70,
+      "topics": [],
+      "inside": "plan"
+    },
+    {
+      "fill": "#1e293b",
+      "stroke": "#38bdf8",
+      "font": "#f8fafc",
+      "status": "",
+      "parent": null,
+      "kind": "node",
+      "id": "avoid",
+      "title": "Avoid",
+      "body": "Dodge obstacles",
+      "x": 280,
+      "y": 0,
+      "w": 180,
+      "h": 70,
+      "topics": [],
+      "inside": "plan"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "source": "sense",
+      "target": "plan",
+      "color": "#94a3b8",
+      "dashed": false,
+      "label": "scene"
+    },
+    {
+      "id": "e2",
+      "source": "plan",
+      "target": "act",
+      "color": "#94a3b8",
+      "dashed": false,
+      "label": "command"
+    },
+    {
+      "id": "e3",
+      "source": "route",
+      "target": "avoid",
+      "color": "#94a3b8",
+      "dashed": false,
+      "label": ""
+    }
+  ]
+}

@@ -1,0 +1,282 @@
+import { createHash, randomUUID } from "node:crypto";
+import { createServer } from "node:http";
+import {
+  appendFileSync, closeSync, existsSync, fsyncSync, mkdirSync, openSync,
+  readFileSync, realpathSync, unlinkSync, writeFileSync,
+} from "node:fs";
+import { isAbsolute, join, relative, resolve, sep } from "node:path";
+
+function append(file, record) {
+  const fd = openSync(file, "a", 0o600);
+  try {
+    appendFileSync(fd, JSON.stringify(record) + "\n");
+    fsyncSync(fd);
+  } finally {
+    closeSync(fd);
+  }
+}
+
+function reply(response, status, value) {
+  response.writeHead(status, { "Content-Type": "application/json", "Cache-Control": "no-store" });
+  response.end(JSON.stringify(value));
+}
+
+function field(value, name, limit) {
+  if (typeof value !== "string" || !value.trim() || Buffer.byteLength(value) > limit) {
+    throw new Error(`${name} must contain 1–${limit} UTF-8 bytes.`);
+  }
+  return value.trim();
+}
+
+const COLORS = ["yellow", "green", "blue", "pink"];
+
+function identifier(value, name) {
+  const id = field(value, name, 36);
+  if (!/^[\da-f]{8}(-[\da-f]{4}){3}-[\da-f]{12}$/i.test(id)) throw new Error(`Invalid ${name}.`);
+  return id;
+}
+
+class CommentConflict extends Error {}
+
+export async function startCommentBridge({
+  sessionId, documentRoot, previewOrigin, storageRoot, notify, onError,
+}) {
+  const root = realpathSync(documentRoot);
+  const directory = join(storageRoot, sessionId);
+  mkdirSync(directory, { recursive: true, mode: 0o700 });
+  const log = join(directory, "comments.jsonl");
+  const connectionFile = join(directory, "connection.json");
+  const records = existsSync(log)
+    ? readFileSync(log, "utf8").split("\n").filter(Boolean).map(line => JSON.parse(line))
+    : [];
+  const comments = new Map();
+  const updates = new Map();
+  let revision = 0;
+  let latestFeedbackId;
+  function apply(record) {
+    if (record.event === "comment") {
+      const quiet = Boolean(record.highlight || record.note);
+      comments.set(record.id, { ...record, seen: quiet, resolved: false, replies: [] });
+      if (!quiet) latestFeedbackId = record.id;
+    }
+    else if (record.event === "queued") {
+      const comment = comments.get(record.id);
+      if (!comment) throw new Error(`Receipt has no comment: ${record.id}`);
+      comment.queued = true;
+    } else if (record.event === "seen") {
+      for (const id of record.ids) {
+        const comment = comments.get(id);
+        if (!comment) throw new Error(`Read receipt has no comment: ${id}`);
+        comment.seen = true;
+      }
+    } else if (record.event === "update") {
+      const comment = comments.get(record.commentId);
+      if (!comment) throw new Error(`Update has no comment: ${record.commentId}`);
+      updates.set(record.id, record);
+      comment.updatedAt = record.at;
+      if (record.reply !== undefined) {
+        comment.replies.push({
+          id: record.id, at: record.at, author: record.author, comment: record.reply,
+          ...(record.note ? { note: true } : {}),
+        });
+      }
+      let wake = (record.reply !== undefined && !record.note) || record.resolved !== undefined;
+      if (record.promote) { comment.note = false; wake = true; }
+      if (record.editComment !== undefined) {
+        comment.comment = record.editComment;
+        comment.commentEdited = true;
+        wake ||= !comment.note;
+      }
+      if (record.editReply) {
+        const target = comment.replies.find(item => item.id === record.editReply.id);
+        if (target) {
+          target.comment = record.editReply.text;
+          target.edited = true;
+          wake ||= !target.note && !comment.note;
+        }
+      }
+      if (record.removeReply) comment.replies = comment.replies.filter(item => item.id !== record.removeReply);
+      if (record.resolved !== undefined) comment.resolved = record.resolved;
+      if (record.color !== undefined) comment.color = record.color;
+      if (record.removed !== undefined) comment.removed = record.removed;
+      if (record.clear) Object.assign(comment, { comment: "", note: false, highlight: true, replies: [], resolved: false, seen: true });
+      if (record.author === "user" && wake) {
+        comment.seen = false;
+        latestFeedbackId = record.id;
+      }
+    } else throw new Error(`Unknown comment-log event: ${record.event}`);
+    revision++;
+  }
+  for (const record of records) apply(record);
+  const token = randomUUID();
+
+  function unread() {
+    return [...comments.values()].filter(comment => !comment.seen);
+  }
+
+  function normalize(input) {
+    if (input.sessionId !== sessionId) throw new Error("The receiving session changed. Reload before sending.");
+    const id = identifier(input.id, "Comment ID");
+    if (updates.has(id)) throw new CommentConflict("This ID already identifies a thread update.");
+    const url = new URL(field(input.url, "Page URL", 2048));
+    if (url.origin !== previewOrigin) throw new Error("The page is not the configured preview.");
+    const pathname = decodeURIComponent(url.pathname).replace(/\.html$/, "");
+    const stem = resolve(root, "." + pathname);
+    const source = realpathSync(pathname.endsWith("/") ? join(stem, "index.md") : stem + ".md");
+    const within = relative(root, source);
+    if (isAbsolute(within) || within === ".." || within.startsWith(".." + sep)) {
+      throw new Error("The document is outside the preview root.");
+    }
+    if (!["text", "equation", "figure", "node", "edge"].includes(input.kind)) throw new Error("Invalid comment target.");
+    return {
+      id, url: url.href, source,
+      section: field(input.section, "Section", 512),
+      anchor: typeof input.anchor === "string" ? input.anchor.slice(0, 256) : "",
+      kind: input.kind,
+      quote: field(input.quote, "Selected content", 4096),
+      comment: input.highlight === true && !input.comment ? "" : field(input.comment, "Comment", 8192),
+      ...(input.highlight === true ? { highlight: true } : {}),
+      ...(input.note === true && input.highlight !== true ? { note: true } : {}),
+      color: COLORS.includes(input.color) ? input.color : "yellow",
+    };
+  }
+
+  function normalizeUpdate(input, author) {
+    if (!["user", "copilot"].includes(author)) throw new Error("Invalid reply author.");
+    if (author === "user" && input.sessionId !== sessionId) {
+      throw new Error("The receiving session changed. Reload before sending.");
+    }
+    const value = {
+      id: identifier(input.id, "Update ID"),
+      commentId: identifier(input.commentId, "Comment ID"), author,
+    };
+    if (comments.has(value.id)) throw new CommentConflict("This update ID already identifies a comment.");
+    if (!comments.has(value.commentId)) throw new Error("The comment does not exist in this session.");
+    if (Object.hasOwn(input, "reply")) value.reply = field(input.reply, "Reply", 8192);
+    if (Object.hasOwn(input, "resolved")) {
+      if (typeof input.resolved !== "boolean") throw new Error("Resolved must be a boolean.");
+      value.resolved = input.resolved;
+    }
+    if (author === "user" && COLORS.includes(input.color)) value.color = input.color;
+    if (author === "user" && input.clear === true) value.clear = true;
+    if (author === "user" && input.note === true && value.reply !== undefined) value.note = true;
+    if (author === "user" && input.promote === true) value.promote = true;
+    if (author === "user" && Object.hasOwn(input, "editComment")) value.editComment = field(input.editComment, "Comment", 8192);
+    if (author === "user" && input.editReply) {
+      value.editReply = { id: identifier(input.editReply.id, "Reply ID"), text: field(input.editReply.text, "Reply", 8192) };
+    }
+    if (author === "user" && input.removeReply) value.removeReply = identifier(input.removeReply, "Reply ID");
+    if (author === "user" && typeof input.removed === "boolean") value.removed = input.removed;
+    if (value.reply === undefined && value.resolved === undefined && value.color === undefined && value.removed === undefined && !value.clear &&
+        !value.promote && value.editComment === undefined && !value.editReply && !value.removeReply) {
+      throw new Error("An update needs a reply, resolved state, colour, edit or removal.");
+    }
+    const previous = updates.get(value.id);
+    if (previous && JSON.stringify(previous.input) !== JSON.stringify(value)) {
+      throw new CommentConflict("This update ID already has different content.");
+    }
+    return value;
+  }
+
+  function saveUpdate(input) {
+    if (!updates.has(input.id)) {
+      const record = { ...input, input, event: "update", at: new Date().toISOString() };
+      append(log, record);
+      apply(record);
+    }
+    return {
+      id: input.id, commentId: input.commentId, saved: true, revision,
+      resolved: comments.get(input.commentId).resolved,
+    };
+  }
+
+  const server = createServer(async (request, response) => {
+    let saved = false;
+    try {
+      if (request.headers.authorization !== `Bearer ${token}`) {
+        return reply(response, 403, { error: "Unauthorized comment bridge request." });
+      }
+      if (request.method === "GET" && request.url === "/status") {
+        return reply(response, 200, { sessionId, pendingCount: unread().length });
+      }
+      if (request.method === "GET" && request.url === "/history") {
+        return reply(response, 200, { sessionId, revision, comments: [...comments.values()] });
+      }
+      if (request.method !== "POST" || !["/comments", "/updates"].includes(request.url)) {
+        return reply(response, 404, { error: "Unknown comment endpoint." });
+      }
+      const chunks = [];
+      let size = 0;
+      for await (const chunk of request) {
+        size += chunk.length;
+        if (size > 24_576) {
+          return reply(response, 413, { error: "Comment request is too large." });
+        }
+        chunks.push(chunk);
+      }
+      let input;
+      try {
+        const body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+        input = request.url === "/updates" ? normalizeUpdate(body, "user") : normalize(body);
+      } catch (error) {
+        return reply(response, error instanceof CommentConflict ? 409 : 400, { error: error.message });
+      }
+      if (request.url === "/updates") {
+        const result = saveUpdate(input);
+        saved = true;
+        await notify();
+        return reply(response, 200, { ...result, awaitingReview: !comments.get(input.commentId).seen });
+      }
+      let comment = comments.get(input.id);
+      if (comment) {
+        if (JSON.stringify(comment.input) !== JSON.stringify(input)) {
+          return reply(response, 409, { error: "This comment ID already has different content." });
+        }
+      } else {
+        comment = {
+          ...input, input, event: "comment", at: new Date().toISOString(), seen: false,
+          sourceHash: createHash("sha256").update(readFileSync(input.source)).digest("hex"),
+        };
+        append(log, comment);
+        apply(comment);
+        comment = comments.get(comment.id);
+      }
+      saved = true;
+      await notify();
+      reply(response, 200, { id: comment.id, saved: true, awaitingReview: !comment.seen });
+    } catch (error) {
+      await onError(error);
+      reply(response, 503, { saved, error: error.message });
+    }
+  });
+  await new Promise((accept, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", accept);
+  });
+  writeFileSync(connectionFile, JSON.stringify({
+    port: server.address().port, token, sessionId, previewOrigin,
+  }), { mode: 0o600 });
+  return {
+    connectionFile,
+    list: () => [...comments.values()],
+    update: (input, author = "copilot") => saveUpdate(normalizeUpdate(input, author)),
+    pending: () => {
+      const rows = unread();
+      return { count: rows.length, latestId: rows.length ? latestFeedbackId : undefined };
+    },
+    read: ({ includeSeen = false } = {}) => {
+      const rows = unread();
+      const result = includeSeen ? [...comments.values()] : rows;
+      if (rows.length) {
+        const receipt = { event: "seen", ids: rows.map(comment => comment.id), at: new Date().toISOString() };
+        append(log, receipt);
+        apply(receipt);
+      }
+      return result;
+    },
+    close: async () => {
+      unlinkSync(connectionFile);
+      await new Promise((accept, reject) => server.close(error => error ? reject(error) : accept()));
+    },
+  };
+}

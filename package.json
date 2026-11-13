@@ -1,0 +1,28 @@
+{
+  "name": "agent-doc-review",
+  "version": "0.3.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "Local Markdown, equation and figure review with persistent Copilot session comments",
+  "engines": {
+    "node": ">=20"
+  },
+  "exports": {
+    ".": "./src/preview.mjs",
+    "./copilot": "./src/copilot.mjs",
+    "./vite-plugin": "./scripts/preview_comments/vite-plugin.mjs",
+    "./comment-bridge": "./scripts/preview_comments/server.mjs"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "example:paper": "python3 tools/fetch_arxiv.py 2211.08416v3 --root examples",
+    "preview": "node bin/preview.mjs",
+    "readme": "node bin/preview.mjs examples/index.md 5180"
+  },
+  "dependencies": {
+    "cytoscape": "3.35.0",
+    "markdown-it-mathjax3": "4.3.2",
+    "vitepress": "1.6.4"
+  }
+}

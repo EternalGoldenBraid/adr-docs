@@ -1,0 +1,294 @@
+import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
+import { appendFileSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { createServer } from "node:http";
+import test from "node:test";
+import { startCommentBridge } from "../scripts/preview_comments/server.mjs";
+import { previewComments } from "../scripts/preview_comments/vite-plugin.mjs";
+import { commentAttention, withdrawLegacyComments } from "../scripts/preview_comments/extension.mjs";
+
+test("feedback stays unread across notification failure, legacy receipts and restart until explicitly fetched", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "preview-comments-"));
+  const sessionId = randomUUID();
+  writeFileSync(join(directory, "state.md"), "# State\n\nAn uncertain state.");
+  let bridge;
+  let attempts = 0;
+  let fail = true;
+  const errors = [];
+  const options = {
+    sessionId, documentRoot: directory, storageRoot: directory,
+    previewOrigin: "http://127.0.0.1:8766",
+    onError: error => errors.push(error.message),
+    notify: async (...args) => {
+      attempts++;
+      assert.equal(args.length, 0);
+      assert.match(readFileSync(join(directory, sessionId, "comments.jsonl"), "utf8"), /Clarify/);
+      if (fail) throw new Error("Session is unavailable");
+      await new Promise(resolve => setTimeout(resolve, 10));
+    },
+  };
+  const input = {
+    sessionId, id: randomUUID(), url: "http://127.0.0.1:8766/state#state",
+    section: "State", anchor: "state", kind: "text",
+    quote: "An uncertain state.", comment: "Clarify this: ε is estimation error.",
+  };
+  async function send(body, authorized = true) {
+    const connection = JSON.parse(readFileSync(bridge.connectionFile));
+    const response = await fetch(`http://127.0.0.1:${connection.port}/comments`, {
+      method: "POST",
+      headers: { Authorization: authorized ? `Bearer ${connection.token}` : "wrong" },
+      body: JSON.stringify(body),
+    });
+    return { status: response.status, body: await response.json() };
+  }
+  try {
+    bridge = await startCommentBridge(options);
+    assert.equal((await send(input, false)).status, 403);
+    assert.equal((await send({ ...input, sessionId: randomUUID() })).status, 400);
+    assert.equal((await send({ ...input, url: "https://elsewhere.test/state" })).status, 400);
+    assert.equal((await send({ ...input, comment: " " })).status, 400);
+    assert.equal((await send({ ...input, comment: "x".repeat(30_000) })).status, 413);
+    assert.equal(bridge.list().length, 0);
+
+    const failed = await send(input);
+    assert.equal(failed.status, 503);
+    assert.equal(failed.body.saved, true);
+    assert.match(failed.body.error, /unavailable/);
+    assert.deepEqual(errors, ["Session is unavailable"]);
+    assert.equal(bridge.pending().count, 1);
+    await bridge.close();
+    appendFileSync(join(directory, sessionId, "comments.jsonl"), JSON.stringify({
+      event: "queued", id: input.id, at: new Date().toISOString(),
+    }) + "\n");
+
+    bridge = await startCommentBridge(options);
+    assert.equal(bridge.list()[0].comment, input.comment);
+    assert.equal(bridge.pending().count, 1);
+    fail = false;
+    const retries = await Promise.all([send(input), send(input)]);
+    assert.ok(retries.every(result => result.status === 200 && result.body.awaitingReview));
+    assert.equal(attempts, 3);
+    assert.equal(bridge.list().length, 1);
+    assert.equal((await send({ ...input, comment: "Different content" })).status, 409);
+    assert.equal(bridge.read()[0].comment, input.comment);
+    assert.deepEqual(bridge.read(), []);
+    assert.equal(bridge.pending().count, 0);
+
+    await bridge.close();
+    bridge = await startCommentBridge(options);
+    assert.equal(bridge.pending().count, 0);
+    assert.equal((await send(input)).body.awaitingReview, false);
+    assert.equal(bridge.read({ includeSeen: true }).length, 1);
+    const records = readFileSync(join(directory, sessionId, "comments.jsonl"), "utf8")
+      .trim().split("\n").map(line => JSON.parse(line));
+    assert.deepEqual(records.map(record => record.event), ["comment", "queued", "seen"]);
+    assert.match(records[0].sourceHash, /^[a-f0-9]{64}$/);
+  } finally {
+    if (bridge) await bridge.close();
+    rmSync(directory, { recursive: true });
+  }
+});
+
+test("the Vite adapter admits only the owning preview and forwards into its session", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "preview-comments-proxy-"));
+  const sessionId = randomUUID();
+  writeFileSync(join(directory, "state.md"), "# State");
+  let handler;
+  const proxy = createServer((request, response) => handler(request, response, () => {
+    response.writeHead(404);
+    response.end();
+  }));
+  await new Promise(resolve => proxy.listen(0, "127.0.0.1", resolve));
+  const origin = `http://127.0.0.1:${proxy.address().port}`;
+  let notifications = 0;
+  const bridge = await startCommentBridge({
+    sessionId, documentRoot: directory, storageRoot: directory, previewOrigin: origin,
+    notify: async () => { notifications++; },
+    onError: error => { throw error; },
+  });
+  try {
+    const plugin = previewComments({ connectionFile: bridge.connectionFile });
+    assert.throws(() => plugin.configureServer({ config: { server: { host: "0.0.0.0" } } }), /loopback/);
+    plugin.configureServer({
+      config: { server: { host: "127.0.0.1" }, logger: { error: assert.fail } },
+      middlewares: { use: middleware => { handler = middleware; } },
+    });
+    const endpoint = origin + "/__preview_comments";
+    assert.equal((await fetch(endpoint + "/status")).status, 403);
+    assert.equal((await fetch(endpoint + "/status", {
+      headers: { Origin: "https://unrelated.example", "X-Preview-Comment": "1" },
+    })).status, 403);
+    const ready = await fetch(endpoint + "/status", {
+      headers: { Origin: origin, "X-Preview-Comment": "1" },
+    });
+    assert.equal((await ready.json()).sessionId, sessionId);
+    const accepted = await fetch(endpoint + "/comments", {
+      method: "POST",
+      headers: { Origin: origin, "X-Preview-Comment": "1" },
+      body: JSON.stringify({
+        id: randomUUID(), sessionId, url: origin + "/state",
+        section: "State", kind: "figure", quote: "Uncertainty cloud",
+        comment: "Clarify the orange arrow.",
+      }),
+    });
+    const created = await accepted.json();
+    assert.equal(created.awaitingReview, true);
+    assert.equal(notifications, 1);
+    const history = await fetch(endpoint + "/history", { headers: { "X-Preview-Comment": "1" } });
+    assert.equal((await history.json()).comments[0].resolved, false);
+    const update = await fetch(endpoint + "/updates", {
+      method: "POST", headers: { "X-Preview-Comment": "1" },
+      body: JSON.stringify({ sessionId, id: randomUUID(), commentId: created.id, resolved: true }),
+    });
+    assert.equal((await update.json()).resolved, true);
+    assert.equal(notifications, 2);
+  } finally {
+    await bridge.close();
+    await new Promise(resolve => proxy.close(resolve));
+    rmSync(directory, { recursive: true });
+  }
+});
+
+test("history persists replies and explicit resolution; only user updates renew unread attention", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "preview-comment-history-"));
+  const sessionId = randomUUID();
+  writeFileSync(join(directory, "state.md"), "# State");
+  let bridge;
+  let fail = false;
+  const errors = [];
+  const options = {
+    sessionId, documentRoot: directory, storageRoot: directory,
+    previewOrigin: "http://127.0.0.1:8766", onError: error => errors.push(error.message),
+    notify: async () => { if (fail) throw new Error("Notification unavailable"); },
+  };
+  async function request(path, body) {
+    const connection = JSON.parse(readFileSync(bridge.connectionFile));
+    const response = await fetch(`http://127.0.0.1:${connection.port}${path}`, {
+      method: body ? "POST" : "GET", headers: { Authorization: `Bearer ${connection.token}` },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    return { status: response.status, body: await response.json() };
+  }
+  const first = randomUUID();
+  const second = randomUUID();
+  try {
+    bridge = await startCommentBridge(options);
+    for (const id of [first, second]) {
+      assert.equal((await request("/comments", {
+        id, sessionId, url: options.previewOrigin + "/state", section: "State",
+        kind: "text", quote: "State", comment: "Explain this state.",
+      })).status, 200);
+    }
+    const initial = await request("/history");
+    assert.ok(initial.body.comments.every(comment => !comment.resolved && !comment.seen));
+    assert.equal(bridge.pending().count, 2);
+    bridge.read();
+    assert.ok(bridge.list().every(comment => comment.seen && !comment.resolved));
+    const outcome = { id: randomUUID(), commentId: first, reply: "Clarified in commit abc123.", resolved: true };
+    bridge.update(outcome);
+    bridge.update(outcome);
+    assert.equal(bridge.list()[0].replies.length, 1);
+    assert.equal(bridge.pending().count, 0);
+    assert.throws(() => bridge.update({ ...outcome, reply: "Different reply" }), /different content/);
+    assert.throws(() => bridge.update({ ...outcome, id: randomUUID(), reply: "ε".repeat(4097) }), /8192 UTF-8 bytes/);
+    assert.throws(() => bridge.update({ ...outcome, id: randomUUID() }, "unknown"), /Invalid reply author/);
+
+    const followup = {
+      id: randomUUID(), sessionId, commentId: first, author: "copilot",
+      reply: "<img src=x onerror=alert(1)> What about velocity?",
+    };
+    fail = true;
+    const saved = await request("/updates", followup);
+    assert.equal(saved.status, 503);
+    assert.equal(saved.body.saved, true);
+    assert.deepEqual(errors, ["Notification unavailable"]);
+    assert.equal(bridge.pending().latestId, followup.id);
+    await bridge.close();
+    bridge = await startCommentBridge(options);
+    assert.equal(bridge.pending().count, 1);
+    assert.equal(bridge.pending().latestId, followup.id);
+    fail = false;
+    const retried = await request("/updates", followup);
+    assert.equal(retried.status, 200);
+    const thread = bridge.list()[0];
+    assert.equal(thread.resolved, true);
+    assert.equal(thread.replies.length, 2);
+    assert.equal(thread.replies[1].author, "user");
+    assert.equal(thread.replies[1].comment, followup.reply);
+    const reopened = { id: randomUUID(), sessionId, commentId: first, resolved: false };
+    assert.equal((await request("/updates", { ...reopened, id: first })).status, 409);
+    assert.equal((await request("/updates", reopened)).body.resolved, false);
+    assert.equal(bridge.pending().latestId, reopened.id);
+    assert.equal((await request("/updates", { ...reopened, resolved: true })).status, 409);
+    assert.equal((await request("/updates", { ...reopened, id: randomUUID(), resolved: "yes" })).status, 400);
+    assert.equal((await request("/updates", { id: randomUUID(), sessionId, commentId: randomUUID(), reply: "Unknown" })).status, 400);
+    assert.equal((await request("/updates", { id: randomUUID(), sessionId, commentId: first, reply: " " })).status, 400);
+    assert.equal((await request("/updates", { id: randomUUID(), sessionId: randomUUID(), commentId: first, resolved: true })).status, 400);
+    assert.equal(bridge.read()[0].resolved, false);
+    await bridge.close();
+    bridge = await startCommentBridge(options);
+    assert.equal(bridge.pending().count, 0);
+    assert.equal(bridge.list()[0].resolved, false);
+    assert.equal(bridge.list()[0].replies.length, 2);
+    const final = await request("/history");
+    const records = readFileSync(join(directory, sessionId, "comments.jsonl"), "utf8").trim().split("\n");
+    assert.equal(final.body.revision, records.length);
+  } finally {
+    if (bridge) await bridge.close();
+    rmSync(directory, { recursive: true });
+  }
+});
+
+test("busy work receives one count hint; idle work wakes immediately with no comment bodies or queued prompts", async () => {
+  let processing = true;
+  let inbox = { count: 1, latestId: "first" };
+  let reject = false;
+  const messages = [];
+  const attention = commentAttention({
+    rpc: { metadata: { isProcessing: async () => ({ processing }) } },
+    send: async message => {
+      if (reject) throw new Error("Cannot notify");
+      messages.push(message);
+    },
+  }, () => inbox);
+  await attention.wakeIfIdle();
+  assert.equal(messages.length, 0);
+  assert.match(attention.hint(), /^1 unread browser comment/);
+  assert.equal(attention.hint(), undefined);
+  processing = false;
+  inbox = { count: 2, latestId: "second" };
+  await Promise.all([attention.wakeIfIdle(), attention.wakeIfIdle()]);
+  assert.deepEqual(messages, [{
+    prompt: "2 unread browser comment(s) available. Use get_preview_comments if relevant to the current work; otherwise leave them pending.",
+    mode: "immediate",
+  }]);
+  assert.equal(attention.hint(), undefined);
+  inbox = { count: 3, latestId: "third" };
+  reject = true;
+  await assert.rejects(attention.wakeIfIdle(), /Cannot notify/);
+  reject = false;
+  await attention.wakeIfIdle();
+  assert.equal(messages.length, 2);
+  inbox = { count: 0 };
+  assert.equal(attention.hint(), undefined);
+});
+
+test("migration withdraws only saved legacy comment prompts by stable queue ID", async () => {
+  const id = randomUUID();
+  const unknown = randomUUID();
+  const removed = [];
+  await withdrawLegacyComments({
+    rpc: { queue: {
+      pendingItems: async () => ({ items: [
+        { id: "owned", kind: "message", displayText: `[Browser comment ${id}]\nFeedback` },
+        { id: "human", kind: "message", displayText: "Please continue." },
+        { id: "unknown", kind: "message", displayText: `[Browser comment ${unknown}]\nOther feedback` },
+        { id: "command", kind: "command", displayText: "/help" },
+      ] }),
+      removeAt: async ({ id: item }) => { removed.push(item); return { removed: true }; },
+    } },
+  }, [{ id, queued: true }]);
+  assert.deepEqual(removed, ["owned"]);
+});

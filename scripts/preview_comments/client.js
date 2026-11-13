@@ -1,0 +1,1022 @@
+(() => {
+  if (document.getElementById("preview-comment-overlay")) return;
+  const host = document.createElement("div");
+  host.id = "preview-comment-overlay";
+  const shadow = host.attachShadow({ mode: "open" });
+  shadow.innerHTML = `
+    <style>
+      :host{position:fixed;right:24px;bottom:24px;z-index:10000;color:#eee;font:14px/1.5 system-ui}
+      *{box-sizing:border-box}button,textarea{font:inherit}
+      button{border:1px solid #59616d;border-radius:8px;padding:8px 14px;cursor:pointer;background:#292d35;color:#eee}
+      button:hover{background:#363e4b}button:focus-visible,textarea:focus-visible{outline:2px solid #74c0fc;outline-offset:3px}
+      button:disabled{opacity:.6;cursor:wait}button.primary{background:#164a75;border-color:#74c0fc}
+      [hidden]{display:none!important}.panel{width:min(390px,calc(100vw - 48px));padding:20px;background:#1b1d22;border:1px solid #59616d;border-radius:12px;box-shadow:0 12px 40px #0008;margin-bottom:12px}
+      h2{font-size:17px;margin:0 0 4px}small{color:#b7c1ce}.quote{margin:12px 0;padding:10px;border-left:3px solid #74c0fc;background:#252a32;max-height:120px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}
+      label{display:block;margin:12px 0 6px}textarea{width:100%;min-height:110px;max-height:240px;resize:vertical;padding:10px;background:#111318;color:#eee;border:1px solid #59616d;border-radius:6px}
+      .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}.status{max-width:390px;margin:8px 0;padding:10px 12px;border:1px solid #59616d;border-radius:8px;background:#1b1d22;white-space:pre-wrap}.status:empty{display:none}.error{color:#ffb4a9}
+      .hint{margin:10px 0 0;color:#b7c1ce}
+      .contextual{position:fixed}
+      .panel.contextual-panel{position:fixed;margin:0;max-height:calc(100vh - 140px);overflow:auto}
+      .vim-caret{position:fixed;width:2px;background:#74c0fc;pointer-events:none}
+      .toolbar{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;max-width:calc(100vw - 48px)}
+      .history{width:min(520px,calc(100vw - 48px));max-height:calc(100vh - 120px);overflow:auto}
+      .history-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+      select{font:inherit;padding:6px;background:#292d35;color:#eee;border:1px solid #59616d;border-radius:6px}
+      .thread-card{display:block;width:100%;text-align:left;margin:10px 0;padding:12px}
+      .thread-card small{display:block}.preview{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+      .thread-state{margin:12px 0;color:#b7c1ce}.thread-state.resolved{color:#a2d8b1}
+      .note{margin:12px 0;padding:12px;background:#252a32;border-radius:6px}
+      .note p{margin:6px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
+      a{color:#74c0fc}
+      .contextual{display:flex;gap:6px;align-items:center;padding:6px;background:#1b1d22;border:1px solid #59616d;border-radius:10px;box-shadow:0 8px 24px #0008}
+      .contextual button{padding:5px 10px;border-radius:7px}
+      .swatch{width:22px;height:22px;padding:0!important;border-radius:50%!important;border:2px solid #0006!important}
+      .c-yellow{background:#ffd000!important}.c-green{background:#58c97a!important}.c-blue{background:#5aa9ff!important}.c-pink{background:#ff7eb6!important}
+      .swatch.on{outline:2px solid #fff;outline-offset:1px}
+      .pill{display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;opacity:.75}
+      .pill:hover,.pill[aria-expanded=true]{opacity:1}
+      .dot{width:9px;height:9px;border-radius:50%;background:#58c97a}.dot.waiting{background:#ffb02e}
+      .toolbar[hidden]{display:none!important}.toolbar{margin-bottom:8px}
+      .dock{display:flex;flex-direction:column;align-items:flex-end;transform-origin:bottom right;transform:translate(var(--dx,0px),var(--dy,0px)) scale(var(--ds,1))}
+      .rail{position:fixed;top:0;right:0;width:0;height:100vh;pointer-events:none}
+      .bubble{position:fixed;right:10px;transform:scale(var(--s,1));transform-origin:right center;width:24px;height:24px;padding:0;border-radius:50%;pointer-events:auto;border:2px solid #0006;font-size:11px;line-height:1;opacity:.8}
+      .bubble:hover{opacity:1}.bubble.fresh{box-shadow:0 0 0 3px #fff8}
+      .bubble.resolved{opacity:.35}
+      .bubble.fresh::after,.pill.alert::before{content:"";position:absolute;top:-5px;right:-5px;width:10px;height:10px;border-radius:50%;background:#ff5a4f;border:2px solid #1b1d22;animation:ping 1.6s ease-out infinite}
+      .pill{position:relative}.pill.alert{border-color:#ff5a4f}.pill.alert::before{top:-4px;right:-2px}
+      @keyframes ping{0%{box-shadow:0 0 0 0 #ff5a4faa}100%{box-shadow:0 0 0 9px #ff5a4f00}}
+      .note .tools{display:flex;gap:6px;margin-top:6px}.note .tools button{padding:2px 8px;font-size:12px}
+      .note.private{border-left:3px solid #ffb02e}.note textarea{width:100%;box-sizing:border-box;min-height:54px}
+    </style>
+    <section class="panel" hidden aria-labelledby="comment-title">
+      <h2 id="comment-title">Comment to Copilot</h2><small class="receiver"></small>
+      <div class="quote"></div>
+      <form><label for="comment-body">Your comment</label>
+      <textarea id="comment-body" required maxlength="4000"></textarea>
+      <div class="actions"><button type="button" class="cancel">Cancel</button><button type="button" class="note-save">Save as note</button><button class="primary" type="submit">Send</button></div></form>
+    </section>
+    <section class="panel history" hidden aria-labelledby="history-title">
+      <div class="history-head"><h2 id="history-title">Comment history</h2>
+      <button class="history-close" type="button">Close</button></div>
+      <small class="history-counts"></small>
+      <label for="history-filter">Show</label>
+      <select id="history-filter"><option value="page">This page · open</option><option value="all">All comments</option>
+      <option value="unresolved">Unresolved</option><option value="resolved">Resolved</option></select>
+      <button class="history-refresh" type="button">Refresh</button>
+      <div class="thread-list"></div>
+      <section class="thread" hidden>
+        <div class="actions"><button class="thread-back" type="button">Back</button>
+        <a class="thread-source">Open page</a></div>
+        <div class="thread-state"></div>
+        <details><summary>Selected content</summary><div class="quote thread-quote"></div></details>
+        <div class="thread-messages"></div>
+        <form class="reply-form"><label for="thread-reply">Your reply</label>
+        <textarea id="thread-reply" required maxlength="4000"></textarea>
+        <div class="actions"><button class="thread-resolve" type="button">Resolve</button>
+        <button class="primary reply-send" type="submit">Reply</button></div></form>
+      </section>
+    </section>
+    <div class="status" role="status" aria-live="polite"></div>
+    <div class="vim-caret" hidden aria-hidden="true"></div>
+    <div class="contextual" hidden><button class="ctx-comment" type="button">Comment</button><span class="swatches" style="display:flex;gap:5px"></span></div><div class="rail"></div>
+    <div class="dock"><div class="toolbar" hidden>
+    <button class="vim-mode" type="button" title="h/j/k/l: move · v: select · c or -c: comment · -h: history · Esc: normal">Vim</button>
+    <button class="history-toggle" type="button">History</button>
+    <button class="toggle" type="button">Comment</button></div>
+    <button class="pill" type="button" aria-expanded="false"><span class="dot"></span><span class="pill-label">Comments</span></button></div>`;
+  document.body.append(host);
+  const pagePath = url => new URL(url).pathname.replace(/\.html$/, "").replace(/\/index$/, "/");
+  const find = selector => shadow.querySelector(selector);
+  const panel = find(".panel");
+  const textarea = find("textarea");
+  const toggle = find(".toggle");
+  const status = find(".status");
+  const contextual = find(".contextual");
+  let offeredTarget;
+  let offeredAnchor;
+  let targetAnchor;
+  let target;
+  let selecting = false;
+  let draftId;
+  let noteRequested = false;
+  let submittedText;
+  let sessionId;
+  let statusTimer;
+  const history = find(".history");
+  const replyInput = find("#thread-reply");
+  const replyDrafts = new Map();
+  let historyComments = [];
+  let historyRevision = -1;
+  let selectedThread;
+  let historyTimer;
+  let historySaving = false;
+  const vimButton = find(".vim-mode");
+  const caret = find(".vim-caret");
+  let vimEnabled = localStorage.getItem("preview-comments-vim") !== "off";
+  let visual = false;
+  let prefix;
+  let prefixTimer;
+  let externalMode; // set by pages that run their own modal keys (e.g. the graph)
+  document.addEventListener("preview-comment-mode", event => { externalMode = event.detail?.mode; modeLabel(); });
+
+  function modeLabel() {
+    const mode = !vimEnabled ? "OFF" : !history.hidden ? "HISTORY" : !panel.hidden ? "COMMENT" : externalMode || (visual ? "VISUAL" : "NORMAL");
+    vimButton.textContent = `Vim · ${mode}${prefix ? " " + prefix : ""}`;
+    vimButton.setAttribute("aria-pressed", String(vimEnabled));
+  }
+  function clearPrefix() {
+    clearTimeout(prefixTimer);
+    prefix = undefined;
+    modeLabel();
+  }
+  function textNodes() {
+    const doc = document.querySelector(".vp-doc");
+    if (!doc) return [];
+    const walker = document.createTreeWalker(doc, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      if (!node.data.trim() || node.parentElement.closest("mjx-assistive-mml, [hidden], [aria-hidden='true']")) continue;
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      if (range.getClientRects().length) nodes.push(node);
+    }
+    return nodes;
+  }
+  function edgeRange(last) {
+    const nodes = textNodes();
+    const node = last ? nodes.at(-1) : nodes[0];
+    if (!node) return;
+    const range = document.createRange();
+    range.setStart(node, last ? node.length : 0);
+    range.collapse(true);
+    return range;
+  }
+  function viewportTop() {
+    return Math.max(0, ...[...document.querySelectorAll(".VPNav, .VPLocalNav")]
+      .map(node => node.getBoundingClientRect().bottom)) + 12;
+  }
+  function viewRange(last = false) {
+    const nodes = textNodes();
+    if (last) nodes.reverse();
+    const top = viewportTop();
+    for (const node of nodes) {
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      const rects = [...range.getClientRects()];
+      if (last) rects.reverse();
+      for (const rect of rects) {
+        if (rect.bottom <= top || rect.top >= innerHeight - 24 || !rect.width) continue;
+        const x = last ? rect.right - 1 : rect.left + 1;
+        const y = Math.max(top, rect.top) + Math.min(8, rect.height / 2);
+        const point = document.caretPositionFromPoint?.(x, y);
+        const chosen = document.createRange();
+        if (point) {
+          chosen.setStart(point.offsetNode, point.offset);
+          chosen.collapse(true);
+        } else {
+          const fallback = document.caretRangeFromPoint?.(x, y);
+          if (!fallback) continue;
+          chosen.setStart(fallback.startContainer, fallback.startOffset);
+          chosen.collapse(true);
+        }
+        if (document.querySelector(".vp-doc").contains(chosen.startContainer)) return chosen;
+      }
+    }
+    return edgeRange(last);
+  }
+  function showCaret(reveal = false) {
+    modeLabel();
+    const selected = getSelection();
+    const doc = document.querySelector(".vp-doc");
+    caret.hidden = !vimEnabled || !panel.hidden || !history.hidden || !doc?.contains(selected?.focusNode);
+    if (caret.hidden) return;
+    const range = document.createRange();
+    range.setStart(selected.focusNode, selected.focusOffset);
+    range.collapse(true);
+    let rect = range.getBoundingClientRect();
+    const top = viewportTop();
+    if (reveal) {
+      if (rect.top < top) scrollBy(0, rect.top - top);
+      else if (rect.bottom > innerHeight - 24) scrollBy(0, rect.bottom - innerHeight + 24);
+      rect = range.getBoundingClientRect();
+    }
+    caret.hidden = !rect.height || rect.bottom <= top || rect.top >= innerHeight - 24;
+    caret.style.left = rect.left + "px";
+    caret.style.top = rect.top + "px";
+    caret.style.height = rect.height + "px";
+  }
+  function useRange(range) {
+    if (!range) { message("No selectable document text is available.", true); return false; }
+    const selected = getSelection();
+    if (visual && document.querySelector(".vp-doc").contains(selected.anchorNode)) {
+      selected.extend(range.startContainer, range.startOffset);
+    } else {
+      selected.removeAllRanges();
+      selected.addRange(range);
+    }
+    showCaret(true);
+    return true;
+  }
+  function ensureCursor() {
+    const doc = document.querySelector(".vp-doc");
+    const selected = getSelection();
+    return doc.contains(selected.anchorNode) && doc.contains(selected.focusNode) || useRange(viewRange());
+  }
+  function move(direction, granularity) {
+    if (!ensureCursor()) return;
+    const selected = getSelection();
+    selected.modify(visual ? "extend" : "move", direction, granularity);
+    if (!document.querySelector(".vp-doc").contains(selected.focusNode)) {
+      useRange(edgeRange(direction === "forward"));
+    }
+    showCaret(true);
+  }
+  function commentSelection() {
+    const chosen = selection() || (textarea.value.trim() && target);
+    if (chosen) open(chosen);
+    else message("Press v and move to select text, then c to comment.");
+  }
+  vimButton.addEventListener("mousedown", event => event.preventDefault());
+  vimButton.addEventListener("click", () => {
+    vimEnabled = !vimEnabled;
+    visual = false;
+    clearPrefix();
+    localStorage.setItem("preview-comments-vim", vimEnabled ? "on" : "off");
+    document.dispatchEvent(new CustomEvent("preview-comment-vim", { detail: { enabled: vimEnabled } }));
+    showCaret();
+  });
+  document.addEventListener("selectionchange", () => {
+    showCaret();
+    const chosen = selection();
+    if (chosen) offer(chosen, getSelection().getRangeAt(0).cloneRange());
+    else if (offeredAnchor instanceof Range) contextual.hidden = true;
+  });
+  const reposition = () => {
+    showCaret();
+    if (!contextual.hidden) position(contextual, offeredAnchor);
+    if (!panel.hidden && targetAnchor) position(panel, targetAnchor);
+  };
+  document.addEventListener("scroll", reposition, { passive: true, capture: true });
+  addEventListener("resize", reposition);
+  modeLabel();
+
+  function message(text, error = false) {
+    clearTimeout(statusTimer);
+    status.textContent = text;
+    status.classList.toggle("error", error);
+  }
+  async function api(path, body) {
+    const response = await fetch("/__preview_comments/" + path, {
+      method: body ? "POST" : "GET",
+      headers: { "Content-Type": "application/json", "X-Preview-Comment": "1" },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error((result.saved ? "Saved locally; notification failed. " : "") + result.error);
+    return result;
+  }
+  function currentThread() {
+    return historyComments.find(comment => comment.id === selectedThread);
+  }
+  function renderNote(author, text, at, opts = {}) {
+    const note = document.createElement("article");
+    note.className = opts.note ? "note private" : "note";
+    const label = document.createElement("small");
+    label.textContent = `${author}${opts.note ? " · private note" : ""} · ${new Date(at).toLocaleString()}${opts.edited ? " · edited" : ""}`;
+    const body = document.createElement("p");
+    body.textContent = text;
+    note.append(label, body);
+    if (opts.onEdit || opts.onDelete) {
+      const tools = document.createElement("div");
+      tools.className = "tools";
+      const tool = (name, run) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = name;
+        button.addEventListener("click", run);
+        tools.append(button);
+      };
+      if (opts.onEdit) tool("Edit", () => {
+        const input = document.createElement("textarea");
+        input.value = text;
+        const save = () => input.value.trim() && input.value !== text ? opts.onEdit(input.value) : cancel();
+        const cancel = () => { input.replaceWith(body); tools.hidden = false; };
+        input.addEventListener("keydown", event => {
+          if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) { event.preventDefault(); save(); }
+          if (event.key === "Escape") { event.stopPropagation(); cancel(); }
+        });
+        body.replaceWith(input);
+        tools.hidden = true;
+        const row = document.createElement("div");
+        row.className = "tools";
+        for (const [name, run] of [["Save", save], ["Cancel", cancel]]) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.textContent = name;
+          button.addEventListener("click", () => { row.remove(); run(); });
+          row.append(button);
+        }
+        note.append(row);
+        input.focus();
+      });
+      if (opts.onDelete) tool("Delete", opts.onDelete);
+      note.append(tools);
+    }
+    return note;
+  }
+  function threadNodes(comment, run) {
+    const nodes = [];
+    if (comment.comment) {
+      nodes.push(renderNote("You", comment.comment, comment.at, {
+        note: comment.note, edited: comment.commentEdited,
+        onEdit: text => run({ editComment: text }),
+      }));
+    }
+    for (const reply of comment.replies) {
+      const mine = reply.author !== "copilot";
+      nodes.push(renderNote(mine ? "You" : "Copilot", reply.comment, reply.at, {
+        note: reply.note, edited: reply.edited,
+        onEdit: mine ? text => run({ editReply: { id: reply.id, text } }) : undefined,
+        onDelete: () => run({ removeReply: reply.id }),
+      }));
+    }
+    return nodes;
+  }
+  function renderHistory() {
+    if (historyRevision < 0) {
+      find(".thread-list").textContent = "Loading comment history...";
+      return;
+    }
+    const resolved = historyComments.filter(comment => comment.resolved).length;
+    find(".history-counts").textContent = `${historyComments.length - resolved} unresolved · ${resolved} resolved`;
+    const list = find(".thread-list");
+    const focusedComment = shadow.activeElement?.dataset.commentId;
+    list.replaceChildren();
+    const filter = find("#history-filter").value;
+    const rows = [...historyComments].sort((a, b) => new Date(b.updatedAt || b.at) - new Date(a.updatedAt || a.at));
+    for (const comment of rows) {
+      if (comment.removed) continue;
+      if (filter === "page" ? comment.resolved || pagePath(comment.url) !== pagePath(location.href)
+        : filter !== "all" && comment.resolved !== (filter === "resolved")) continue;
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className = "thread-card";
+      card.dataset.commentId = comment.id;
+      const label = document.createElement("small");
+      label.textContent = `${comment.resolved ? "Resolved" : "Unresolved"} · ${comment.seen ? "Read" : "Unread"} by Copilot · ${comment.replies.length} ${comment.replies.length === 1 ? "reply" : "replies"}`;
+      const section = document.createElement("strong");
+      section.textContent = comment.section;
+      const text = document.createElement("div");
+      text.className = "preview";
+      text.textContent = comment.comment || "Highlight";
+      card.append(label, section, text);
+      card.addEventListener("click", () => {
+        selectedThread = comment.id;
+        replyInput.value = replyDrafts.get(comment.id)?.text || "";
+        renderHistory();
+        find(".thread-back").focus();
+      });
+      list.append(card);
+    }
+    if (!list.children.length) list.textContent = "No comments match this filter.";
+    const comment = currentThread();
+    find(".thread").hidden = !comment;
+    list.hidden = Boolean(comment);
+    if (!comment && focusedComment) {
+      [...list.children].find(card => card.dataset.commentId === focusedComment)?.focus();
+    }
+    if (!comment) return;
+    find(".thread-source").href = comment.url;
+    if (find(".thread-quote").textContent !== comment.quote) find(".thread-quote").textContent = comment.quote;
+    const state = find(".thread-state");
+    state.textContent = `${comment.resolved ? "Resolved" : "Unresolved"} · ${comment.note ? "Private note" : comment.seen ? "Read by Copilot" : "Unread by Copilot"}`;
+    state.classList.toggle("resolved", comment.resolved);
+    find(".thread-resolve").textContent = comment.resolved ? "Reopen" : "Resolve";
+    markSeen(comment);
+    find(".thread-messages").replaceChildren(...threadNodes(comment, values => updateThread(values)));
+  }
+  async function refreshHistory() {
+    const result = await api("history");
+    sessionId = result.sessionId;
+    if (result.revision < historyRevision) return;
+    if (result.revision !== historyRevision) {
+      historyRevision = result.revision;
+      historyComments = result.comments;
+      renderHistory();
+    }
+  }
+  function historyError(error) {
+    message(error.message, true);
+    if (historyRevision < 0) find(".thread-list").textContent = "History unavailable. Use Refresh to retry.";
+  }
+  function closeHistory() {
+    if (historySaving) return;
+    clearInterval(historyTimer);
+    shadow.activeElement?.blur();
+    history.hidden = true;
+    showCaret();
+  }
+  async function openHistory() {
+    if (find("button[type=submit]").disabled) return;
+    selecting = false;
+    visual = false;
+    clearPrefix();
+    toggle.textContent = "Comment";
+    shadow.activeElement?.blur();
+    panel.hidden = true;
+    contextual.hidden = true;
+    history.hidden = false;
+    showCaret();
+    message("");
+    renderHistory();
+    clearInterval(historyTimer);
+    const load = () => refreshHistory().catch(historyError);
+    await load();
+    if (history.hidden) return;
+    clearInterval(historyTimer);
+    historyTimer = setInterval(load, 2000);
+    find(".history-close").focus();
+  }
+  async function updateThread(values) {
+    const commentId = selectedThread;
+    historySaving = true;
+    for (const selector of [".reply-send", ".thread-resolve", ".thread-back", ".history-close", ".history-toggle", ".toggle", "#history-filter"]) find(selector).disabled = true;
+    find(".thread-source").setAttribute("aria-disabled", "true");
+    replyInput.readOnly = true;
+    try {
+      const result = await api("updates", { ...values, sessionId, commentId });
+      if (values.reply !== undefined) {
+        replyDrafts.delete(commentId);
+        replyInput.value = "";
+        host.dataset.replyDrafts = String([...replyDrafts.values()].filter(draft => draft.text.trim()).length);
+        message("Reply saved");
+      } else if (values.resolved !== undefined) message(result.resolved ? "Comment resolved" : "Comment reopened");
+      else message("Saved");
+      await refreshHistory();
+    } catch (error) {
+      message(error.message + (values.reply !== undefined ? " Your reply draft is kept; press Reply to retry." : ""), true);
+    } finally {
+      historySaving = false;
+      for (const selector of [".reply-send", ".thread-resolve", ".thread-back", ".history-close", ".history-toggle", ".toggle", "#history-filter"]) find(selector).disabled = false;
+      find(".thread-source").removeAttribute("aria-disabled");
+      replyInput.readOnly = false;
+    }
+  }
+  find(".history-toggle").addEventListener("click", () => history.hidden ? openHistory() : closeHistory());
+  find(".history-close").addEventListener("click", closeHistory);
+  find(".history-refresh").addEventListener("click", () => refreshHistory().catch(historyError));
+  find("#history-filter").addEventListener("change", () => { selectedThread = undefined; renderHistory(); });
+  find(".thread-back").addEventListener("click", () => {
+    const previous = selectedThread;
+    selectedThread = undefined;
+    renderHistory();
+    [...find(".thread-list").children].find(card => card.dataset.commentId === previous)?.focus();
+  });
+  find(".thread-source").addEventListener("click", event => {
+    if (historySaving) event.preventDefault();
+    else closeHistory();
+  });
+  replyInput.addEventListener("input", () => {
+    replyDrafts.set(selectedThread, { ...replyDrafts.get(selectedThread), text: replyInput.value });
+    host.dataset.replyDrafts = String([...replyDrafts.values()].filter(draft => draft.text.trim()).length);
+  });
+  find(".reply-form").addEventListener("submit", event => {
+    event.preventDefault();
+    if (!replyInput.value.trim() || historySaving) return;
+    const draft = replyDrafts.get(selectedThread) || {};
+    if (!draft.id || draft.submitted !== replyInput.value) draft.id = crypto.randomUUID();
+    draft.submitted = replyInput.value;
+    replyDrafts.set(selectedThread, draft);
+    updateThread({ id: draft.id, reply: replyInput.value });
+  });
+  find(".thread-resolve").addEventListener("click", () => {
+    updateThread({ id: crypto.randomUUID(), resolved: !currentThread().resolved });
+  });
+  function context(element, kind, quote) {
+    const doc = element.closest(".vp-doc");
+    const before = node => node === element || node.contains(element) ||
+      Boolean(node.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING);
+    const headings = [...doc.querySelectorAll("h1,h2,h3,h4")].filter(before);
+    const anchors = [...doc.querySelectorAll("h1[id],h2[id],h3[id],h4[id],a[id]")].filter(before);
+    const anchor = anchors.at(-1)?.id || "";
+    const url = new URL(location.href);
+    url.hash = anchor;
+    return { kind, quote, anchor, url: url.href, section: headings.at(-1)?.textContent.replace(/#$/, "").trim() || document.title };
+  }
+  function selection() {
+    const selected = getSelection();
+    if (!selected?.rangeCount || !selected.toString().trim()) return null;
+    const range = selected.getRangeAt(0);
+    const element = range.commonAncestorContainer.nodeType === Node.ELEMENT_NODE
+      ? range.commonAncestorContainer : range.commonAncestorContainer.parentElement;
+    if (!element?.closest(".vp-doc")) return null;
+    return context(element, "text", selected.toString().trim());
+  }
+  function elementSelection(element) {
+    if (!element?.closest?.(".vp-doc")) return null;
+    const equation = element.closest("mjx-container");
+    if (equation) {
+      const label = equation.querySelector("mlabeledtr > mtd")?.textContent;
+      return { element: equation, chosen: context(equation, "equation",
+        label ? `Equation ${label}` : equation.textContent.trim()) };
+    }
+    const control = element.closest("input, textarea, select, button") || element.closest("label")?.control;
+    if (control && !control.matches("input[type=password], input[type=hidden], input[type=file]")) {
+      const label = control.getAttribute("aria-label") ||
+        [...(control.labels || [])].map(node => node.textContent.trim()).join(" ") ||
+        control.textContent.trim() || control.getAttribute("placeholder") || control.tagName.toLowerCase();
+      const value = control.matches("input[type=checkbox], input[type=radio]")
+        ? control.checked ? "checked" : "unchecked" : control.value;
+      const quote = (value ? `${label}: ${value}` : label).slice(0, 1000);
+      return { element: control, chosen: context(control, "text", quote) };
+    }
+    const text = element.closest("svg text, label");
+    if (text?.textContent.trim()) return { element: text, chosen: context(text, "text", text.textContent.trim().slice(0, 1000)) };
+    const figure = element.closest("img, svg, figure, [role=figure], [role=img]");
+    if (!figure) return null;
+    const quote = figure.getAttribute("alt") || figure.getAttribute("aria-label") ||
+      figure.querySelector("title, figcaption")?.textContent || figure.textContent.trim() ||
+      figure.getAttribute("src") || "Figure";
+    return { element: figure, chosen: context(figure, "figure", quote.slice(0, 1000)) };
+  }
+  function position(node, anchor) {
+    if (!anchor) return;
+    const rect = anchor.getBoundingClientRect();
+    if (node === contextual && (rect.bottom <= viewportTop() || rect.top >= innerHeight - 12)) {
+      contextual.hidden = true;
+      return;
+    }
+    const width = node.offsetWidth, height = node.offsetHeight;
+    const left = Math.max(12, Math.min(rect.left, innerWidth - width - 12));
+    let top = rect.bottom + 8;
+    if (top + height > innerHeight - 12) top = rect.top - height - 8;
+    top = Math.max(viewportTop(), Math.min(top, innerHeight - height - 12));
+    node.style.left = left + "px";
+    node.style.top = top + "px";
+  }
+  function offer(chosen, anchor) {
+    if (!panel.hidden || !history.hidden || historySaving || find("button[type=submit]").disabled) return;
+    offeredTarget = chosen;
+    offeredAnchor = anchor;
+    contextual.hidden = false;
+    position(contextual, anchor);
+  }
+  contextual.addEventListener("mousedown", event => event.preventDefault());
+  document.addEventListener("focusin", event => {
+    const picked = elementSelection(event.target);
+    if (picked) offer(picked.chosen, picked.element);
+  });
+  document.addEventListener("input", event => {
+    if (contextual.hidden || offeredAnchor !== event.target) return;
+    const picked = elementSelection(event.target);
+    if (picked) offer(picked.chosen, picked.element);
+  });
+  async function open(chosen, anchor) {
+    if (historySaving) return;
+    closeHistory();
+    if (JSON.stringify(chosen) !== JSON.stringify(target)) draftId = undefined;
+    targetAnchor = anchor || (selection() && getSelection().getRangeAt(0).cloneRange()) ||
+      (JSON.stringify(chosen) === JSON.stringify(target) ? targetAnchor : undefined);
+    target = chosen;
+    contextual.hidden = true;
+    selecting = false;
+    visual = false;
+    clearPrefix();
+    toggle.textContent = "Comment";
+    find(".quote").textContent = chosen.quote;
+    panel.hidden = false;
+    panel.classList.toggle("contextual-panel", Boolean(targetAnchor));
+    panel.style.left = "";
+    panel.style.top = "";
+    if (targetAnchor) position(panel, targetAnchor);
+    showCaret();
+    message("");
+    textarea.focus();
+    try {
+      const ready = await api("status");
+      sessionId = ready.sessionId;
+      find(".receiver").textContent = `This conversation · ${sessionId.slice(0, 8)}`;
+    } catch (error) {
+      message(error.message, true);
+    }
+  }
+  toggle.addEventListener("mousedown", event => event.preventDefault());
+  toggle.addEventListener("click", () => {
+    const chosen = selection();
+    if (chosen) { open(chosen); return; }
+    if (textarea.value.trim() && target) { open(target); return; }
+    selecting = !selecting;
+    toggle.textContent = selecting ? "Cancel selection" : "Comment";
+    message(selecting ? "Select text, or click an equation, figure, label or control." : "");
+  });
+  document.addEventListener("mouseup", event => {
+    if (host.contains(event.target)) return;
+    const selected = selection();
+    const picked = selected ? null : elementSelection(event.target);
+    const chosen = selected || picked?.chosen;
+    if (!chosen) { contextual.hidden = true; return; }
+    const anchor = picked?.element || getSelection().getRangeAt(0).cloneRange();
+    if (selecting) open(chosen, anchor);
+    else offer(chosen, anchor);
+  });
+  document.addEventListener("keydown", event => {
+    if (event.isComposing) return;
+    if (event.key === "Escape") {
+      contextual.hidden = true;
+      if (find("button[type=submit]").disabled || historySaving) return;
+      if (!history.hidden) { event.preventDefault(); closeHistory(); return; }
+      if (panel.hidden && !visual && !prefix && !selecting) { message(""); return; }
+      if (!panel.hidden || visual || prefix || selecting) event.preventDefault();
+      if (visual) {
+        const selected = getSelection();
+        if (selected.focusNode) selected.collapse(selected.focusNode, selected.focusOffset);
+      }
+      visual = false;
+      clearPrefix();
+      selecting = false;
+      toggle.textContent = "Comment";
+      shadow.activeElement?.blur();
+      panel.hidden = true;
+      message("");
+      showCaret();
+      return;
+    }
+    if (!vimEnabled || !panel.hidden || !history.hidden || event.ctrlKey || event.metaKey || event.altKey ||
+        event.composedPath().some(node => node.matches?.("input, textarea, select, button, [contenteditable]:not([contenteditable='false']), [role='textbox']")) ||
+        !document.querySelector(".vp-doc")) return;
+    const previous = prefix;
+    clearPrefix();
+    if (event.key === "h" && previous === "-") {
+      event.preventDefault();
+      openHistory();
+      return;
+    }
+    if (event.key === "c" && (visual || previous === "-")) {
+      event.preventDefault();
+      commentSelection();
+      return;
+    }
+    if (event.key === "-" || event.key === "g" && previous !== "g") {
+      event.preventDefault();
+      prefix = event.key;
+      modeLabel();
+      prefixTimer = setTimeout(clearPrefix, 1000);
+      return;
+    }
+    const motions = {
+      h: ["backward", "character"], l: ["forward", "character"],
+      j: ["forward", "line"], k: ["backward", "line"],
+      w: ["forward", "word"], b: ["backward", "word"],
+      "0": ["backward", "lineboundary"], "$": ["forward", "lineboundary"],
+    };
+    if (!motions[event.key] && !["v", "g", "G", "H", "L", " "].includes(event.key)) return;
+    if (typeof getSelection().modify !== "function") {
+      message("Vim selection is not supported by this browser. Mouse commenting remains available.", true);
+      return;
+    }
+    if (event.key === " ") {
+      const node = getSelection().focusNode;
+      const element = node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement;
+      const details = element?.closest(".vp-doc details");
+      if (!details) return;
+      event.preventDefault();
+      details.open = !details.open;
+      showCaret();
+      return;
+    }
+    event.preventDefault();
+    if (motions[event.key]) move(...motions[event.key]);
+    else if (event.key === "g" || event.key === "G") useRange(edgeRange(event.key === "G"));
+    else if (event.key === "L" || event.key === "H") useRange(viewRange(event.key === "H"));
+    else {
+      if (!ensureCursor()) return;
+      const selected = getSelection();
+      if (visual) selected.collapse(selected.focusNode, selected.focusOffset);
+      else if (selected.isCollapsed) {
+        selected.modify("extend", "forward", "character");
+        if (!document.querySelector(".vp-doc").contains(selected.focusNode) || selected.isCollapsed) {
+          selected.collapse(selected.anchorNode, selected.anchorOffset);
+          selected.modify("extend", "backward", "character");
+        }
+      }
+      visual = !visual;
+      modeLabel();
+      showCaret(true);
+    }
+  });
+  find(".note-save").addEventListener("click", () => {
+    noteRequested = true;
+    find("form").requestSubmit();
+  });
+  find(".cancel").addEventListener("click", () => {
+    shadow.activeElement?.blur();
+    panel.hidden = true;
+    message("");
+    showCaret();
+  });
+  find("form").addEventListener("submit", async event => {
+    event.preventDefault();
+    if (!target || !textarea.value.trim()) return;
+    if (!draftId || submittedText !== textarea.value) draftId = crypto.randomUUID();
+    submittedText = textarea.value;
+    const send = find("button[type=submit]");
+    send.disabled = true;
+    toggle.disabled = true;
+    find(".cancel").disabled = true;
+    textarea.readOnly = true;
+    message("Saving…");
+    try {
+      if (!sessionId) sessionId = (await api("status")).sessionId;
+      const asNote = noteRequested;
+      noteRequested = false;
+      await api("comments", { ...target, id: draftId, sessionId, comment: submittedText, ...(asNote ? { note: true } : {}) });
+      message(asNote ? "Saved as private note" : "Saved · awaiting review");
+      statusTimer = setTimeout(() => message(""), 5000);
+      textarea.value = "";
+      draftId = undefined;
+      shadow.activeElement?.blur();
+      panel.hidden = true;
+      getSelection()?.removeAllRanges();
+      showCaret();
+    } catch (error) {
+      message(error.message + " Your draft is kept; press Send to retry.", true);
+    } finally {
+      send.disabled = false;
+      toggle.disabled = false;
+      find(".cancel").disabled = false;
+      textarea.readOnly = false;
+    }
+  });
+
+  const COLORS = { yellow: "255,208,0", green: "88,201,122", blue: "90,169,255", pink: "255,126,182" };
+  const markStyle = document.createElement("style");
+  markStyle.textContent = Object.entries(COLORS).map(([name, rgb]) =>
+    `::highlight(preview-comment-${name}){background:rgba(${rgb},.4)}`).join("") +
+    "";
+  document.head.append(markStyle);
+  const popStyle = document.createElement("style");
+  popStyle.textContent = ".mark-pop{position:fixed;transform:scale(var(--s,1));transform-origin:top left;width:min(340px,calc(100vw - 24px));max-height:60vh;overflow:auto;" +
+    "padding:12px;background:#1b1d22;border:1px solid #59616d;border-radius:12px;box-shadow:0 12px 40px #0008;margin:0}" +
+    ".mark-pop .note{margin:8px 0}.mark-pop textarea{width:100%;min-height:54px;box-sizing:border-box}" +
+    ".mark-pop .row{display:flex;gap:6px;align-items:center;margin:6px 0}" +
+    ".mark-pop .actions{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}" +
+    ".mark-pop .actions button{padding:5px 10px;font-size:13px;white-space:nowrap}";
+  shadow.append(popStyle);
+  const pop = document.createElement("section");
+  pop.className = "mark-pop";
+  pop.hidden = true;
+  shadow.append(pop);
+  const rail = find(".rail");
+  const pill = find(".pill");
+  const toolbar = find(".toolbar");
+  let marks = [];
+  // Browser zoom shrinks fixed UI with the page; counter-scale so it stays readable when zoomed out.
+  const uiScale = () => {
+    // devicePixelRatio tracks browser zoom; the largest ratio seen is the 100% baseline (HiDPI screens).
+    const base = Math.max(1, Number(localStorage.getItem("preview-comments-dpr")) || 1, devicePixelRatio);
+    localStorage.setItem("preview-comments-dpr", base);
+    const zoom = devicePixelRatio / base;
+    return zoom < 0.95 ? Math.min(3, 1 / zoom) : 1;
+  };
+  // Pinch-zoom leaves fixed elements on the layout viewport; pull the dock back to the visible corner.
+  const applyDock = () => {
+    const v = window.visualViewport, root = document.documentElement;
+    const k = v ? v.scale : 1;
+    const dx = v ? v.offsetLeft + v.width - root.clientWidth : 0;
+    const dy = v ? v.offsetTop + v.height - root.clientHeight : 0;
+    host.style.setProperty("--dx", `${dx}px`);
+    host.style.setProperty("--dy", `${dy}px`);
+    host.style.setProperty("--ds", uiScale() / k);
+  };
+  const applyScale = () => { host.style.setProperty("--s", uiScale()); applyDock(); placeBubbles(); };
+  addEventListener("resize", applyScale);
+  if (window.visualViewport) { visualViewport.addEventListener("resize", applyDock); visualViewport.addEventListener("scroll", applyDock); }
+  const SEEN_KEY = "preview-comments-seen-replies";
+  const firstRun = localStorage.getItem(SEEN_KEY) === null;
+  const seenReplies = JSON.parse(localStorage.getItem(SEEN_KEY) || "{}");
+  const hasFresh = comment => {
+    const last = comment.replies.at(-1);
+    return Boolean(last && last.author === "copilot" && seenReplies[comment.id] !== last.id);
+  };
+  function markSeen(comment) {
+    const last = comment.replies.at(-1);
+    if (!last || seenReplies[comment.id] === last.id) return;
+    seenReplies[comment.id] = last.id;
+    localStorage.setItem(SEEN_KEY, JSON.stringify(seenReplies));
+    placeBubbles();
+    applyMarks();
+  }
+  let hoverColor = localStorage.getItem("preview-comments-color") || "yellow";
+  const squash = text => text.normalize("NFKC").replace(/\s+/g, "");
+  function swatches(container, chosen, pick) {
+    container.replaceChildren();
+    for (const name of Object.keys(COLORS)) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.title = `Highlight ${name}`;
+      button.className = `swatch c-${name}${name === chosen ? " on" : ""}`;
+      button.addEventListener("mousedown", event => event.preventDefault());
+      button.addEventListener("click", () => pick(name));
+      container.append(button);
+    }
+  }
+  function locate(doc, quote) {
+    const wanted = squash(quote);
+    if (!wanted) return;
+    let flat = "";
+    const index = [];
+    const walker = document.createTreeWalker(doc, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const parent = node.parentElement;
+      if (!parent || parent.closest("script, style, mjx-assistive-mml, [aria-hidden='true']") || !parent.checkVisibility()) continue;
+      for (let i = 0; i < node.data.length; i++) {
+        for (const char of node.data[i].normalize("NFKC")) {
+          if (/\s/.test(char)) continue;
+          flat += char;
+          index.push([node, i]);
+        }
+      }
+    }
+    const at = flat.indexOf(wanted);
+    if (at < 0) return;
+    const range = document.createRange();
+    range.setStart(...index[at]);
+    const [endNode, endOffset] = index[at + wanted.length - 1];
+    range.setEnd(endNode, endOffset + 1);
+    return range;
+  }
+  // Pages with canvas content (graphs) expose window.previewCommentTargets.get(id) →
+  // { kind: "node"|"edge", quote, rect } (rect in viewport coordinates, null if not visible)
+  const customTarget = id => window.previewCommentTargets?.get?.(id) || null;
+  function customChosen(id) {
+    const item = customTarget(id);
+    if (!item) return null;
+    const url = new URL(location.href);
+    url.hash = `${item.kind}-${id}`;
+    return {
+      chosen: { kind: item.kind, quote: item.quote, anchor: `${item.kind}-${id}`, url: url.href, section: document.title },
+      anchor: { getBoundingClientRect: () => customTarget(id)?.rect || { top: -1e4, bottom: -1e4, left: 0, right: 0 } },
+    };
+  }
+  document.addEventListener("preview-comment-pick", event => {
+    setTimeout(() => { const item = customChosen(event.detail?.id); if (item) offer(item.chosen, item.anchor); }, 0);
+  });
+  document.addEventListener("preview-comment-open", event => {
+    const item = customChosen(event.detail?.id);
+    if (item) open(item.chosen, item.anchor);
+  });
+  document.addEventListener("preview-comment-reflow", () => { if (marks.length) requestAnimationFrame(placeBubbles); });
+  function placeBubbles() {
+    rail.replaceChildren();
+    const top = viewportTop();
+    let last = -100;
+    for (const mark of marks) {
+      if (mark.comment.resolved) continue;
+      const y = mark.range.getBoundingClientRect().top;
+      if (!(y >= top) || y > innerHeight - 40) continue;
+      const bubble = document.createElement("button");
+      bubble.type = "button";
+      bubble.className = `bubble c-${mark.comment.color || "yellow"}${hasFresh(mark.comment) ? " fresh" : ""}`;
+      const count = mark.comment.replies.length + (mark.comment.comment ? 1 : 0);
+      bubble.textContent = count ? String(count) : "";
+      const gap = 28 * uiScale();
+      bubble.style.top = `${Math.max(y, last + gap)}px`;
+      last = Math.max(y, last + gap);
+      bubble.addEventListener("click", event => { event.stopPropagation(); showMark(mark, bubble.getBoundingClientRect()); });
+      rail.append(bubble);
+    }
+  }
+  function applyMarks() {
+    const doc = document.querySelector(".vp-doc");
+    marks = [];
+    const here = pagePath(location.href);
+    for (const comment of historyComments) {
+      if (comment.removed || pagePath(comment.url) !== here) continue;
+      if (comment.kind === "node" || comment.kind === "edge") {
+        const id = comment.anchor.replace(/^(node|edge)-/, "");
+        marks.push({ custom: true, comment, range: { getBoundingClientRect: () => customTarget(id)?.rect || { top: NaN } } });
+      } else if (doc && CSS.highlights) {
+        const range = locate(doc, comment.quote);
+        if (range) marks.push({ range, comment });
+      }
+    }
+    if (!CSS.highlights) { placeBubbles(); return; }
+    for (const name of Object.keys(COLORS)) {
+      const ranges = marks.filter(mark => !mark.custom && (mark.comment.color || "yellow") === name)
+        .map(mark => mark.range);
+      if (ranges.length) CSS.highlights.set(`preview-comment-${name}`, new Highlight(...ranges));
+      else CSS.highlights.delete(`preview-comment-${name}`);
+    }
+    const open = marks.filter(mark => !mark.comment.resolved).length;
+    const waiting = marks.some(mark => mark.comment.comment && !mark.comment.seen && !mark.comment.resolved);
+    if (firstRun && historyRevision >= 0 && localStorage.getItem(SEEN_KEY) === null) {
+      for (const item of historyComments) { const last = item.replies.at(-1); if (last) seenReplies[item.id] = last.id; }
+      localStorage.setItem(SEEN_KEY, JSON.stringify(seenReplies));
+    }
+    const fresh = marks.filter(mark => hasFresh(mark.comment)).length;
+    pill.classList.toggle("alert", fresh > 0);
+    find(".pill-label").textContent = fresh ? `${fresh} new ${fresh === 1 ? "reply" : "replies"}` : open ? `${open} on this page` : "Comments";
+    find(".dot").classList.toggle("waiting", waiting);
+    placeBubbles();
+  }
+  async function update(comment, values) {
+    await api("updates", { ...values, id: crypto.randomUUID(), sessionId, commentId: comment.id });
+    await refreshHistory();
+    applyMarks();
+  }
+  function showMark(mark, at) {
+    const { comment } = mark;
+    setTimeout(() => markSeen(comment), 0);
+    const state = document.createElement("small");
+    const replies = comment.replies.length;
+    state.textContent = `${comment.resolved ? "Resolved" : comment.note ? "Private note" : comment.comment ? "Open" : "Highlight"}` +
+      (replies ? ` · ${replies} ${replies === 1 ? "reply" : "replies"}` : "");
+    const colors = document.createElement("div");
+    colors.className = "row";
+    swatches(colors, comment.color || "yellow", name => update(comment, { color: name }).then(() => { pop.hidden = true; }));
+    const redo = values => update(comment, values).then(() => {
+      const fresh = marks.find(item => item.comment.id === comment.id);
+      if (fresh) showMark(fresh, at);
+      else pop.hidden = true;
+    });
+    const notes = threadNodes(comment, redo);
+    const input = document.createElement("textarea");
+    input.placeholder = comment.comment ? "Reply… (Ctrl+Enter)" : "Add a comment… (Ctrl+Enter)";
+    const send = async (note = false) => {
+      if (!input.value.trim()) return;
+      await update(comment, { reply: input.value, ...(note ? { note: true } : {}) });
+      pop.hidden = true;
+    };
+    input.addEventListener("keydown", event => {
+      if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) { event.preventDefault(); send(); }
+      if (event.key === "Escape") { event.stopPropagation(); pop.hidden = true; }
+    });
+    const actions = document.createElement("div");
+    actions.className = "actions";
+    const button = (label, run) => {
+      const node = document.createElement("button");
+      node.type = "button";
+      node.textContent = label;
+      node.addEventListener("click", run);
+      return node;
+    };
+    actions.append(button("Close", () => { pop.hidden = true; }));
+    if (comment.comment) {
+      actions.append(button(comment.resolved ? "Reopen" : "Resolve",
+        () => update(comment, { resolved: !comment.resolved }).then(() => { pop.hidden = true; })));
+      actions.append(button("Delete comment", () => update(comment, { clear: true }).then(() => { pop.hidden = true; })));
+    }
+    actions.append(button("Remove highlight", () => update(comment, { removed: true }).then(() => { pop.hidden = true; })));
+    if (comment.note) actions.append(button("Send to Copilot", () => redo({ promote: true })));
+    actions.append(button("Note", () => send(true)), button("Send", () => send()));
+    pop.replaceChildren(state, colors, ...notes, input, actions);
+    pop.hidden = false;
+    pop.style.left = `${Math.max(12, Math.min(at.left, innerWidth - pop.offsetWidth * uiScale() - 12))}px`;
+    pop.style.top = `${Math.max(12, Math.min(at.top + 14, innerHeight - pop.offsetHeight * uiScale() - 12))}px`;
+    input.focus();
+  }
+  document.addEventListener("click", event => {
+    if (host.contains(event.target) || !getSelection().isCollapsed) return;
+    const caret = document.caretPositionFromPoint?.(event.clientX, event.clientY);
+    const hit = caret && marks.filter(mark => !mark.custom && mark.range.isPointInRange(caret.offsetNode, caret.offset))
+      .sort((a, b) => a.range.toString().length - b.range.toString().length)[0];
+    if (hit) showMark(hit, { left: event.clientX, top: event.clientY });
+    else pop.hidden = true;
+  });
+  swatches(find(".swatches"), hoverColor, async name => {
+    hoverColor = name;
+    localStorage.setItem("preview-comments-color", name);
+    if (!offeredTarget) return;
+    try {
+      if (!sessionId) sessionId = (await api("status")).sessionId;
+      await api("comments", { ...offeredTarget, id: crypto.randomUUID(), sessionId, highlight: true, color: name });
+      getSelection().removeAllRanges();
+      contextual.hidden = true;
+      await refreshHistory();
+      applyMarks();
+    } catch (error) { message(error.message, true); }
+  });
+  find(".ctx-comment").addEventListener("click", () => open(offeredTarget, offeredAnchor));
+  pill.addEventListener("click", () => {
+    toolbar.hidden = !toolbar.hidden;
+    pill.setAttribute("aria-expanded", String(!toolbar.hidden));
+  });
+  textarea.addEventListener("keydown", event => {
+    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) { event.preventDefault(); find("form").requestSubmit(); }
+  });
+  replyInput.addEventListener("keydown", event => {
+    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) { event.preventDefault(); find(".reply-form").requestSubmit(); }
+  });
+  async function syncMarks() {
+    try { await refreshHistory(); } catch { /* the bridge may be offline; keep the last marks */ }
+    applyMarks();
+  }
+  let markTimer;
+  new MutationObserver(() => { clearTimeout(markTimer); markTimer = setTimeout(applyMarks, 150); })
+    .observe(document.body, { attributes: true, attributeFilter: ["hidden"], subtree: true });
+  addEventListener("scroll", () => { if (marks.length) requestAnimationFrame(placeBubbles); }, { passive: true });
+  addEventListener("resize", applyMarks);
+  applyScale();
+  syncMarks();
+  setInterval(syncMarks, 3000);
+})();
