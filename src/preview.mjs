@@ -57,9 +57,17 @@ export async function startDocumentPreview({
     writeFileSync(join(configDirectory, "config.mjs"),
       `import { previewConfig } from ${JSON.stringify(configModule)};\n` +
       `export default previewConfig(${JSON.stringify({ documentRoot, connectionFile, workspace, packageRoot })});\n`);
-    server = await createServer(workspace, { host: "127.0.0.1", port, strictPort: port !== 0 });
+    let listenPort = port;
+    // VitePress calls this when the config file changes (the page tree touches it); keep the port so the origin stays valid.
+    const recreate = async () => {
+      await server.close();
+      server = await createServer(workspace, { host: "127.0.0.1", port: listenPort, strictPort: true }, recreate);
+      await server.listen();
+    };
+    server = await createServer(workspace, { host: "127.0.0.1", port, strictPort: port !== 0 }, recreate);
     await server.listen();
     const address = server.httpServer.address();
+    listenPort = address.port;
     const origin = `http://127.0.0.1:${address.port}`;
     bridge = await startCommentBridge({ sessionId, documentRoot, storageRoot, previewOrigin: origin, notify, onError });
     const stem = basename(document, ".md");

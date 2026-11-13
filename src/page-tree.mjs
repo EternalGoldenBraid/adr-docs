@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { readdirSync, readFileSync, utimesSync } from "node:fs";
 import { basename, join, relative } from "node:path";
 
 const frontOf = text => text.match(/^---\n([\s\S]*?)\n---/)?.[1] ?? "";
@@ -48,6 +48,28 @@ export function nestedTree(pages, parent = null) {
     ({ slug, link, title, ...(order !== 1000 ? { order } : {}), children: nestedTree(pages, slug) }));
 }
 
+// The sidebar and top bar are baked into the VitePress config; touching the config file makes
+// VitePress reload it, so added, removed or re-parented pages show up without a restart.
+function watchTree(server, documentRoot) {
+  let known = JSON.stringify(treeThemeConfig(documentRoot));
+  let timer;
+  const check = file => {
+    if (!file.endsWith(".md") || !file.startsWith(documentRoot)) return;
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      let now;
+      try { now = JSON.stringify(treeThemeConfig(documentRoot)); } catch { return; } // root removed while closing
+      if (now === known) return;
+      known = now;
+      const config = server.config.vitepress?.configPath ?? join(server.config.root, ".vitepress/config.mjs");
+      try { utimesSync(config, new Date(), new Date()); } catch { /* no config file to touch */ }
+    }, 300);
+  };
+  server.httpServer?.once("close", () => clearTimeout(timer));
+  server.watcher.add(documentRoot);
+  for (const event of ["add", "unlink", "change"]) server.watcher.on(event, check);
+}
+
 export function treeJsonPlugin(documentRoot) {
   const body = publishedOnly => JSON.stringify(nestedTree(readPageTree(documentRoot, { publishedOnly })), null, 2) + "\n";
   return {
@@ -58,6 +80,7 @@ export function treeJsonPlugin(documentRoot) {
         response.setHeader("content-type", "application/json");
         response.end(body(false));
       });
+      watchTree(server, documentRoot);
     },
     generateBundle() { this.emitFile({ type: "asset", fileName: "tree.json", source: body(true) }); },
   };
