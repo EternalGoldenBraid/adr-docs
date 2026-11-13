@@ -3,7 +3,7 @@
 ## 0.16.0 - 2026-11-13
 
 - Vim mode now shows as a status bar at the bottom (`-- NORMAL --`, with the agent status beside it); the toolbar button is just `Vim`.
-- Attention markers: open threads whose last message is from the agent are counted as awaiting you. The tab title gets `(n)`, and the page tree (breadcrumb, child list, popover, Tree button) shows red counts per page. Session chat counts in the total.
+- Attention markers: open threads the agent started whose last message is from the agent (not plain replies to your comments) count as awaiting you. The tab title gets `(n)`, and the page tree (breadcrumb, child list, popover, Tree button) shows red counts per page. Session chat counts in the total.
 
 ## 0.15.0 - 2026-11-13
 

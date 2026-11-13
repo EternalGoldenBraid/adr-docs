@@ -92,7 +92,7 @@ onUnmounted(() => {
   <span v-if="children.length" class="pt-children">
     Pages below: <a v-for="c in children" :key="c.slug" :href="withBase(c.link)">{{ c.title }}<b v-if="waits(c.slug)" class="pt-dot">{{ waits(c.slug) }}</b></a>
   </span>
-  <button class="pt-open" title="Page tree (t)" @click="open ? (open = false) : show()">☰ Tree<b v-if="awaiting['*'] || Object.keys(awaiting).length" class="pt-dot">{{ Object.values(awaiting).reduce((a, b) => a + b, 0) }}</b></button>
+  <button class="pt-open" title="Page tree (t)" @click="open ? (open = false) : show()">☰ Tree<b v-if="Object.keys(awaiting).length" class="pt-dot" title="Open threads the agent started and is waiting on you for">{{ Object.values(awaiting).reduce((a, b) => a + b, 0) }}</b></button>
   <div v-if="open" class="pt-pop" ref="list" tabindex="0" role="tree">
     <div v-for="(r, i) in rows" :key="r.slug" class="pt-row" :class="{ cur: r.slug === current, at: i === cursor }"
       :style="{ paddingLeft: 10 + r.depth * 18 + 'px' }" role="treeitem" @click="go(r.link)">
