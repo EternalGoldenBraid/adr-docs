@@ -265,7 +265,7 @@ onMounted(async () => {
         width: 2, 'line-color': 'data(color)', 'target-arrow-color': 'data(color)', 'target-arrow-shape': 'triangle',
         'curve-style': 'taxi', 'taxi-direction': 'vertical', 'taxi-turn': '50%', 'taxi-radius': 8, opacity: 0.85 } },
       { selector: 'node[kind = "dot"]', style: { label: '', 'border-width': 0 } },
-      { selector: 'edge[label]', style: { label: 'data(label)', 'font-size': 11, 'font-style': 'italic', color: '#cbd5e1', 'text-background-color': '#0b1220', 'text-background-opacity': 1, 'text-background-padding': 3 } },
+      { selector: 'edge[label]', style: { label: 'data(label)', 'font-size': 14, 'font-weight': 600, color: 'data(color)', 'text-background-color': '#0b1220', 'text-background-opacity': 1, 'text-background-padding': 4, 'text-background-shape': 'round-rectangle' } },
       { selector: 'edge[?dashed]', style: { 'line-style': 'dashed' } },
       { selector: '.dim', style: { opacity: 0.12 } },
       { selector: ':selected', style: { 'border-color': '#facc15', 'border-width': 4 } },
