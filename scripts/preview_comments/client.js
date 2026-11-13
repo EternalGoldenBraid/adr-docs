@@ -27,6 +27,11 @@
       .history-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
       select{font:inherit;padding:6px;background:#292d35;color:#eee;border:1px solid #59616d;border-radius:6px}
       .thread-card{display:block;width:100%;text-align:left;margin:10px 0;padding:12px}
+      .thread-card{border-left:4px solid #444c56}
+      .thread-card.unread{border-left-color:#e3b341;background:rgba(227,179,65,.14)}
+      .thread-card.waiting{border-left-color:#f85149;background:rgba(248,81,73,.16)}
+      .thread-card.open{border-left-color:#58a6ff}
+      .thread-card.done{opacity:.55}
       .thread-card small{display:block}.preview{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
       .thread-state{margin:12px 0;color:#b7c1ce}.thread-state.resolved{color:#a2d8b1}
       .note{margin:12px 0;padding:12px;background:#252a32;border-radius:6px}
@@ -490,6 +495,7 @@
       card.type = "button";
       card.className = "thread-card";
       card.dataset.commentId = comment.id;
+      card.classList.add(comment.resolved ? "done" : awaiting(comment) ? "waiting" : comment.seen || comment.note ? "open" : "unread");
       const label = document.createElement("small");
       label.textContent = `${comment.resolved ? "Resolved" : "Unresolved"} · ${comment.seen ? "Read" : "Unread"} by Copilot · ${comment.replies.length} ${comment.replies.length === 1 ? "reply" : "replies"}`;
       const section = document.createElement("strong");

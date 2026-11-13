@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.17.2 - 2026-11-13
+
+- History cards are tinted: red = waiting for you, amber = unresolved and not yet read by Copilot, blue = unresolved and read, dim = resolved.
+
 ## 0.17.1 - 2026-11-13
 
 - `publish: false` front matter keeps a page out of `build:site` (page and tree.json). Preview still shows it.
