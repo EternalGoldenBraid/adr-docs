@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.20.0 - 2026-11-14
+
+- **Next awaiting thread:** `]` / `[` on any page jump to the next / previous thread waiting for you, across pages (navigates, then opens the thread). Completes the attention beacon.
+- **Notes tab:** bare highlights and private notes have no resolve state and no longer clutter triage. They are listed on a separate **Notes** tab (also under **All**), counted apart, and the thread view offers **Remove** instead of Resolve. A highlight's comment can still be deleted while keeping the highlight, and the highlight removed, from its popover.
+
 ## 0.19.4 - 2026-11-13
 
 - Unseen Copilot replies are always surfaced: a resolved thread with a reply you have not seen is listed on the **Open**/**This page**/**Chat** tabs (badge "resolved · new reply") until you view it, so the "N new replies" pill and the history agree. `r` on such a row marks it seen without reopening it.
