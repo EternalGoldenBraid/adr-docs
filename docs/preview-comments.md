@@ -23,6 +23,8 @@ appear in **History**; document edits appear through the existing hot preview.
 its selected content, page link, link chips and dated replies from you and
 Copilot; the reply box stays at the bottom.
 
+A resolved thread that has a Copilot reply you have not yet seen stays on the open tabs, marked "new reply", until you open it (or press `r` on it).
+
 Keyboard triage: in the list `j`/`k` move, `l` or Enter opens, `r` resolves the
 row and moves to the next, `[`/`]` (or `k` from the first row, then `h`/`l`) switch tabs, `g`/`G` jump to the ends. In a
 thread `j`/`k` step through the messages (and scroll), `J`/`K` go to the next or previous thread, `r` resolves (back to the list
