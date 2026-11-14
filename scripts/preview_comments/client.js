@@ -715,8 +715,10 @@
     box.replaceChildren(...out.map(c => row("→", c, true)), ...back.map(c => row("←", c, false)), picker);
   }
   // Cycle through threads awaiting you, across pages; remembers the last stop.
+  // Needs your eyes: the agent started it and waits, or it has an agent reply you have not seen (resolved ones only if the reply came after resolving).
+  const attention = comment => !comment.removed && !isNote(comment) && (awaiting(comment) || hasFresh(comment));
   function jumpToAwaiting(step) {
-    const queue = historyComments.filter(awaiting).sort((x, y) => new Date(x.at) - new Date(y.at));
+    const queue = historyComments.filter(attention).sort((x, y) => new Date(x.at) - new Date(y.at));
     if (!queue.length) { message("Nothing awaiting you"); return; }
     const last = queue.findIndex(c => c.id === sessionStorage.getItem("adr-beacon"));
     const next = queue[(last + step + queue.length) % queue.length];
@@ -737,7 +739,7 @@
   };
   function announceAwaiting() {
     const pages = {};
-    for (const comment of historyComments) if (awaiting(comment)) {
+    for (const comment of historyComments) if (attention(comment)) {
       const key = comment.kind === "session" ? "*" : pagePath(comment.url);
       pages[key] = (pages[key] || 0) + 1;
     }

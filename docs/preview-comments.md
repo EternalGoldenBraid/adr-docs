@@ -91,7 +91,7 @@ In Vim mode, Alt+h/l narrow/widen and Alt+j/k shorten/heighten the open panel, h
 
 ## Page tree
 
-`.md` files at any depth are pages (a folder page defaults to that folder's `index` as parent). Front matter `parent: <slug>`, `order: <n>` and `nav: <label>` arrange them: only parentless pages stay in the top bar, and each page shows a breadcrumb, its child pages and a `☰ Tree` popover (Vim `t`; `j/k` move, `h/l` fold, Enter open). `/tree.json` lists the nested structure for agents, in the preview and the static build. A graph node `link` can point at the same slug.
+`.md` files at any depth are pages (a folder page defaults to that folder's `index` as parent). Front matter `parent: <slug>`, `order: <n>` and `nav: <label>` arrange them: only parentless pages stay in the top bar, and each page shows a breadcrumb, its child pages and a `☰ Tree` popover (Vim `t`; `j/k` move, `h/l` fold, Enter open). Red badges in the tree count threads that need you: ones the agent opened and awaits, and ones with an agent reply you have not yet seen. `/tree.json` lists the nested structure for agents, in the preview and the static build. A graph node `link` can point at the same slug.
 
 ### Classification banner
 
