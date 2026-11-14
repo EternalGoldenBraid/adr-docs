@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.25.1 - 2026-11-14
+
+- Export: dead links to pages outside the single-page build no longer abort it (`ignoreDeadLinks`); the document may be the page's own file or any file in the site (the site root is found by climbing to where the page path resolves); a missing page now says which file to pass.
+
 ## 0.25.0 - 2026-11-14
 
 - Offline export of a page: **Export** button (also `:export`) in the preview, or `npm run export -- <file.md> [--page /path] [--out file] [--zip] [--inline-media-under <MB>]`. Works without a Copilot session. Produces one self-contained `.html` (script, styles, fonts, images, graph JSON inlined; opens from `file://` with an interactive DocGraph and no comment UI), or a `.zip` with `media/` when the page has media over 2 MB. Localhost iframes become a placeholder and are reported as warnings; links to other pages are inert. Only the exported page is built, so broken front matter elsewhere cannot block it.

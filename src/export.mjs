@@ -100,9 +100,16 @@ export async function exportPage({ documentPath, documentRoot, page, outFile, in
   page ??= stem === "index" ? "/" : `/${stem}`;
   const warnings = [];
   const slug = decodeURIComponent(page.split(/[?#]/)[0]).replace(/^\/|\.html$/g, "").replace(/\/$/, "");
-  const onlyPage = [`${slug}.md`, `${slug ? `${slug}/` : ""}index.md`].find(file => slug !== "" || file === "index.md"
-    ? existsSync(join(documentRoot, file)) : false);
-  if (!onlyPage) throw new Error(`Page not found: ${page}`);
+  const sourceOf = root => [`${slug}.md`, `${slug ? `${slug}/` : ""}index.md`].find(file => (slug !== "" || file === "index.md") && existsSync(join(root, file)));
+  // The document may be the page itself (or any file in the site): climb to the directory the page path is relative to.
+  if (documentPath) {
+    for (let root = documentRoot; ; root = dirname(root)) {
+      if (sourceOf(root)) { documentRoot = root; break; }
+      if (dirname(root) === root) break;
+    }
+  }
+  const onlyPage = sourceOf(documentRoot);
+  if (!onlyPage) throw new Error(`Page ${page} not found under ${documentRoot}. Pass any .md file in the site root, e.g. its index.md, or the page's own file.`);
   const workspace = await buildSite(documentRoot, onlyPage);
   try {
     const dist = join(workspace, "dist");
