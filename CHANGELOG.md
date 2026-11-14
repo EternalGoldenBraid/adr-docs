@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.30.0 - 2026-11-14
+
+- `:grep` also searches comment threads (text, quote and replies) within the same page scope; Enter opens the thread. `-p` searches pages only, `-c` threads only.
+
 ## 0.29.0 - 2026-11-14
 
 - Search: `/` or `:grep [-d N] [-u N] [-s] <regex>` greps the Markdown of the page tree and lists file:line matches (j/k, Enter opens the page and selects the match). No flag searches every page; `-d 0` this page, `-d N` this page plus N levels below, `-u N` also N ancestors; `-1` means all levels; smart-case unless `-s`. Unpublished pages are skipped; results are capped at 200.
