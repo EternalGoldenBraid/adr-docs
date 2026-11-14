@@ -93,6 +93,19 @@ In Vim mode, Alt+h/l narrow/widen and Alt+j/k shorten/heighten the open panel, h
 
 `.md` files at any depth are pages (a folder page defaults to that folder's `index` as parent). Front matter `parent: <slug>`, `order: <n>` and `nav: <label>` arrange them: only parentless pages stay in the top bar, and each page shows a breadcrumb, its child pages and a `☰ Tree` popover (Vim `t`; `j/k` move, `h/l` fold, Enter open). `/tree.json` lists the nested structure for agents, in the preview and the static build. A graph node `link` can point at the same slug.
 
+### Classification banner
+
+A thin fixed strip on every page, in the live preview, `npm run build:site` and offline exports. Set it once in the root `index.md` front matter; no other page can hide or change it:
+
+```yaml
+---
+classification: "RESTRICTED · restricted-mokki org only"
+classification-level: restricted   # restricted (red) | internal (amber) | public (green)
+---
+```
+
+If `classification-level` is omitted it is taken from the first word of the label, otherwise amber. Without `classification:` there is no banner.
+
 Scroll gutter: unresolved comments appear as coloured ticks along the right edge, at their relative position in the page. Click a tick to scroll to it.
 
 Key layers: the page owns the keys by default. Clicking a `<DocGraph>` enters the graph layer (status bar `-- GRAPH · NORMAL --`), where graph keys apply and page motions do not; `Esc` in graph normal mode returns to the page.

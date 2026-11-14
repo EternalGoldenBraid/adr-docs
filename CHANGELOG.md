@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.28.0 - 2026-11-14
+
+- Classification banner: `classification:` and `classification-level:` (restricted / internal / public) in the root `index.md` front matter show a thin fixed strip on every page, in the preview, the static build and offline exports. Requested via the mokki agent.
+
 ## 0.27.4 - 2026-11-14
 
 - Comment history: `o` on a focused thread in the list jumps straight to its page (previously only inside an open thread).
