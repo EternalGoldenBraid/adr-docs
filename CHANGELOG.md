@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.27.1 - 2026-11-14
+
+- Export picker: ticking a page selects only that page. Each parent row has a **+ below** button (and `X`) to tick or clear it together with all its descendants.
+- Links between pages in a multi-page export now work offline; links to pages that were not exported stay inert.
+
 ## 0.27.0 - 2026-11-14
 
 - Export several pages at once: open the tree (`t`), tick pages with Space or `x` (ticking a page also ticks the pages below it, or click the checkboxes), then press `e` or **Export N selected**. Several pages give one `.zip` with an `.html` per page; links between exported pages stay inert.
