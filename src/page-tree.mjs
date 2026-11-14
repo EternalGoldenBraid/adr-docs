@@ -106,11 +106,11 @@ export function treeJsonPlugin(documentRoot) {
   };
 }
 
-// Status chips for links to workstream pages: id -> { status, owner, done, total }.
+// Board data for the chips and <WorkstreamBoard />: id -> { status, owner, done, total, title, summary, date, depends_on }.
 function workstreamSummary(documentRoot) {
   const directory = join(documentRoot, "workstreams");
   if (!existsSync(directory)) return {};
-  return Object.fromEntries(readBoard(directory).items.map(i => [i.id, { status: i.status, owner: i.owner, done: i.steps.done, total: i.steps.total }]));
+  return Object.fromEntries(readBoard(directory).items.map(i => [i.id, { status: i.status, owner: i.owner, done: i.steps.done, total: i.steps.total, title: i.title, summary: i.summary, date: i.date, depends_on: i.depends_on }]));
 }
 
 // One site-wide banner from the root index.md front matter:

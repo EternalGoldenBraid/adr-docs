@@ -232,6 +232,9 @@ Open a thread and use **Link to another thread…** to reference another thread.
 
 ## Next awaiting thread and notes
 
+Which replies you have read is kept on the server, so every browser and port shows the same unread badges. If the plugin is updated while a preview is running, the status bar says `ADR x.y.z installed · restart preview`.
+
+
 `]` / `[` (page level, vim mode) jump to the next / previous thread awaiting you, across pages. Highlights without text and private notes are not threads: they have no resolved state, stay off the Open/This page/Chat/Resolved tabs, and are listed on the **Notes** tab. Open one and press **Remove** to delete it; `r` never deletes.
 
 ## Landing on a link target
@@ -244,6 +247,6 @@ A link to `#anchor` scrolls the heading or passage clear of the nav bar and flas
 
 ## Workstreams
 
-Tickets in `workstreams/*.md` follow the schema in `workstreams/README.md`. The index page groups them by status; `list_workstreams` (agent tool) or `npm run workstreams -- --json` returns them as JSON.
+Tickets in `workstreams/*.md` follow the schema in `workstreams/README.md`. The index page (`<WorkstreamBoard />`, built live from the front matter) groups them by status; `list_workstreams` (agent tool) or `npm run workstreams -- --json` returns them as JSON.
 
 Links to `/workstreams/<id>` pages show a status chip (status, owner, progress) automatically.
