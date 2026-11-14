@@ -242,7 +242,7 @@
     `${KM.page.region} region screenshot · ${KM.leader}${KM.leaderKeys.history} history · ${KM.leader}${KM.leaderKeys.chat} session chat`,
     `${KM.resize.narrower}/${KM.resize.wider}/${KM.resize.shorter}/${KM.resize.taller} resize panel · t page tree`,
     "In history: j/k move · l open · r resolve · h back · [ ] tabs · i reply · o page · J/K thread",
-    "Search: / or :grep [-d N] [-u N] [-s] <regex> (no flag: all pages; -d 0: this page; -d N: N levels below; -u N: N ancestors; -1 = all)\nCommands: :help :history :chat :comment :tree :export :grep :vim off|on :keys",
+    "Search: / or :grep [-d N] [-u N] [-s] [-p|-c] <regex> pages and threads (no flag: all pages; -d 0: this page; -d N: N levels below; -u N: N ancestors; -1 = all)\nCommands: :help :history :chat :comment :tree :export :grep :vim off|on :keys",
     "Keys are configured in ~/.config/agent-doc-review/keymap.json",
   ].join("\n");
   const commands = {
@@ -294,35 +294,46 @@
   async function grep(_first, line = "") {
     const words = line.split(/\s+/).filter(Boolean);
     const query = new URLSearchParams();
-    let scoped = false;
+    let scoped = false, only;
     while (words[0]?.startsWith("-") && words[0].length > 1) {
       const flag = words.shift();
       if (flag === "-s") query.set("case", "1");
+      else if (flag === "-p" || flag === "-c") only = flag;
       else if (flag === "-d" || flag === "-u") {
         const n = Number(words.shift());
         if (!Number.isInteger(n) || n < -1) return message(`${flag} needs a whole number ≥ 0, or -1 for all`, true);
         query.set(flag === "-d" ? "down" : "up", String(n));
         scoped = true;
-      } else return message(`Unknown flag ${flag} (use -d N, -u N, -s)`, true);
+      } else return message(`Unknown flag ${flag} (use -d N, -u N, -s, -p pages only, -c comments only)`, true);
     }
     const pattern = words.join(" ");
-    if (!pattern) return message("Usage: :grep [-d N] [-u N] [-s] <regex>", true);
+    if (!pattern) return message("Usage: :grep [-d N] [-u N] [-s] [-p|-c] <regex>", true);
     query.set("q", pattern);
     if (scoped) query.set("from", pagePath(location.href));
     message(`Searching “${pattern}”…`);
     const response = await fetch("/__adr/search?" + query);
     const result = await response.json();
     if (!response.ok) return message(`Bad pattern: ${result.error}`, true);
-    message(`${result.hits.length}${result.truncated ? "+" : ""} match${result.hits.length === 1 ? "" : "es"} in ${result.pages} page${result.pages === 1 ? "" : "s"}`);
-    if (!result.hits.length) return closeGrep();
-    grepPanel.querySelector("header").textContent = `grep ${pattern} · ${result.hits.length}${result.truncated ? "+ (first 200)" : ""} match${result.hits.length === 1 ? "" : "es"} · j/k move · Enter open · Esc close`;
     const sensitive = query.get("case") === "1" || /[A-Z]/.test(pattern);
-    grepList.replaceChildren(...result.hits.map(hit => {
+    const regex = new RegExp(pattern, sensitive ? "" : "i");
+    const inScope = new Set(result.links);
+    const threads = only === "-p" ? [] : historyComments.filter(c => !c.removed &&
+      (c.kind === "session" ? !scoped : inScope.has(pagePath(c.url) === "/" ? "/" : pagePath(c.url)))).flatMap(c => {
+      const texts = [c.comment, c.quote, ...c.replies.map(r => r.comment)].filter(Boolean);
+      const found = texts.map(t => regex.exec(t)).find(Boolean);
+      return found ? [{ thread: c, text: texts.find(t => regex.test(t)).replace(/\s+/g, " ").slice(0, 200), match: found[0] }] : [];
+    });
+    const pageHits = only === "-c" ? [] : result.hits;
+    const total = pageHits.length + threads.length;
+    message(`${total}${result.truncated ? "+" : ""} match${total === 1 ? "" : "es"} (${pageHits.length} in ${result.pages} page${result.pages === 1 ? "" : "s"}, ${threads.length} in threads)`);
+    if (!total) return closeGrep();
+    grepPanel.querySelector("header").textContent = `grep ${pattern} · ${total}${result.truncated ? "+ (first 200 page lines)" : ""} match${total === 1 ? "" : "es"} · j/k move · Enter open · Esc close`;
+    const row = (label, hit, activate) => {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "grep-hit";
       const where = document.createElement("b");
-      where.textContent = `${hit.title}:${hit.line}`;
+      where.textContent = label;
       const text = document.createElement("span");
       const at = hit.text.indexOf(hit.match);
       if (at < 0) text.textContent = " " + hit.text;
@@ -332,13 +343,15 @@
         text.append(" " + hit.text.slice(0, at), mark, hit.text.slice(at + hit.match.length));
       }
       button.append(where, text);
-      button.addEventListener("click", () => {
-        closeGrep();
+      button.addEventListener("click", () => { closeGrep(); activate(); });
+      return button;
+    };
+    grepList.replaceChildren(
+      ...pageHits.map(hit => row(`${hit.title}:${hit.line}`, hit, () => {
         sessionStorage.setItem("adr-find", JSON.stringify({ text: hit.match, sensitive }));
         if (pagePath(new URL(hit.link, location.origin)) === pagePath(location.href)) findPending(); else location.assign(hit.link);
-      });
-      return button;
-    }));
+      })),
+      ...threads.map(hit => row(`💬 ${hit.thread.kind === "session" ? "session" : hit.thread.section || pagePath(hit.thread.url)}${hit.thread.resolved ? " ✓" : ""}`, hit, () => goToThread(hit.thread))));
     grepPanel.hidden = false;
     grepList.firstElementChild.focus();
   }
