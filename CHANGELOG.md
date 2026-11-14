@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.34.0 - 2026-11-14
+
+- Page tree: `group-by: status` in an index page's front matter groups its child tickets under virtual status nodes, driven by each ticket's `status:`.
+
 ## 0.33.0 - 2026-11-14
 
 - Page tree: export checkboxes and the Export bar appear only in select mode (`v` or the **Select** button; `Esc` leaves it, ticks are kept; `a`/`A` tick all/none). New folds: `zc`/`zo` fold or unfold a row and everything below it, `H`/`L` collapse or expand all, plus **Collapse all** / **Expand all** buttons.

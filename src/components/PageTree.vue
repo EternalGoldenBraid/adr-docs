@@ -43,7 +43,7 @@ function pick(row, withChildren = false) {
   picked.value = next
 }
 function runExport() {
-  const links = pages.value.filter(p => picked.value.has(p.slug)).map(p => p.link)
+  const links = pages.value.filter(p => picked.value.has(p.slug) && !p.virtual).map(p => p.link)
   if (!links.length) return
   open.value = false
   document.dispatchEvent(new CustomEvent('adr-export', { detail: { pages: links } }))

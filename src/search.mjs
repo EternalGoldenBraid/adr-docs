@@ -31,7 +31,7 @@ export function scopePages(pages, from, { down, up } = {}) {
 export function searchPages(documentRoot, { pattern, from, down, up, caseSensitive = false }) {
   if (!pattern) throw new Error("Empty pattern.");
   const regex = new RegExp(pattern, caseSensitive || /[A-Z]/.test(pattern) ? "" : "i");
-  const pages = scopePages(readPageTree(documentRoot, { publishedOnly: true }), from, { down, up });
+  const pages = scopePages(readPageTree(documentRoot, { publishedOnly: true, grouped: false }), from, { down, up });
   const hits = [];
   for (const page of pages) {
     const lines = readFileSync(join(documentRoot, page.slug + ".md"), "utf8").split("\n");
