@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.26.0 - 2026-11-14
+
+- DocGraph: edges meeting the same side of a node now attach at separate points, ordered by where the other end lies so lines do not cross; opposite-direction edges between the same pair run side by side. Solid and dashed edges alike. Elbows are drawn as explicit segments, so corners are square (the old rounded taxi corners are gone). Requested via the mokki agent.
+
 ## 0.25.1 - 2026-11-14
 
 - Export: dead links to pages outside the single-page build no longer abort it (`ignoreDeadLinks`); the document may be the page's own file or any file in the site (the site root is found by climbing to where the page path resolves); a missing page now says which file to pass.
