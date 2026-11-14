@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -26,24 +27,54 @@ function stderrLogger() {
   return logger;
 }
 
-// GET /__adr/export?page=/x downloads an offline copy of that page; works with or without an agent session.
+// Export jobs: GET /__adr/export/start?page=/a&page=/b -> {id}; /status?id -> progress; /file?id -> the download.
+// GET /__adr/export?page=/x still returns one page directly. All work with or without an agent session.
 function exportPlugin(documentRoot) {
+  const jobs = new Map();
+  const json = (response, code, body) => { response.writeHead(code, { "Content-Type": "application/json" }); response.end(JSON.stringify(body)); };
+  const param = (request, name) => new URL(request.url, "http://x").searchParams.getAll(name);
+  const fileName = (pages, kind) => (pages.length > 1 ? "pages" : pages[0].replace(/^\/|\/$/g, "").replace(/\//g, "-") || "index") + "." + kind;
+  const send = (response, result, pages) => {
+    response.writeHead(200, {
+      "Content-Type": result.kind === "zip" ? "application/zip" : "text/html; charset=utf-8",
+      "Content-Disposition": `attachment; filename="${fileName(pages, result.kind).replace(/[^\w.-]/g, "_")}"`,
+      "X-ADR-Warnings": encodeURIComponent(result.warnings.join(" | ")).slice(0, 1000),
+    });
+    response.end(readFileSync(result.file));
+  };
   return {
     name: "adr-export",
     configureServer(server) {
+      server.middlewares.use("/__adr/export/start", async (request, response) => {
+        const pages = param(request, "page");
+        if (!pages.length) return json(response, 400, { error: "No pages chosen." });
+        const id = randomUUID();
+        const directory = mkdtempSync(join(tmpdir(), "adr-download-"));
+        const job = { state: "running", stage: "Starting", done: 0, total: pages.length + 2, pages, directory };
+        jobs.set(id, job);
+        const { exportPage } = await import("./export.mjs");
+        exportPage({ documentRoot, pages, outFile: join(directory, "out.bin"), onProgress: step => Object.assign(job, step) })
+          .then(result => Object.assign(job, { state: "done", result, warnings: result.warnings }))
+          .catch(error => Object.assign(job, { state: "failed", error: error.message }));
+        setTimeout(() => { jobs.delete(id); rmSync(directory, { recursive: true, force: true }); }, 30 * 60 * 1000).unref();
+        json(response, 200, { id });
+      });
+      server.middlewares.use("/__adr/export/status", (request, response) => {
+        const job = jobs.get(param(request, "id")[0]);
+        if (!job) return json(response, 404, { error: "Unknown export." });
+        json(response, 200, { state: job.state, stage: job.stage, done: job.done, total: job.total, error: job.error, warnings: job.warnings });
+      });
+      server.middlewares.use("/__adr/export/file", (request, response) => {
+        const job = jobs.get(param(request, "id")[0]);
+        if (!job?.result) return json(response, 404, { error: "Export not ready." });
+        send(response, job.result, job.pages);
+      });
       server.middlewares.use("/__adr/export", async (request, response) => {
         const directory = mkdtempSync(join(tmpdir(), "adr-download-"));
         try {
-          const page = new URL(request.url, "http://x").searchParams.get("page") || "/";
+          const page = param(request, "page")[0] || "/";
           const { exportPage } = await import("./export.mjs");
-          const result = await exportPage({ documentRoot, page, outFile: join(directory, "page") + ".out" });
-          const name = (page.replace(/^\/|\/$/g, "").replace(/\//g, "-") || "index") + "." + result.kind;
-          response.writeHead(200, {
-            "Content-Type": result.kind === "zip" ? "application/zip" : "text/html; charset=utf-8",
-            "Content-Disposition": `attachment; filename="${name.replace(/[^\w.-]/g, "_")}"`,
-            "X-ADR-Warnings": encodeURIComponent(result.warnings.join(" | ")).slice(0, 1000),
-          });
-          response.end(readFileSync(result.file));
+          send(response, await exportPage({ documentRoot, page, outFile: join(directory, "page") + ".out" }), [page]);
         } catch (error) {
           response.writeHead(500, { "Content-Type": "text/plain; charset=utf-8" });
           response.end(`Export failed: ${error.message}`);
@@ -55,10 +86,10 @@ function exportPlugin(documentRoot) {
   };
 }
 
-export function previewConfig({ documentRoot, connectionFile, workspace, packageRoot, exportMode = false, onlyPage }) {
+export function previewConfig({ documentRoot, connectionFile, workspace, packageRoot, exportMode = false, onlyPages }) {
   return {
-    // An export renders one page, so unrelated pages (even with broken front matter) cannot break it.
-    ...(onlyPage ? { srcExclude: markdownFiles(documentRoot).filter(file => file !== onlyPage).map(file => file.replace(/[\\*?[\]{}()!]/g, "\\$&")) } : {}),
+    // An export renders chosen pages only, so unrelated pages (even with broken front matter) cannot break it.
+    ...(onlyPages ? { srcExclude: markdownFiles(documentRoot).filter(file => !onlyPages.includes(file)).map(file => file.replace(/[\\*?[\]{}()!]/g, "\\$&")) } : {}),
     ...(exportMode ? { base: "./", ignoreDeadLinks: true } : {}),
     srcDir: `${workspace}/source`,
     cacheDir: `${workspace}/cache`,

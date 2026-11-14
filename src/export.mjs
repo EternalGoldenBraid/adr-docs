@@ -27,7 +27,7 @@ function pageFiles(page) {
   return { html: `${trimmed}.html`, key: `${trimmed.replaceAll("/", "_")}.md` };
 }
 
-async function buildSite(documentRoot, onlyPage) {
+async function buildSite(documentRoot, onlyPages) {
   const workspace = mkdtempSync(join(tmpdir(), "adr-export-"));
   mkdirSync(join(workspace, ".vitepress", "theme"), { recursive: true });
   symlinkSync(documentRoot, join(workspace, "source"), "junction");
@@ -36,7 +36,7 @@ async function buildSite(documentRoot, onlyPage) {
     `export { default } from ${JSON.stringify(join(packageRoot, "src/theme/index.mjs"))};\n`);
   writeFileSync(join(workspace, ".vitepress", "config.mjs"),
     `import { previewConfig } from ${JSON.stringify(pathToFileURL(join(packageRoot, "src/vitepress-config.mjs")).href)};\n` +
-    `export default previewConfig(${JSON.stringify({ documentRoot, connectionFile: "", workspace, packageRoot, exportMode: true, onlyPage })});\n`);
+    `export default previewConfig(${JSON.stringify({ documentRoot, connectionFile: "", workspace, packageRoot, exportMode: true, onlyPages })});\n`);
   await build(workspace);
   return workspace;
 }
@@ -88,7 +88,70 @@ function inlineStyles(html, dist) {
   });
 }
 
-export async function exportPage({ documentPath, documentRoot, page, outFile, inlineLimit = 2 * 1024 * 1024, zip } = {}) {
+const sourceFor = (root, page) => {
+  const slug = decodeURIComponent(page.split(/[?#]/)[0]).replace(/^\/|\.html$/g, "").replace(/\/$/, "");
+  return [`${slug}.md`, `${slug ? `${slug}/` : ""}index.md`].find(file => (slug !== "" || file === "index.md") && existsSync(join(root, file)));
+};
+
+// One built page -> standalone html plus the media files it references (copied by the caller).
+async function renderPage(dist, page, inlineLimit, mediaPrefix, warnings) {
+  const { html: htmlName, key } = pageFiles(page);
+  const htmlPath = join(dist, htmlName);
+  if (!existsSync(htmlPath)) throw new Error(`Page not found: ${page}`);
+  const pageDir = dirname(htmlPath);
+  let html = readFileSync(htmlPath, "utf8");
+  const { code, pageSource } = await bundleScript(dist, key);
+
+  html = html
+    .replace(/<link rel="(?:modulepreload|preload)"[^>]*(?:\.js|\.woff2)"[^>]*>/g, "")
+    .replace(/<script type="module"[^>]*><\/script>/g, "");
+  html = inlineStyles(html, dist);
+
+  const files = { "hashmap.json": readFileSync(join(dist, "hashmap.json"), "utf8") };
+  for (const match of pageSource.matchAll(/["'`]([^"'`\s]+\.json)["'`]/g)) {
+    const url = match[1];
+    if (!isLocal(url) && !url.startsWith("/")) continue;
+    const path = url.startsWith("/") ? join(dist, url) : join(pageDir, url);
+    if (existsSync(path)) files[url.replace(/^\.?\//, "")] = readFileSync(path, "utf8");
+    else warnings.push(`Data file not found: ${url}`);
+  }
+
+  const media = [];
+  html = html.replace(/\b(src|poster)="([^"]+)"/g, (whole, attribute, url) => {
+    if (!isLocal(url)) return whole;
+    const path = url.startsWith("/") ? join(dist, url.split(/[?#]/)[0]) : join(pageDir, url.split(/[?#]/)[0]);
+    if (!existsSync(path) || !statSync(path).isFile()) { warnings.push(`Missing file: ${url}`); return whole; }
+    if (statSync(path).size <= inlineLimit) {
+      return `${attribute}="data:${MIME[extname(path)] ?? "application/octet-stream"};base64,${readFileSync(path).toString("base64")}"`;
+    }
+    const name = `media/${mediaPrefix}${media.length}-${basename(path)}`;
+    media.push({ path, name });
+    return `${attribute}="${name}"`;
+  });
+
+  html = html.replace(/<iframe\b[^>]*\bsrc="([^"]*)"[^>]*>(?:<\/iframe>)?/g, (whole, src) => {
+    if (!/^(https?:)?\/\/(localhost|127\.|\[::1\])/i.test(src) && !isLocal(src)) return whole;
+    warnings.push(`Interactive embed not available offline: ${src}`);
+    return `<div style="padding:16px;border:1px dashed #888;border-radius:8px;color:#aaa">Interactive viewer not available in the offline copy.<br><small>${src.replace(/[<>&"]/g, "")}</small></div>`;
+  });
+
+  const shim = "for(const m of['replaceState','pushState']){const o=history[m].bind(history);history[m]=(...a)=>{try{o(...a)}catch{}}}" +
+    `window.__ADR_FILES=${scriptSafe(JSON.stringify(files))};` +
+    "const f=window.fetch;window.fetch=(u,o)=>{const p=String(u&&u.url||u).split(/[?#]/)[0].replace(/^[a-z]+:\\/\\/[^/]*/i,'').replace(/^\\.?\\//,'');" +
+    "const k=Object.keys(window.__ADR_FILES).find(x=>x===p||p.endsWith('/'+x));" +
+    "return k?Promise.resolve(new Response(window.__ADR_FILES[k],{headers:{'Content-Type':'application/json'}})):f(u,o)};" +
+    "addEventListener('click',e=>{const a=e.target.closest&&e.target.closest('a[href]');if(!a)return;const h=a.getAttribute('href');" +
+    "if(h&&!h.startsWith('#')&&!/^[a-z][a-z\\d+.-]*:/i.test(h)){e.preventDefault();e.stopImmediatePropagation()}},true);";
+  // The route is the file's own path under file://, so any route must resolve to this page.
+  html = html.replace(/<script>window\.__VP_HASH_MAP__=[\s\S]*?<\/script>/, whole =>
+    `${whole}<script>(()=>{const v=window.__VP_HASH_MAP__[${JSON.stringify(key)}];window.__VP_HASH_MAP__=new Proxy({},{get:()=>v})})()</script>`);
+  html = html.replace("</head>", () => `<script>(()=>{${shim}})()</script></head>`)
+    .replace("</body>", () => `<script>${scriptSafe(code)}</script></body>`);
+  return { html, media, htmlName };
+}
+
+// `pages` (several) or `page` (one). onProgress({ stage, done, total }) reports coarse steps.
+export async function exportPage({ documentPath, documentRoot, page, pages, outFile, inlineLimit = 2 * 1024 * 1024, zip, onProgress = () => {} } = {}) {
   let stem = "index";
   if (documentPath) {
     const document = realpathSync(documentPath);
@@ -97,87 +160,55 @@ export async function exportPage({ documentPath, documentRoot, page, outFile, in
     stem = basename(document, ".md");
   }
   if (!documentRoot) throw new Error("Export needs a document or a document root.");
-  page ??= stem === "index" ? "/" : `/${stem}`;
-  const warnings = [];
-  const slug = decodeURIComponent(page.split(/[?#]/)[0]).replace(/^\/|\.html$/g, "").replace(/\/$/, "");
-  const sourceOf = root => [`${slug}.md`, `${slug ? `${slug}/` : ""}index.md`].find(file => (slug !== "" || file === "index.md") && existsSync(join(root, file)));
+  pages = [...new Set(pages?.length ? pages : [page ?? (stem === "index" ? "/" : `/${stem}`)])];
   // The document may be the page itself (or any file in the site): climb to the directory the page path is relative to.
   if (documentPath) {
     for (let root = documentRoot; ; root = dirname(root)) {
-      if (sourceOf(root)) { documentRoot = root; break; }
+      if (sourceFor(root, pages[0])) { documentRoot = root; break; }
       if (dirname(root) === root) break;
     }
   }
-  const onlyPage = sourceOf(documentRoot);
-  if (!onlyPage) throw new Error(`Page ${page} not found under ${documentRoot}. Pass any .md file in the site root, e.g. its index.md, or the page's own file.`);
-  const workspace = await buildSite(documentRoot, onlyPage);
+  const sources = pages.map(item => {
+    const source = sourceFor(documentRoot, item);
+    if (!source) throw new Error(`Page ${item} not found under ${documentRoot}. Pass any .md file in the site root, e.g. its index.md, or the page's own file.`);
+    return source;
+  });
+  const many = pages.length > 1;
+  const total = pages.length + 2;
+  const warnings = [];
+  onProgress({ stage: "Building site", done: 0, total });
+  const workspace = await buildSite(documentRoot, sources);
   try {
     const dist = join(workspace, "dist");
-    const { html: htmlName, key } = pageFiles(page);
-    const htmlPath = join(dist, htmlName);
-    if (!existsSync(htmlPath)) throw new Error(`Page not found: ${page}`);
-    const pageDir = dirname(htmlPath);
-    let html = readFileSync(htmlPath, "utf8");
-    const { code, pageSource } = await bundleScript(dist, key);
-
-    html = html
-      .replace(/<link rel="(?:modulepreload|preload)"[^>]*(?:\.js|\.woff2)"[^>]*>/g, "")
-      .replace(/<script type="module"[^>]*><\/script>/g, "");
-    html = inlineStyles(html, dist);
-
-    const files = { "hashmap.json": readFileSync(join(dist, "hashmap.json"), "utf8") };
-    for (const match of pageSource.matchAll(/["'`]([^"'`\s]+\.json)["'`]/g)) {
-      const url = match[1];
-      if (!isLocal(url) && !url.startsWith("/")) continue;
-      const path = url.startsWith("/") ? join(dist, url) : join(pageDir, url);
-      if (existsSync(path)) files[url.replace(/^\.?\//, "")] = readFileSync(path, "utf8");
-      else warnings.push(`Data file not found: ${url}`);
+    const rendered = [];
+    for (const [index, item] of pages.entries()) {
+      onProgress({ stage: `Packaging ${item}`, done: index + 1, total });
+      const prefix = many ? `${index}-` : "";
+      const result = await renderPage(dist, item, inlineLimit, prefix, warnings);
+      rendered.push({ ...result, page: item });
     }
-
-    const media = [];
-    html = html.replace(/\b(src|poster)="([^"]+)"/g, (whole, attribute, url) => {
-      if (!isLocal(url)) return whole;
-      const path = url.startsWith("/") ? join(dist, url.split(/[?#]/)[0]) : join(pageDir, url.split(/[?#]/)[0]);
-      if (!existsSync(path) || !statSync(path).isFile()) { warnings.push(`Missing file: ${url}`); return whole; }
-      if (statSync(path).size <= inlineLimit) {
-        return `${attribute}="data:${MIME[extname(path)] ?? "application/octet-stream"};base64,${readFileSync(path).toString("base64")}"`;
-      }
-      const name = `media/${media.length}-${basename(path)}`;
-      media.push({ path, name });
-      return `${attribute}="${name}"`;
-    });
-
-    html = html.replace(/<iframe\b[^>]*\bsrc="([^"]*)"[^>]*>(?:<\/iframe>)?/g, (whole, src) => {
-      if (!/^(https?:)?\/\/(localhost|127\.|\[::1\])/i.test(src) && !isLocal(src)) return whole;
-      warnings.push(`Interactive embed not available offline: ${src}`);
-      return `<div style="padding:16px;border:1px dashed #888;border-radius:8px;color:#aaa">Interactive viewer not available in the offline copy.<br><small>${src.replace(/[<>&"]/g, "")}</small></div>`;
-    });
-
-    const shim = "for(const m of['replaceState','pushState']){const o=history[m].bind(history);history[m]=(...a)=>{try{o(...a)}catch{}}}" +
-      `window.__ADR_FILES=${scriptSafe(JSON.stringify(files))};` +
-      "const f=window.fetch;window.fetch=(u,o)=>{const p=String(u&&u.url||u).split(/[?#]/)[0].replace(/^[a-z]+:\\/\\/[^/]*/i,'').replace(/^\\.?\\//,'');" +
-      "const k=Object.keys(window.__ADR_FILES).find(x=>x===p||p.endsWith('/'+x));" +
-      "return k?Promise.resolve(new Response(window.__ADR_FILES[k],{headers:{'Content-Type':'application/json'}})):f(u,o)};" +
-      "addEventListener('click',e=>{const a=e.target.closest&&e.target.closest('a[href]');if(!a)return;const h=a.getAttribute('href');" +
-      "if(h&&!h.startsWith('#')&&!/^[a-z][a-z\\d+.-]*:/i.test(h)){e.preventDefault();e.stopImmediatePropagation()}},true);";
-    // The route is the file's own path under file://, so any route must resolve to this page.
-    html = html.replace(/<script>window\.__VP_HASH_MAP__=[\s\S]*?<\/script>/, whole =>
-      `${whole}<script>(()=>{const v=window.__VP_HASH_MAP__[${JSON.stringify(key)}];window.__VP_HASH_MAP__=new Proxy({},{get:()=>v})})()</script>`);
-    html = html.replace("</head>", () => `<script>(()=>{${shim}})()</script></head>`)
-      .replace("</body>", () => `<script>${scriptSafe(code)}</script></body>`);
-
-    const asZip = zip ?? media.length > 0;
-    const target = resolve(outFile ?? `${basename(htmlName, ".html") === "index" ? stem : basename(htmlName, ".html")}.${asZip ? "zip" : "html"}`);
+    const media = rendered.flatMap(item => item.media);
+    const asZip = many || (zip ?? media.length > 0);
+    const first = rendered[0].htmlName;
+    const target = resolve(outFile ?? `${many ? "pages" : basename(first, ".html") === "index" ? stem : basename(first, ".html")}.${asZip ? "zip" : "html"}`);
+    onProgress({ stage: asZip ? "Zipping" : "Writing", done: total - 1, total });
     if (asZip) {
       const staging = join(workspace, "bundle");
       mkdirSync(join(staging, "media"), { recursive: true });
-      writeFileSync(join(staging, "index.html"), html);
+      const taken = new Set();
+      for (const item of rendered) {
+        let name = many ? item.htmlName.replaceAll("/", "-") : "index.html";
+        while (taken.has(name)) name = `x-${name}`;
+        taken.add(name);
+        writeFileSync(join(staging, name), item.html);
+      }
       for (const item of media) copyFileSync(item.path, join(staging, item.name));
       rmSync(target, { force: true });
       execFileSync("zip", ["-qr", target, "."], { cwd: staging });
     } else {
-      writeFileSync(target, html);
+      writeFileSync(target, rendered[0].html);
     }
+    onProgress({ stage: "Done", done: total, total });
     return { file: target, kind: asZip ? "zip" : "html", warnings, bytes: statSync(target).size };
   } finally {
     rmSync(workspace, { recursive: true, force: true });

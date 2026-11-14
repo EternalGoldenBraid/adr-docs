@@ -67,7 +67,7 @@ native input.
 | `c` in visual mode, or `-c` | Open a comment on the selection. `-c` also resumes an unsent draft. |
 | `s` | Select a region and attach its screenshot (see below). |
 | `-h` | Open comment history. |
-| `:export` | Download this page as an offline file (also the **Export** button). One `.html`, or a `.zip` when media is over 2 MB; localhost iframes are replaced by a note. |
+| `:export` | Download this page as an offline file (also the **Export** button). One `.html`, or a `.zip` when media is over 2 MB; localhost iframes are replaced by a note. Progress shows in the status line. To export several pages, open the tree (`t`), tick pages (Space/`x`), press `e`: one `.zip`, an `.html` per page. |
 | `Space` inside a caveat | Open or close its details. |
 | `Esc` | Leave visual mode or close a panel, preserving drafts. |
 

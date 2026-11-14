@@ -14,7 +14,7 @@ Needs Node.js 20+.
 npm ci
 npm run readme                       # the landing page, with a graph demo
 npm run preview -- path/to/doc.md    # any Markdown file
-npm run export -- doc.md --page /x   # offline copy of one page (or the Export button / :export)
+npm run export -- doc.md --page /x   # offline copy of one page; repeat --page for several (or the Export button / :export)
 adr path/to/doc.md 5190              # same, from anywhere (ln -s $PWD/bin/preview.mjs ~/.local/bin/adr)
 npm run example:paper                # fetch an arXiv paper for the example
 ```

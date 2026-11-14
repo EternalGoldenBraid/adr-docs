@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.27.0 - 2026-11-14
+
+- Export several pages at once: open the tree (`t`), tick pages with Space or `x` (ticking a page also ticks the pages below it, or click the checkboxes), then press `e` or **Export N selected**. Several pages give one `.zip` with an `.html` per page; links between exported pages stay inert.
+- Export now shows a progress bar (`Exporting ██████░░░░ 3/5 Packaging /a`) driven by a server-side job, so a long build no longer looks stalled. The CLI prints the same steps and accepts repeated `--page`.
+
 ## 0.26.0 - 2026-11-14
 
 - DocGraph: edges meeting the same side of a node now attach at separate points, ordered by where the other end lies so lines do not cross; opposite-direction edges between the same pair run side by side. Solid and dashed edges alike. Elbows are drawn as explicit segments, so corners are square (the old rounded taxi corners are gone). Requested via the mokki agent.
