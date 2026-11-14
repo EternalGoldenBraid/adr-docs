@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.29.0 - 2026-11-14
+
+- Search: `/` or `:grep [-d N] [-u N] [-s] <regex>` greps the Markdown of the page tree and lists file:line matches (j/k, Enter opens the page and selects the match). No flag searches every page; `-d 0` this page, `-d N` this page plus N levels below, `-u N` also N ancestors; smart-case unless `-s`. Unpublished pages are skipped; results are capped at 200.
+
 ## 0.28.2 - 2026-11-14
 
 - Tree, breadcrumb and "Pages below" badges take the colour of the most recently active thread they count, instead of always red. Marking a thread seen updates the badges at once.
