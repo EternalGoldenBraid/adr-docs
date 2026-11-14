@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.27.4 - 2026-11-14
+
+- Comment history: `o` on a focused thread in the list jumps straight to its page (previously only inside an open thread).
+- Region capture (`s`) no longer hides the overlay when the history, comment box or thread popup is open, so the history view can be screenshotted (it used to come out as an empty rectangle).
+
 ## 0.27.3 - 2026-11-14
 
 - Resolved threads come back when Copilot replies after they were resolved: they reappear in the open lists, count as a new reply and get their bubble back on the page. A sign-off sent together with the resolution does not count, so resolved threads no longer pile up as unread. (Replaces the 0.27.2 rule that hid them regardless.)
