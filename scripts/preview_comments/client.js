@@ -133,6 +133,7 @@
     <div class="dock"><div class="toolbar" hidden>
     <button class="vim-mode" type="button" title="h/j/k/l: move · v: select · c: comment (page if nothing selected) · -m: session chat · s: region screenshot · -h: history · Esc: normal">Vim</button>
     <button class="history-toggle" type="button">History</button>
+    <button class="export-page" type="button" title="Download this page as a file that opens offline (:export)">Export</button>
     <button class="toggle" type="button">Comment</button></div>
     <button class="pill" type="button" aria-expanded="false"><span class="dot"></span><span class="pill-label">Comments</span></button></div>`;
   document.body.append(host);
@@ -236,7 +237,7 @@
     `${KM.page.region} region screenshot · ${KM.leader}${KM.leaderKeys.history} history · ${KM.leader}${KM.leaderKeys.chat} session chat`,
     `${KM.resize.narrower}/${KM.resize.wider}/${KM.resize.shorter}/${KM.resize.taller} resize panel · t page tree`,
     "In history: j/k move · l open · r resolve · h back · [ ] tabs · i reply · o page · J/K thread",
-    "Commands: :help :history :chat :comment :tree :vim off|on :keys",
+    "Commands: :help :history :chat :comment :tree :export :vim off|on :keys",
     "Keys are configured in ~/.config/agent-doc-review/keymap.json",
   ].join("\n");
   const commands = {
@@ -247,6 +248,14 @@
     tree: () => document.dispatchEvent(new KeyboardEvent("keydown", { key: "t", bubbles: true })),
     vim: arg => { if ((arg === "off") === vimEnabled) vimButton.click(); },
   };
+  function exportPage() {
+    message("Exporting this page… the download starts when it is ready.");
+    const link = document.createElement("a");
+    link.href = `/__adr/export?page=${encodeURIComponent(pagePath(location.href))}`;
+    link.download = "";
+    link.click();
+  }
+  commands.export = exportPage;
   function openCmdline() { cmdbar.hidden = false; cmdinput.value = ""; cmdinput.focus(); }
   function closeCmdline() { cmdbar.hidden = true; cmdinput.blur(); }
   cmdinput.addEventListener("keydown", event => {
@@ -791,6 +800,7 @@
       replyInput.readOnly = false;
     }
   }
+  find(".export-page").addEventListener("click", () => exportPage());
   find(".history-toggle").addEventListener("click", () => history.hidden ? openHistory() : closeHistory());
   find(".history-close").addEventListener("click", closeHistory);
   find(".history-refresh").addEventListener("click", () => refreshHistory().catch(historyError));

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.25.0 - 2026-11-14
+
+- Offline export of a page: **Export** button (also `:export`) in the preview, or `npm run export -- <file.md> [--page /path] [--out file] [--zip] [--inline-media-under <MB>]`. Works without a Copilot session. Produces one self-contained `.html` (script, styles, fonts, images, graph JSON inlined; opens from `file://` with an interactive DocGraph and no comment UI), or a `.zip` with `media/` when the page has media over 2 MB. Localhost iframes become a placeholder and are reported as warnings; links to other pages are inert. Only the exported page is built, so broken front matter elsewhere cannot block it.
+
 ## 0.24.0 - 2026-11-14
 
 - `adr <file.md> [port]`: standalone launcher (package `bin`), no Copilot session needed. Each document gets its own stable comment store instead of one shared placeholder session. Install with `ln -s <repo>/bin/preview.mjs ~/.local/bin/adr` (or `npm link` where the global prefix is writable). Validates the file and port.
