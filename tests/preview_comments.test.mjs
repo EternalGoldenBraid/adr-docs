@@ -434,3 +434,27 @@ test("resolving records when, so later replies can resurface the thread", async 
   await bridge.close();
   rmSync(directory, { recursive: true, force: true });
 });
+
+test("seen state is stored on the server and survives a restart", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "preview-comments-"));
+  writeFileSync(join(directory, "page.md"), "# Page\n\nText.");
+  const sessionId = randomUUID();
+  const options = { sessionId, documentRoot: directory, storageRoot: directory, previewOrigin: "http://127.0.0.1:8769", onError: error => assert.fail(error.message), notify: async () => {} };
+  const bridge = await startCommentBridge(options);
+  const id = bridge.add({ page: "/page", kind: "page", quote: "Page", comment: "a" }).id;
+  const call = async (bridgeInstance, path, body) => {
+    const { port, token } = JSON.parse(readFileSync(bridgeInstance.connectionFile, "utf8"));
+    const response = await fetch(`http://127.0.0.1:${port}${path}`, { method: body ? "POST" : "GET", headers: { Authorization: `Bearer ${token}` }, body: body && JSON.stringify(body) });
+    return { status: response.status, body: await response.json() };
+  };
+  assert.equal((await call(bridge, "/history")).body.seenInit, false);
+  assert.equal((await call(bridge, "/userseen", { seen: { [id]: "root" } })).status, 200);
+  assert.equal((await call(bridge, "/userseen", { seen: { "not-an-id": "x" } })).status, 400);
+  await bridge.close();
+  const again = await startCommentBridge(options);
+  const history = (await call(again, "/history")).body;
+  assert.equal(history.seenInit, true);
+  assert.equal(history.comments[0].userSeen, "root");
+  await again.close();
+  rmSync(directory, { recursive: true, force: true });
+});

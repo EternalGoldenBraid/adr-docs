@@ -61,6 +61,7 @@ export async function startCommentBridge({
   const updates = new Map();
   let revision = 0;
   let latestFeedbackId;
+  let seenInit = false;
   let agentStatus = { state: "idle", text: "" };
   function apply(record) {
     if (record.event === "comment") {
@@ -78,6 +79,10 @@ export async function startCommentBridge({
         if (!comment) throw new Error(`Read receipt has no comment: ${id}`);
         comment.seen = true;
       }
+    } else if (record.event === "userseen") {
+      // The user has read up to this reply (or "root" for an agent-started thread); shared by every browser.
+      for (const [id, key] of Object.entries(record.seen)) if (comments.has(id)) comments.get(id).userSeen = key;
+      seenInit = true;
     } else if (record.event === "update") {
       const comment = comments.get(record.commentId);
       if (!comment) throw new Error(`Update has no comment: ${record.commentId}`);
@@ -254,7 +259,7 @@ export async function startCommentBridge({
         return reply(response, 200, { sessionId, pendingCount: unread().length, agent: agentStatus });
       }
       if (request.method === "GET" && request.url === "/history") {
-        return reply(response, 200, { sessionId, revision, comments: [...comments.values()] });
+        return reply(response, 200, { sessionId, revision, seenInit, comments: [...comments.values()] });
       }
       const download = request.method === "GET" && /^\/attachments\/([\da-f]{64})$/.exec(request.url);
       if (download) {
@@ -262,7 +267,7 @@ export async function startCommentBridge({
         response.writeHead(200, { "Content-Type": "image/png", "Cache-Control": "private, max-age=31536000, immutable" });
         return response.end(readFileSync(imageFile(download[1])));
       }
-      if (request.method !== "POST" || !["/comments", "/updates", "/attachments"].includes(request.url)) {
+      if (request.method !== "POST" || !["/comments", "/updates", "/attachments", "/userseen"].includes(request.url)) {
         return reply(response, 404, { error: "Unknown comment endpoint." });
       }
       const chunks = [];
@@ -277,6 +282,20 @@ export async function startCommentBridge({
       if (request.url === "/attachments") {
         try {
           return reply(response, 200, { id: saveImage(Buffer.concat(chunks)) });
+        } catch (error) {
+          return reply(response, 400, { error: error.message });
+        }
+      }
+      if (request.url === "/userseen") {
+        try {
+          const body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+          const entries = Object.entries(body.seen || {}).slice(0, 200).map(([id, key]) => [identifier(id, "Comment ID"), field(key, "Reply ID", 36)]);
+          if (entries.length || !seenInit) {
+            const record = { event: "userseen", seen: Object.fromEntries(entries), at: new Date().toISOString() };
+            append(log, record);
+            apply(record);
+          }
+          return reply(response, 200, { saved: true, seenInit });
         } catch (error) {
           return reply(response, 400, { error: error.message });
         }

@@ -24,7 +24,7 @@
       .hint{margin:10px 0 0;color:#b7c1ce}
       .proposal{margin:10px 0;border:1px solid #59616d;border-radius:8px;padding:8px}.proposal pre{margin:0 0 6px;padding:6px;white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.4 ui-monospace,monospace;border-radius:4px}.proposal .del{background:#4a1d24}.proposal .add{background:#16402a}
       .banners[hidden]{display:none}.banners{position:fixed;top:72px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;z-index:5}.banner{max-width:min(640px,90vw);padding:8px 14px;border:1px solid #ff5a4f;border-radius:10px;background:#2a1517;color:#eee;text-align:left}.banner small{color:#ffb3ae;display:block}
-      .statusbar{position:fixed;left:0;right:0;bottom:0;display:flex;gap:18px;align-items:center;padding:3px 14px;background:#111318;border-top:1px solid #3a404a;font:12px/1.4 ui-monospace,monospace;color:#b7c1ce;pointer-events:none}.sb-mode{font-weight:700;color:#74c0fc}.sb-hint{order:3;margin-left:auto}.agent-status::before{content:"● ";color:#51cf66}.agent-status.await::before{color:#ff6b6b}
+      .statusbar{position:fixed;left:0;right:0;bottom:0;display:flex;gap:18px;align-items:center;padding:3px 14px;background:#111318;border-top:1px solid #3a404a;font:12px/1.4 ui-monospace,monospace;color:#b7c1ce;pointer-events:none}.sb-mode{font-weight:700;color:#74c0fc}.sb-hint{order:3;margin-left:auto}.sb-stale{color:#e3b341;font-weight:700;white-space:nowrap}.sb-mode{white-space:nowrap}.agent-status::before{content:"● ";color:#51cf66}.agent-status.await::before{color:#ff6b6b}
       .grep{position:fixed;left:50%;bottom:44px;transform:translateX(-50%);width:min(860px,94vw);max-height:50vh;display:flex;flex-direction:column;background:#17191f;border:1px solid #59616d;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,.5);font:13px/1.4 ui-monospace,monospace;color:#d6dbe3;z-index:5}
       .grep header{padding:6px 12px;border-bottom:1px solid #2f343d;color:#9aa4b2}.grep .grep-list{overflow:auto;padding:4px}
       .grep-hit{display:block;width:100%;text-align:left;background:none;border:0;border-radius:6px;color:inherit;font:inherit;padding:3px 8px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -131,7 +131,7 @@
     <div class="status" role="status" aria-live="polite"></div>
     <div class="region" hidden><div class="region-box" hidden></div><div class="region-tip">Drag to select a region · Esc cancels</div></div>
     <div class="vim-caret" hidden aria-hidden="true"></div>
-    <div class="banners"></div><div class="statusbar" hidden><span class="sb-mode"></span><span class="sb-hint"></span><span class="agent-status" hidden></span></div>
+    <div class="banners"></div><div class="statusbar" hidden><span class="sb-mode"></span><span class="sb-hint"></span><span class="sb-stale" hidden></span><span class="agent-status" hidden></span></div>
     <section class="grep" hidden aria-label="Search results"><header></header><div class="grep-list"></div></section>
     <form class="cmdbar" hidden><span>:</span><input class="cmdinput" autocomplete="off" spellcheck="false" aria-label="Command"></form>
     <div class="contextual" hidden><button class="ctx-comment" type="button">Comment</button><span class="swatches" style="display:flex;gap:5px"></span></div><div class="rail"></div>
@@ -164,6 +164,7 @@
   const replyDrafts = new Map();
   let historyComments = [];
   let historyRevision = -1;
+  let serverSeenInit = false;
   let selectedThread;
   let historyFilter = "unresolved";
   let pendingFocus;
@@ -863,6 +864,7 @@
   async function refreshHistory() {
     const result = await api("history");
     sessionId = result.sessionId;
+    serverSeenInit = Boolean(result.seenInit);
     if (result.revision < historyRevision) return;
     if (result.revision !== historyRevision) {
       historyRevision = result.revision;
@@ -1540,6 +1542,7 @@
   if (window.visualViewport) { visualViewport.addEventListener("resize", applyDock); visualViewport.addEventListener("scroll", applyDock); }
   const SEEN_KEY = "preview-comments-seen-replies";
   const firstRun = localStorage.getItem(SEEN_KEY) === null;
+  let seenMigrated = false;
   const seenReplies = JSON.parse(localStorage.getItem(SEEN_KEY) || "{}");
   // The newest thing the agent said: its latest reply, or the opening comment of an agent-authored thread.
   const lastFromCopilot = comment => {
@@ -1550,16 +1553,18 @@
   // A resolved thread resurfaces only for a Copilot reply that arrived after it was resolved.
   const hasFresh = comment => {
     const key = lastFromCopilot(comment);
-    if (!key || seenReplies[comment.id] === key) return false;
+    if (!key || seenReplies[comment.id] === key || comment.userSeen === key) return false;
     if (!comment.resolved) return true;
     const last = comment.replies.at(-1);
     return Boolean(last && comment.resolvedAt && new Date(last.at) > new Date(comment.resolvedAt));
   };
   function markSeen(comment) {
     const key = lastFromCopilot(comment);
-    if (!key || seenReplies[comment.id] === key) return;
+    if (!key || seenReplies[comment.id] === key && comment.userSeen === key) return;
     seenReplies[comment.id] = key;
+    comment.userSeen = key;
     localStorage.setItem(SEEN_KEY, JSON.stringify(seenReplies));
+    api("userseen", { seen: { [comment.id]: key } }).catch(() => {});
     placeBubbles();
     applyMarks();
     announceAwaiting();
@@ -1717,9 +1722,19 @@
     }
     const open = marks.filter(mark => !mark.comment.resolved || hasFresh(mark.comment)).length;
     const waiting = marks.some(mark => mark.comment.comment && !mark.comment.seen && !mark.comment.resolved);
-    if (firstRun && historyRevision >= 0 && localStorage.getItem(SEEN_KEY) === null) {
-      for (const item of historyComments) { const last = item.replies.at(-1); if (last) seenReplies[item.id] = last.id; }
-      localStorage.setItem(SEEN_KEY, JSON.stringify(seenReplies));
+    // Seen state lives on the server. The first browser to meet a store without it uploads what it knows
+    // (a brand-new browser counts every existing reply as seen); later browsers just read the server's.
+    if (!serverSeenInit && !seenMigrated && historyRevision >= 0) {
+      seenMigrated = true;
+      if (firstRun && localStorage.getItem(SEEN_KEY) === null) {
+        for (const item of historyComments) { const last = item.replies.at(-1); if (last) seenReplies[item.id] = last.id; }
+        localStorage.setItem(SEEN_KEY, JSON.stringify(seenReplies));
+      }
+      const entries = Object.entries(seenReplies).filter(([id]) => historyComments.some(item => item.id === id));
+      if (!entries.length) api("userseen", { seen: {} }).catch(() => {});
+      for (let from = 0; from < entries.length; from += 100) {
+        api("userseen", { seen: Object.fromEntries(entries.slice(from, from + 100)) }).catch(() => {});
+      }
     }
     const fresh = marks.filter(mark => hasFresh(mark.comment)).length;
     pill.classList.toggle("alert", fresh > 0);
@@ -1864,6 +1879,18 @@
       video.after(bar);
     }
   }
+  // The plugin may be updated under a running preview; say so instead of leaving old code in place.
+  async function checkVersion() {
+    try {
+      const { running, onDisk } = await (await fetch("/__adr/version")).json();
+      const stale = find(".sb-stale");
+      stale.hidden = !running || !onDisk || running === onDisk;
+      stale.textContent = `ADR ${onDisk} installed · restart preview`;
+      stale.title = `This preview runs ADR ${running}`;
+    } catch { /* static or offline */ }
+  }
+  checkVersion();
+  setInterval(checkVersion, 60000);
   async function syncMarks() {
     enhanceVideos();
     try { await refreshHistory(); } catch { /* the bridge may be offline; keep the last marks */ }

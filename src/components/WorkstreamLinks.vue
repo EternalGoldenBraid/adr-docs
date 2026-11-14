@@ -8,7 +8,7 @@ const route = useRoute()
 function decorate() {
   const board = theme.value.workstreams || {}
   for (const a of document.querySelectorAll('.vp-doc a[href]')) {
-    if (a.dataset.wsChip) continue
+    if (a.dataset.wsChip || a.closest('.wsb')) continue
     const id = /(?:^|\/)workstreams\/([^/#?]+?)(?:\.html|\.md)?(?:[#?].*)?$/.exec(a.getAttribute('href'))?.[1]
     const ws = id && board[id]
     if (!ws) continue

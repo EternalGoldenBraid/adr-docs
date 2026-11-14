@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.32.0 - 2026-11-14
+
+- Seen state is stored on the server (`userseen` log events, `userSeen` on each thread), so unread badges, the Tree counts and the `]` beacon agree across browsers, ports and cleared storage. The first browser to meet an existing store uploads what it already knew; browser storage stays as a fallback.
+- The status bar warns when the installed plugin is newer than the running preview ("ADR 0.32.0 installed · restart preview"; `/__adr/version`).
+- `<WorkstreamBoard />` renders the workstreams board live from the ticket front matter (grouped by status, with owner, steps, dependencies, summary); `workstreams/index.md` is now that one component, and `npm run workstreams` just writes that page. Ticket data in the theme config also carries title, summary, date and dependencies.
+
 ## 0.31.0 - 2026-11-14
 
 - GFM task lists: `- [ ]` and `- [x]` render as read-only checkboxes in the live preview, the built site and exports. Projects with their own VitePress config add `md.use(taskLists)` (`import taskLists from "<adr>/src/task-lists.mjs"`) and import `<adr>/src/theme/task-lists.css` (the ADR theme already does).

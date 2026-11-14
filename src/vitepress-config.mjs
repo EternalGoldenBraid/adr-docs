@@ -28,6 +28,21 @@ function stderrLogger() {
   return logger;
 }
 
+// GET /__adr/version -> {running, onDisk}: onDisk differs once the plugin was updated under a running preview.
+function versionPlugin(packageRoot) {
+  const read = () => { try { return JSON.parse(readFileSync(join(packageRoot, "package.json"), "utf8")).version; } catch { return undefined; } };
+  const running = read();
+  return {
+    name: "adr-version",
+    configureServer(server) {
+      server.middlewares.use("/__adr/version", (request, response) => {
+        response.writeHead(200, { "Content-Type": "application/json" });
+        response.end(JSON.stringify({ running, onDisk: read() }));
+      });
+    },
+  };
+}
+
 // GET /__adr/search?q=<regex>&from=/page&down=N&up=N&case=1 -> {hits:[{link,title,line,text,match}], pages, truncated}.
 function searchPlugin(documentRoot) {
   return {
@@ -129,7 +144,7 @@ export function previewConfig({ documentRoot, connectionFile, workspace, package
       // VitePress supplies fixed optimizer inputs; the document tree needs no dependency scan.
       optimizeDeps: { noDiscovery: true, include: ["cytoscape"] },
       customLogger: stderrLogger(),
-      plugins: exportMode ? [] : [previewComments({ connectionFile }), treeJsonPlugin(documentRoot), exportPlugin(documentRoot), searchPlugin(documentRoot)],
+      plugins: exportMode ? [] : [previewComments({ connectionFile }), treeJsonPlugin(documentRoot), exportPlugin(documentRoot), searchPlugin(documentRoot), versionPlugin(packageRoot)],
       server: {
         host: "127.0.0.1",
         fs: { allow: [documentRoot, packageRoot, workspace] },
