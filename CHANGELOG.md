@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.23.0 - 2026-11-14
+
+- Vim normal mode scrolls the page smoothly: `j`/`k` tap or hold, `gg`/`G` animate. Line-by-line caret motion (`h/j/k/l/w/b/0/$`) now needs caret mode (`i`, status `CARET`, `Esc` to leave); the caret is shown only there. Graph layer unchanged. Requested via the demo agent.
+
 ## 0.22.3 - 2026-11-14
 
 - Workstream tickets: optional `resume` front-matter field (in the JSON board) and `workstreams/template.md.example` as the ticket template (from the demo agent).

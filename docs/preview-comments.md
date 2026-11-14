@@ -51,16 +51,17 @@ User reply failures keep the draft and reuse its update ID on retry.
 ## Keyboard navigation and selection
 
 Vim-style controls are enabled on document pages. A blue caret marks the
-document position; the **Vim** button shows **NORMAL**, **VISUAL**, or **COMMENT**
-mode. Click it to turn keyboard controls off or on. The preference is saved for
+document position (only in caret mode); the **Vim** button shows **NORMAL**,
+**CARET**, **VISUAL**, or **COMMENT** mode. Click it to turn keyboard controls off or on. The preference is saved for
 the preview origin. The open history panel shows **HISTORY**. Textareas use
 native input.
 
 | Keys | Action |
 | --- | --- |
-| `h` / `l`, `j` / `k` | Move by character or rendered line. |
-| `w` / `b`, `0` / `$` | Move to word or rendered-line boundaries. |
-| `gg` / `G` | Move to the document start or end. |
+| `j` / `k` | Normal mode: scroll the page smoothly (tap = small step, hold = continuous). Caret mode: move by rendered line. |
+| `i` | Enter caret mode; `Esc` returns to normal mode. |
+| `h` / `l`, `w` / `b`, `0` / `$` | Caret mode: move by character, word or rendered-line boundary. |
+| `gg` / `G` | Scroll smoothly to the document start or end. |
 | `L` / `H` | Move to the top or bottom of the visible document. |
 | `v` | Enter visual selection; motions extend the selection. Press again to return to normal mode. |
 | `c` in visual mode, or `-c` | Open a comment on the selection. `-c` also resumes an unsent draft. |
