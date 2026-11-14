@@ -27,3 +27,21 @@ test("search is smart-case, scopes by depth below and levels up", () => {
   assert.deepEqual(pagesOf(searchPages(root, { pattern: "needle", from: "/a/c", down: 0, up: -1 })), ["/", "/a/", "/a/b", "/a/c"]);
   assert.throws(() => searchPages(root, { pattern: "(" }));
 });
+
+test("group-by: status nests tickets under virtual status groups", async () => {
+  const { readPageTree } = await import("../src/page-tree.mjs");
+  const { mkdtempSync, mkdirSync, writeFileSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const root = mkdtempSync(tmpdir() + "/grp-");
+  mkdirSync(root + "/workstreams");
+  writeFileSync(root + "/index.md", "# Home\n");
+  writeFileSync(root + "/workstreams/index.md", "---\ngroup-by: status\n---\n# WS\n");
+  writeFileSync(root + "/workstreams/a.md", "---\nstatus: Done\n---\n# A\n");
+  writeFileSync(root + "/workstreams/b.md", "---\nstatus: active\n---\n# B\n");
+  const pages = readPageTree(root);
+  const by = Object.fromEntries(pages.map(p => [p.slug, p]));
+  assert.equal(by["workstreams/a"].parent, "workstreams/index#done");
+  assert.equal(by["workstreams/index#active"].parent, "workstreams/index");
+  assert.equal(by["workstreams/index#active"].link, "/workstreams/#active");
+  assert.equal(readPageTree(root, { grouped: false }).length, 4);
+});

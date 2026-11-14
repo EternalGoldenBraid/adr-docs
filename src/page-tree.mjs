@@ -25,7 +25,7 @@ export function markdownFiles(root, directory = root) {
 // Pages are the Markdown files at any depth (slug = path without `.md`). Front matter: `nav:` label,
 // `parent:` page slug, `order:` number. Top-level pages default to the top bar; a page in a folder
 // defaults to that folder's `index` (else the nearest ancestor's, else the root `index`).
-export function readPageTree(documentRoot, { publishedOnly = false } = {}) {
+export function readPageTree(documentRoot, { publishedOnly = false, grouped = true } = {}) {
   const files = markdownFiles(documentRoot)
     .filter(f => !publishedOnly || !isUnpublished(readFileSync(join(documentRoot, f), "utf8")));
   const slugs = new Set(files.map(f => f.slice(0, -3)));
@@ -50,12 +50,25 @@ export function readPageTree(documentRoot, { publishedOnly = false } = {}) {
       title: key("nav") ?? text.match(/^# (.+)$/m)?.[1].trim() ?? key("title") ?? slug,
       parent: key("parent") || (slug.includes("/") ? folderParent(slug) : null),
       order: Number.isFinite(order) ? order : 1000,
+      status: key("status")?.toLowerCase(), groupBy: key("group-by")?.toLowerCase(),
     };
   });
   for (const page of pages) if (page.parent === page.slug || !slugs.has(page.parent)) page.parent = null;
+  const groups = [];
+  for (const index of grouped ? pages.filter(p => p.groupBy === "status") : []) {
+    const order = ["active", "queued", "proposed", "blocked", "done", "declined"];
+    const tickets = pages.filter(p => p.parent === index.slug && p.status);
+    for (const status of [...new Set(tickets.map(t => t.status))]) {
+      const group = { slug: `${index.slug}#${status}`, link: `${index.link}#${status}`, title: status[0].toUpperCase() + status.slice(1),
+        parent: index.slug, order: order.includes(status) ? order.indexOf(status) : order.length, virtual: true };
+      groups.push(group);
+      for (const t of tickets.filter(t => t.status === status)) t.parent = group.slug;
+    }
+  }
+  pages.push(...groups);
   const rank = (a, b) => (a.slug === "index" ? -1 : b.slug === "index" ? 1 : 0) ||
     a.order - b.order || a.title.localeCompare(b.title);
-  return pages.sort(rank);
+  return pages.map(({ status, groupBy, ...page }) => page).sort(rank);
 }
 
 export function topBar(pages) {
