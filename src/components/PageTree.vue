@@ -20,7 +20,10 @@ const hasTree = computed(() => pages.value.some(p => p.parent))
 
 const awaiting = ref({})
 const waits = slug => awaiting.value[slug === 'index' ? '/' : '/' + slug] || 0
-const onAwait = e => { awaiting.value = e.detail?.pages || {} }
+const tints = ref({})
+const onAwait = e => { awaiting.value = e.detail?.pages || {}; tints.value = Object.fromEntries(Object.entries(e.detail?.colors || {}).map(([k, v]) => [k, `rgb(${e.detail.palette?.[v] || '255,90,79'})`])) }
+const tint = slug => { const c = tints.value[slug === 'index' ? '/' : '/' + slug]; return c ? { background: c } : undefined }
+const tintAll = computed(() => { const v = Object.values(tints.value); return v.length ? { background: v[0] } : undefined })
 const open = ref(false)
 const cursor = ref(0)
 const collapsed = ref(new Set())
@@ -105,18 +108,18 @@ onUnmounted(() => {
 <template>
 <div v-if="hasTree && bySlug[current]" class="pt-bar" :class="{ pad }">
   <nav v-if="trail.length" class="pt-crumbs" aria-label="Breadcrumb">
-    <template v-for="p in trail" :key="p.slug"><a :href="withBase(p.link)">{{ p.title }}</a><b v-if="waits(p.slug)" class="pt-dot" title="Agent awaits you">{{ waits(p.slug) }}</b><span>›</span></template>
-    <strong>{{ bySlug[current].title }}</strong><b v-if="waits(current)" class="pt-dot" title="Agent awaits you">{{ waits(current) }}</b>
+    <template v-for="p in trail" :key="p.slug"><a :href="withBase(p.link)">{{ p.title }}</a><b v-if="waits(p.slug)" class="pt-dot" :style="tint(p.slug)" title="Threads with something new for you">{{ waits(p.slug) }}</b><span>›</span></template>
+    <strong>{{ bySlug[current].title }}</strong><b v-if="waits(current)" class="pt-dot" :style="tint(current)" title="Threads with something new for you">{{ waits(current) }}</b>
   </nav>
   <span v-if="children.length" class="pt-children">
-    Pages below: <a v-for="c in children" :key="c.slug" :href="withBase(c.link)">{{ c.title }}<b v-if="waits(c.slug)" class="pt-dot">{{ waits(c.slug) }}</b></a>
+    Pages below: <a v-for="c in children" :key="c.slug" :href="withBase(c.link)">{{ c.title }}<b v-if="waits(c.slug)" class="pt-dot" :style="tint(c.slug)">{{ waits(c.slug) }}</b></a>
   </span>
-  <button class="pt-open" title="Page tree (t)" @click="open ? (open = false) : show()">☰ Tree<b v-if="Object.keys(awaiting).length" class="pt-dot" title="Open threads the agent started and is waiting on you for">{{ Object.values(awaiting).reduce((a, b) => a + b, 0) }}</b></button>
+  <button class="pt-open" title="Page tree (t)" @click="open ? (open = false) : show()">☰ Tree<b v-if="Object.keys(awaiting).length" class="pt-dot" :style="tintAll" title="Threads with something new for you">{{ Object.values(awaiting).reduce((a, b) => a + b, 0) }}</b></button>
   <div v-if="open" class="pt-pop" ref="list" tabindex="0" role="tree">
     <div v-for="(r, i) in rows" :key="r.slug" class="pt-row" :class="{ cur: r.slug === current, at: i === cursor }"
       :style="{ paddingLeft: 10 + r.depth * 18 + 'px' }" role="treeitem" @click="go(r.link)">
       <button v-if="r.kids" class="pt-fold" tabindex="-1" @click.stop="fold(r, !collapsed.has(r.slug))">{{ collapsed.has(r.slug) ? '▸' : '▾' }}</button>
-      <span v-else class="pt-fold"></span><input v-if="canExport" type="checkbox" class="pt-check" tabindex="-1" :checked="picked.has(r.slug)" title="Select this page for export" @click.stop="pick(r)">{{ r.title }}<button v-if="canExport && r.kids" class="pt-kids" tabindex="-1" title="Select or clear this page and all pages below it" @click.stop="pick(r, true)">+ below</button><b v-if="waits(r.slug)" class="pt-dot" title="Agent awaits you">{{ waits(r.slug) }}</b>
+      <span v-else class="pt-fold"></span><input v-if="canExport" type="checkbox" class="pt-check" tabindex="-1" :checked="picked.has(r.slug)" title="Select this page for export" @click.stop="pick(r)">{{ r.title }}<button v-if="canExport && r.kids" class="pt-kids" tabindex="-1" title="Select or clear this page and all pages below it" @click.stop="pick(r, true)">+ below</button><b v-if="waits(r.slug)" class="pt-dot" :style="tint(r.slug)" title="Threads with something new for you">{{ waits(r.slug) }}</b>
     </div>
     <div v-if="canExport" class="pt-export">
       <button :disabled="!picked.size" @click="runExport">Export {{ picked.size || '' }} selected</button>
@@ -138,7 +141,7 @@ onUnmounted(() => {
 .pt-row { display: flex; gap: 4px; align-items: center; padding: 4px 12px; cursor: pointer; }
 .pt-row.cur { font-weight: 700; color: var(--vp-c-brand-1); }
 .pt-row.at { background: var(--vp-c-default-soft); }
-.pt-dot { margin-left: 6px; padding: 0 6px; border-radius: 999px; background: #e03131; color: #fff; font-size: 11px; }
+.pt-dot { margin-left: 6px; padding: 0 6px; border-radius: 999px; background: #e03131; color: #1b1b1f; font-size: 11px; }
 .pt-fold { width: 16px; font-size: 11px; opacity: .7; }
 .pt-check { margin: 0 4px 0 2px; accent-color: var(--vp-c-brand-1); }
 .pt-kids { margin-left: auto; padding: 0 6px; border: 1px solid var(--vp-c-divider); border-radius: 6px; font-size: 11px; opacity: .8; }

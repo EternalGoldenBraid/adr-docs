@@ -739,9 +739,13 @@
   };
   function announceAwaiting() {
     const pages = {};
+    const colors = {};
+    const latest = {};
     for (const comment of historyComments) if (attention(comment)) {
       const key = comment.kind === "session" ? "*" : pagePath(comment.url);
       pages[key] = (pages[key] || 0) + 1;
+      const at = Date.parse(comment.replies.at(-1)?.at || comment.at) || 0;
+      if (!(latest[key] >= at)) { latest[key] = at; colors[key] = comment.color || "yellow"; }
     }
     const total = Object.values(pages).reduce((a, b) => a + b, 0);
     const base = document.title.replace(/^\(\d+\) /, "");
@@ -758,7 +762,7 @@
     }));
     syncBanners();
     document.title = total ? `(${total}) ${base}` : base;
-    document.dispatchEvent(new CustomEvent("preview-comment-awaiting", { detail: { pages, total } }));
+    document.dispatchEvent(new CustomEvent("preview-comment-awaiting", { detail: { pages, total, colors, palette: COLORS } }));
   }
   async function refreshHistory() {
     const result = await api("history");
@@ -1461,6 +1465,7 @@
     localStorage.setItem(SEEN_KEY, JSON.stringify(seenReplies));
     placeBubbles();
     applyMarks();
+    announceAwaiting();
   }
   let hoverColor = localStorage.getItem("preview-comments-color") || "yellow";
   const squash = text => text.normalize("NFKC").replace(/\s+/g, "");
