@@ -589,7 +589,8 @@
     const rows = [...historyComments].sort((a, b) => new Date(b.updatedAt || b.at) - new Date(a.updatedAt || a.at));
     for (const comment of rows) {
       if (comment.removed) continue;
-      const closed = comment.resolved;
+      // A resolved thread with a reply you have not seen stays listed as open until viewed.
+      const closed = comment.resolved && !hasFresh(comment);
       if (filter === "notes" ? !isNote(comment) : isNote(comment) && filter !== "all") continue;
       if (filter !== "notes" && (filter === "chat" ? closed || (comment.kind !== "page" && comment.kind !== "session")
         : filter === "page" ? closed || (comment.kind !== "session" && pagePath(comment.url) !== pagePath(location.href))
@@ -599,7 +600,7 @@
       card.type = "button";
       card.className = "thread-card";
       card.dataset.commentId = comment.id;
-      card.classList.add(comment.resolved ? "done" : awaiting(comment) ? "waiting" : comment.seen || comment.note ? "open" : "unread");
+      card.classList.add(comment.resolved && !hasFresh(comment) ? "done" : awaiting(comment) ? "waiting" : comment.seen || comment.note ? "open" : "unread");
       const top = document.createElement("div");
       top.className = "row-top";
       const section = document.createElement("strong");
@@ -607,7 +608,7 @@
       const badge = document.createElement("span");
       badge.className = "badge";
       const links = (comment.refs?.length || 0) + historyComments.filter(c => !c.removed && c.refs?.includes(comment.id)).length;
-      badge.textContent = [comment.resolved ? "resolved" : awaiting(comment) ? "awaiting you" : comment.seen || comment.note ? "" : "unread",
+      badge.textContent = [comment.resolved ? (hasFresh(comment) ? "resolved · new reply" : "resolved") : awaiting(comment) ? "awaiting you" : comment.seen || comment.note ? "" : "unread",
         comment.replies.length ? `💬${comment.replies.length}` : "", links ? `🔗${links}` : "",
         comment.kind !== "session" && pagePath(comment.url) !== pagePath(location.href) ? pagePath(comment.url) : ""].filter(Boolean).join(" · ");
       top.append(section, badge);
@@ -663,6 +664,13 @@
     const comment = historyComments.find(c => c.id === id);
     if (!comment || historySaving) return;
     if (isNote(comment)) return;
+    if (comment.resolved && hasFresh(comment)) {
+      const rows = [...find(".thread-list").children].map(card => card.dataset.commentId);
+      pendingFocus = rows[rows.indexOf(id) + 1] ?? rows[rows.indexOf(id) - 1];
+      markSeen(comment);
+      renderHistory();
+      return;
+    }
     const ids = [...find(".thread-list").children].map(card => card.dataset.commentId);
     const at = ids.indexOf(id);
     pendingFocus = selectedThread === id && comment.resolved ? id : ids[at + 1] ?? ids[at - 1];
@@ -1433,11 +1441,13 @@
     if (last) return last.author === "copilot" ? last.id : undefined;
     return comment.author === "copilot" ? "root" : undefined;
   };
-  // Resolved threads are closed: a late agent sign-off must not keep them in the open list or the unread counts.
+  // A resolved thread resurfaces only for a Copilot reply that arrived after it was resolved.
   const hasFresh = comment => {
-    if (comment.resolved) return false;
     const key = lastFromCopilot(comment);
-    return Boolean(key && seenReplies[comment.id] !== key);
+    if (!key || seenReplies[comment.id] === key) return false;
+    if (!comment.resolved) return true;
+    const last = comment.replies.at(-1);
+    return Boolean(last && comment.resolvedAt && new Date(last.at) > new Date(comment.resolvedAt));
   };
   function markSeen(comment) {
     const key = lastFromCopilot(comment);
@@ -1529,7 +1539,7 @@
     const size = 24 * uiScale();
     const total = Math.max(document.documentElement.scrollHeight, 1);
     for (const mark of marks) {
-      if (mark.comment.resolved) continue;
+      if (mark.comment.resolved && !hasFresh(mark.comment)) continue;
       const rect = mark.range.getBoundingClientRect();
       if (Number.isFinite(rect.top)) {
         const docY = rect.top + scrollY;
@@ -1598,7 +1608,7 @@
       if (ranges.length) CSS.highlights.set(`preview-comment-${name}`, new Highlight(...ranges));
       else CSS.highlights.delete(`preview-comment-${name}`);
     }
-    const open = marks.filter(mark => !mark.comment.resolved).length;
+    const open = marks.filter(mark => !mark.comment.resolved || hasFresh(mark.comment)).length;
     const waiting = marks.some(mark => mark.comment.comment && !mark.comment.seen && !mark.comment.resolved);
     if (firstRun && historyRevision >= 0 && localStorage.getItem(SEEN_KEY) === null) {
       for (const item of historyComments) { const last = item.replies.at(-1); if (last) seenReplies[item.id] = last.id; }

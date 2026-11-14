@@ -23,7 +23,7 @@ appear in **History**; document edits appear through the existing hot preview.
 its selected content, page link, link chips and dated replies from you and
 Copilot; the reply box stays at the bottom.
 
-A resolved thread leaves the open tabs and the unread counts, even if Copilot replied after you resolved it; find it under **Resolved**. Reopen it to see the reply as new.
+A resolved thread stays closed, with its bubble hidden, until Copilot replies *after* it was resolved; it then returns to the open tabs, marked "new reply", until you open it (or press `r` on it). A sign-off sent together with the resolution does not count.
 
 Keyboard triage: in the list `j`/`k` move, `l` or Enter opens, `r` resolves the
 row and moves to the next, `[`/`]` (or `k` from the first row, then `h`/`l`) switch tabs, `g`/`G` jump to the ends. In a

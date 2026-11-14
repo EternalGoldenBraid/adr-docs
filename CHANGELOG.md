@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.27.3 - 2026-11-14
+
+- Resolved threads come back when Copilot replies after they were resolved: they reappear in the open lists, count as a new reply and get their bubble back on the page. A sign-off sent together with the resolution does not count, so resolved threads no longer pile up as unread. (Replaces the 0.27.2 rule that hid them regardless.)
+
 ## 0.27.2 - 2026-11-14
 
 - Resolved threads no longer stay in the Open/This page/Chat lists or count as unread when Copilot replies after they were resolved; only unresolved threads (or ones awaiting you) stay visible. They remain under Resolved.
