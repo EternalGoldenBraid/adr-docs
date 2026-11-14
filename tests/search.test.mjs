@@ -24,5 +24,6 @@ test("search is smart-case, scopes by depth below and levels up", () => {
   assert.deepEqual(pagesOf(searchPages(root, { pattern: "needle", from: "/a/b", down: 0 })), ["/a/b"]);
   assert.deepEqual(pagesOf(searchPages(root, { pattern: "needle", from: "/a/b", down: 1 })), ["/a/b", "/a/c"]);
   assert.deepEqual(pagesOf(searchPages(root, { pattern: "needle", from: "/a/b", down: 0, up: 1 })), ["/a/", "/a/b"]);
+  assert.deepEqual(pagesOf(searchPages(root, { pattern: "needle", from: "/a/c", down: 0, up: -1 })), ["/", "/a/", "/a/b", "/a/c"]);
   assert.throws(() => searchPages(root, { pattern: "(" }));
 });
