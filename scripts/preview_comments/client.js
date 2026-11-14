@@ -226,7 +226,7 @@
     bar.hidden = !vimEnabled;
     find(".sb-hint").textContent = !history.hidden ? (selectedThread
       ? "j/k scroll messages · J/K next/prev thread · r resolve · i reply · o page · h back · Esc"
-      : "j/k move (k at top → tabs) · l open · r resolve · [ ] tabs · Esc close") : visual ? "c comment · Esc cancel · hjkl extend" : caretMode ? `hjklwb move caret · ${KM.page.visual} select · ${KM.page.comment} comment · Esc scroll mode` : `j/k scroll · i caret · ${KM.page.visual} select text · ${KM.page.comment} comment · ${KM.leader}${KM.leaderKeys.history} threads · ] next awaiting · : commands · :help`;
+      : "j/k move (k at top → tabs) · l open · o go to page · r resolve · [ ] tabs · Esc close") : visual ? "c comment · Esc cancel · hjkl extend" : caretMode ? `hjklwb move caret · ${KM.page.visual} select · ${KM.page.comment} comment · Esc scroll mode` : `j/k scroll · i caret · ${KM.page.visual} select text · ${KM.page.comment} comment · ${KM.leader}${KM.leaderKeys.history} threads · ] next awaiting · : commands · :help`;
     find(".sb-mode").textContent = `-- ${mode}${prefix ? " " + prefix : ""} --`;
     vimButton.setAttribute("aria-pressed", String(vimEnabled));
   }
@@ -969,7 +969,9 @@
       message("");
       const rect = await pickRegion();
       if (!rect) return null;
-      host.style.visibility = "hidden";
+      // The overlay is hidden so it is not in the crop, unless an overlay panel is what is being captured.
+      const capturingOverlay = !history.hidden || !panel.hidden || !pop.hidden;
+      if (!capturingOverlay) host.style.visibility = "hidden";
       await new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done)));
       await nextFrame(video);
       await new Promise(done => setTimeout(done, 60));
@@ -1069,6 +1071,7 @@
     else if (key === "G") step(Infinity);
     else if (key === "l" || key === "ArrowRight") { if (at >= 0) cards[at].click(); }
     else if (key === "r") { if (at >= 0) triage(ids[at]); }
+    else if (key === "o") { if (at >= 0) { selectThread(ids[at]); find(".thread-source").click(); } }
     else if (key === "[" || key === "]") {
       setFilter(values[(values.indexOf(historyFilter) + (key === "]" ? 1 : values.length - 1)) % values.length]);
     } else handled = false;
