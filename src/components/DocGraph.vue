@@ -44,6 +44,9 @@ const labelHost = ref(null)
 const labelEls = new Map()
 let labelFrame = 0
 
+const SHAPES = new Set(['round-rectangle', 'rectangle', 'ellipse', 'diamond', 'hexagon', 'octagon', 'round-tag', 'barrel'])
+const imageSrc = u => !u ? '' : /^(https?:|data:|blob:)/.test(u) ? u : withBase(u)
+
 function nodeLabel(n) {
   return n.data('kind') === 'node' ? '' : (n.data('title') || '') + (n.data('status') ? '  ' + n.data('status') : '') + (n.data('badge') || '')
 }
@@ -61,7 +64,7 @@ function drawLabels() {
     if (!el) {
       el = document.createElement('div')
       el.className = 'xp-label'
-      el.innerHTML = '<b></b><span></span>'
+      el.innerHTML = '<img alt=""><b></b><span></span>'
       labelHost.value.appendChild(el)
       labelEls.set(n.id(), el)
     }
@@ -69,8 +72,14 @@ function drawLabels() {
     const lines = Math.max(0, Math.floor((d.h - 38) / 14))
     el.style.cssText = `left:${p.x - d.w * z / 2}px;top:${p.y - d.h * z / 2}px;width:${d.w * z}px;height:${d.h * z}px;` +
       `font-size:${13 * z}px;color:${d.font};opacity:${n.style('opacity')};padding:${6 * z}px ${8 * z}px`
-    el.firstChild.textContent = (d.title || '') + (d.status ? '  ' + d.status : '') + (d.badge || '')
+    const img = el.firstChild
+    const src = imageSrc(d.image)
+    if (img.dataset.src !== src) { img.dataset.src = src; if (src) img.src = src; else img.removeAttribute('src') }
+    img.style.display = src ? 'block' : 'none'
+    if (d.shape === 'ellipse') el.style.borderRadius = '50%'
+    el.children[1].textContent = (d.title || '') + (d.status ? '  ' + d.status : '') + (d.badge || '')
     const body = el.lastChild
+    if (src) img.style.maxHeight = `${Math.max(0, d.h - 34) * z}px`
     body.textContent = d.body || ''
     body.style.display = d.body && z >= SHOW_BODY_ZOOM && lines > 0 ? '-webkit-box' : 'none'
     body.style.webkitLineClamp = String(lines)
@@ -82,6 +91,8 @@ const scheduleLabels = () => { if (!labelFrame) labelFrame = requestAnimationFra
 function nodeEl(n) {
   const d = { id: n.id, title: n.title, body: n.body, status: n.status, kind: n.kind, topics: n.topics, link: n.link || '',
     w: n.w, h: n.h, fill: n.fill, stroke: n.stroke, font: n.font }
+  if (n.image) d.image = n.image
+  if (SHAPES.has(n.shape)) d.shape = n.shape
   if (n.parent) d.parent = n.parent
   if (n.inside) d.inside = n.inside
   return { group: 'nodes', data: d, position: { x: n.x, y: n.y } }
@@ -146,7 +157,7 @@ function serialise() {
       const d = n.data()
       return { id: d.id, title: d.title, body: d.body, status: d.status, kind: d.kind, parent: d.parent || null, inside: d.inside || null,
         x: Math.round(n.position('x')), y: Math.round(n.position('y')), w: d.w, h: d.h,
-        fill: d.fill, stroke: d.stroke, font: d.font, topics: d.topics, ...(d.link ? { link: d.link } : {}) }
+        fill: d.fill, stroke: d.stroke, font: d.font, topics: d.topics, ...(d.link ? { link: d.link } : {}), ...(d.image ? { image: d.image } : {}), ...(d.shape ? { shape: d.shape } : {}) }
     }),
     edges: cy.edges().map(e => ({ id: e.id(), source: e.data('source'), target: e.data('target'),
       color: e.data('color'), dashed: !!e.data('dashed'), label: e.data('label') || '' })),
@@ -345,6 +356,7 @@ onMounted(async () => {
         label: nodeLabel,
         color: 'data(font)', 'font-size': 13, 'font-weight': 600, 'text-wrap': 'wrap',
         'text-max-width': n => n.data('w') - 16, 'text-valign': 'center', 'text-halign': 'center' } },
+      { selector: 'node[shape]', style: { shape: 'data(shape)' } },
       { selector: ':parent', style: {
         'text-valign': 'top', 'text-halign': 'center', 'text-margin-y': -8, padding: 34,
         'compound-sizing-wrt-labels': 'exclude', 'background-opacity': 0.12, 'border-width': 2, 'font-size': 15,
@@ -652,6 +664,7 @@ onUnmounted(() => { removeEventListener('hashchange', landOnNode); document.remo
 .xp-host { position: absolute; inset: 0; }
 .xp-labels { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
 .xp-label { position: absolute; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; overflow: hidden; line-height: 1.25; }
+.xp-label img { flex: 0 1 auto; min-height: 0; max-width: 100%; object-fit: contain; border-radius: 4px; margin-bottom: 3px; }
 .xp-label b { font-weight: 700; }
 .xp-label span { white-space: pre-line; font-weight: 400; font-size: 0.92em; opacity: .9; overflow: hidden; -webkit-box-orient: vertical; }
 .xp-back { font-size: 13px; text-decoration: none; padding: 5px 10px; border: 1px solid var(--vp-c-divider); border-radius: 8px; }

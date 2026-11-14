@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.35.0 - 2026-11-14
+
+- DocGraph: optional node `image` (shown inside the node) and `shape` (ellipse, rectangle, diamond, ...).
+
 ## 0.34.0 - 2026-11-14
 
 - Page tree: `group-by: status` in an index page's front matter groups its child tickets under virtual status nodes, driven by each ticket's `status:`.

@@ -90,6 +90,10 @@ The agent can show a status line (`set_doc_review_status`) and attach a before/a
 
 In Vim mode, Alt+h/l narrow/widen and Alt+j/k shorten/heighten the open panel, history or bubble popover; sizes persist. All page-layer bindings (motions, `v`, `c`, `s`, the `-` leader, resize keys and step) are defined in `scripts/preview_comments/keymap.json`. To customise, create `~/.config/agent-doc-review/keymap.json` (or point `ADR_KEYMAP` at a file) containing only the entries to change, e.g. `{"resize": {"wider": "A-L", "step": 60}}`; `A-`/`C-` prefixes mean Alt/Ctrl. Reload the page to apply.
 
+## DocGraph node images and shapes
+
+A node may carry `"image": "/public-path.png"` (or an http/data URL) and `"shape": "ellipse"` (also `rectangle`, `diamond`, `hexagon`, `octagon`, `barrel`, `round-tag`). The image is drawn inside the node above the title, scaled to fit the node's `w`/`h`; set those to size the box. Both survive edit mode, `:w` and export.
+
 ## Page tree
 
 `.md` files at any depth are pages (a folder page defaults to that folder's `index` as parent). Front matter `parent: <slug>`, `order: <n>` and `nav: <label>` arrange them: only parentless pages stay in the top bar, and each page shows a breadcrumb, its child pages and a `☰ Tree` popover (Vim `t`; `j/k` move, `h/l` fold, Enter open). Red badges in the tree count threads that need you: ones the agent opened and awaits, and ones with an agent reply you have not yet seen. `/tree.json` lists the nested structure for agents, in the preview and the static build. A graph node `link` can point at the same slug.
