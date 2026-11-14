@@ -197,25 +197,41 @@
     return true;
   }
   let visual = false;
+  // Normal mode scrolls the page smoothly; `i` (or `v`) enters caret mode where motions move the caret.
+  let caretMode = false;
+  let scrollDir = 0, scrollFrame, scrollLast;
+  function scrollTick(now) {
+    scrollBy(0, scrollDir * 1.4 * Math.min(now - scrollLast, 50));
+    scrollLast = now;
+    scrollFrame = scrollDir ? requestAnimationFrame(scrollTick) : undefined;
+  }
+  function holdScroll(dir) {
+    scrollDir = dir;
+    if (!dir || scrollFrame) return;
+    scrollLast = performance.now();
+    scrollFrame = requestAnimationFrame(scrollTick);
+  }
+  addEventListener("keyup", event => { if (scrollDir && (event.key === "j" || event.key === "k")) holdScroll(0); });
+  addEventListener("blur", () => holdScroll(0));
   let prefix;
   let prefixTimer;
   let externalMode; // set by pages that run their own modal keys (e.g. the graph)
   document.addEventListener("preview-comment-mode", event => { externalMode = event.detail?.mode; modeLabel(); });
 
   function modeLabel() {
-    const mode = !vimEnabled ? "OFF" : !history.hidden ? "HISTORY" : !panel.hidden ? "COMMENT" : externalMode || (visual ? "VISUAL" : "NORMAL");
+    const mode = !vimEnabled ? "OFF" : !history.hidden ? "HISTORY" : !panel.hidden ? "COMMENT" : externalMode || (visual ? "VISUAL" : caretMode ? "CARET" : "NORMAL");
     vimButton.textContent = "Vim";
     const bar = find(".statusbar");
     bar.hidden = !vimEnabled;
     find(".sb-hint").textContent = !history.hidden ? (selectedThread
       ? "j/k scroll messages · J/K next/prev thread · r resolve · i reply · o page · h back · Esc"
-      : "j/k move (k at top → tabs) · l open · r resolve · [ ] tabs · Esc close") : visual ? "c comment · Esc cancel · hjkl extend" : `${KM.page.visual} select text · ${KM.page.comment} comment · ${KM.leader}${KM.leaderKeys.history} threads · ] next awaiting · : commands · :help`;
+      : "j/k move (k at top → tabs) · l open · r resolve · [ ] tabs · Esc close") : visual ? "c comment · Esc cancel · hjkl extend" : caretMode ? `hjklwb move caret · ${KM.page.visual} select · ${KM.page.comment} comment · Esc scroll mode` : `j/k scroll · i caret · ${KM.page.visual} select text · ${KM.page.comment} comment · ${KM.leader}${KM.leaderKeys.history} threads · ] next awaiting · : commands · :help`;
     find(".sb-mode").textContent = `-- ${mode}${prefix ? " " + prefix : ""} --`;
     vimButton.setAttribute("aria-pressed", String(vimEnabled));
   }
   const cmdbar = find(".cmdbar"), cmdinput = find(".cmdinput");
   const helpText = () => [
-    `h/j/k/l/w/b/0/$ move · ${KM.page.visual} select · ${KM.page.comment} comment (page if nothing selected)`,
+    `j/k scroll smoothly · i caret mode (h/j/k/l/w/b/0/$ move, Esc leaves) · ${KM.page.visual} select · ${KM.page.comment} comment (page if nothing selected)`,
     `] / [ next / previous thread awaiting you (across pages)`,
     `${KM.page.region} region screenshot · ${KM.leader}${KM.leaderKeys.history} history · ${KM.leader}${KM.leaderKeys.chat} session chat`,
     `${KM.resize.narrower}/${KM.resize.wider}/${KM.resize.shorter}/${KM.resize.taller} resize panel · t page tree`,
@@ -308,7 +324,7 @@
     modeLabel();
     const selected = getSelection();
     const doc = document.querySelector(".vp-doc");
-    caret.hidden = !vimEnabled || !panel.hidden || !history.hidden || !doc?.contains(selected?.focusNode);
+    caret.hidden = !vimEnabled || !caretMode || !panel.hidden || !history.hidden || !doc?.contains(selected?.focusNode);
     if (caret.hidden) return;
     const range = document.createRange();
     range.setStart(selected.focusNode, selected.focusOffset);
@@ -1183,7 +1199,11 @@
         else closeHistory();
         return;
       }
-      if (panel.hidden && !visual && !prefix && !selecting) { message(""); return; }
+      if (panel.hidden && !visual && !prefix && !selecting) {
+        if (caretMode) { caretMode = false; showCaret(); }
+        message("");
+        return;
+      }
       if (!panel.hidden || visual || prefix || selecting) event.preventDefault();
       if (visual) {
         const selected = getSelection();
@@ -1230,6 +1250,12 @@
     if (event.key === ":") { event.preventDefault(); openCmdline(); return; }
     if (event.key === "]" || event.key === "[") { event.preventDefault(); jumpToAwaiting(event.key === "]" ? 1 : -1); return; }
     if (!hasDoc) return;
+    if (event.key === "i" && !caretMode) {
+      event.preventDefault();
+      caretMode = true;
+      if (ensureCursor()) showCaret(true);
+      return;
+    }
     const { motions, visual: vKey, documentStart, documentEnd, viewTop, viewBottom, details: dKey } = KM.page;
     if (!motions[event.key] && ![vKey, documentStart, documentEnd, viewTop, viewBottom, dKey].includes(event.key)) return;
     if (typeof getSelection().modify !== "function") {
@@ -1247,6 +1273,19 @@
       return;
     }
     event.preventDefault();
+    if (!caretMode && event.key !== vKey) {
+      const line = motions[event.key]?.[1] === "line";
+      if (line) {
+        const dir = motions[event.key][0] === "forward" ? 1 : -1;
+        if (!event.repeat) scrollBy(0, dir * 60);
+        holdScroll(dir);
+      }
+      else if (event.key === documentStart || event.key === documentEnd) {
+        scrollTo({ top: event.key === documentEnd ? document.documentElement.scrollHeight : 0, behavior: "smooth" });
+      } else message("Press i to move the caret");
+      return;
+    }
+    caretMode = true;
     if (motions[event.key]) move(...motions[event.key]);
     else if (event.key === documentStart || event.key === documentEnd) useRange(edgeRange(event.key === documentEnd));
     else if (event.key === viewBottom || event.key === viewTop) useRange(viewRange(event.key === viewTop));
