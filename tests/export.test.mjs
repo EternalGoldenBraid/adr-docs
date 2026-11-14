@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -18,5 +19,20 @@ test("export produces one self-contained html: inlined script, image and no modu
   assert.doesNotMatch(html, /<script type="module"|rel="modulepreload"|<iframe/);
   assert.match(html, /Interactive viewer not available/);
   assert.equal(result.warnings.length, 1);
+  rmSync(root, { recursive: true, force: true });
+});
+
+test("export of several pages gives one zip with an html per page and reports progress", async () => {
+  const root = mkdtempSync(join(tmpdir(), "adr-exp-"));
+  writeFileSync(join(root, "index.md"), "# Home\n");
+  writeFileSync(join(root, "a.md"), "# Alpha\n");
+  writeFileSync(join(root, "skip.md"), "# Skipped\n");
+  const out = join(root, "out.zip");
+  const steps = [];
+  const result = await exportPage({ documentRoot: root, pages: ["/", "/a"], outFile: out, onProgress: step => steps.push(step.done) });
+  const listing = execFileSync("unzip", ["-Z1", out], { encoding: "utf8" }).split("\n");
+  assert.equal(result.kind, "zip");
+  assert.ok(listing.includes("index.html") && listing.includes("a.html") && !listing.includes("skip.html"));
+  assert.equal(steps.at(-1), 4);
   rmSync(root, { recursive: true, force: true });
 });

@@ -248,14 +248,40 @@
     tree: () => document.dispatchEvent(new KeyboardEvent("keydown", { key: "t", bubbles: true })),
     vim: arg => { if ((arg === "off") === vimEnabled) vimButton.click(); },
   };
-  function exportPage() {
-    message("Exporting this page… the download starts when it is ready.");
-    const link = document.createElement("a");
-    link.href = `/__adr/export?page=${encodeURIComponent(pagePath(location.href))}`;
-    link.download = "";
-    link.click();
+  let exporting = false;
+  // pages: site paths to export; default is the current page. Polls the server job and shows a progress bar.
+  async function exportPage(pages = [pagePath(location.href)]) {
+    if (exporting) return message("An export is already running.", true);
+    exporting = true;
+    const bar = (done, total) => "█".repeat(Math.round(10 * done / total)).padEnd(10, "░");
+    try {
+      message(`Exporting ${pages.length} page${pages.length > 1 ? "s" : ""}… starting`);
+      const started = await fetch("/__adr/export/start?" + pages.map(page => "page=" + encodeURIComponent(page)).join("&"));
+      const { id, error } = await started.json();
+      if (!id) throw new Error(error || "could not start");
+      for (;;) {
+        await new Promise(resolve => setTimeout(resolve, 400));
+        const job = await (await fetch(`/__adr/export/status?id=${id}`)).json();
+        if (job.error && job.state !== "failed") throw new Error(job.error);
+        if (job.state === "failed") throw new Error(job.error);
+        if (job.state === "done") {
+          const link = document.createElement("a");
+          link.href = `/__adr/export/file?id=${id}`;
+          link.download = "";
+          link.click();
+          message(`Export ready ${bar(1, 1)} downloading${job.warnings?.length ? ` (${job.warnings.length} warning${job.warnings.length > 1 ? "s" : ""}: ${job.warnings[0]})` : ""}`);
+          return;
+        }
+        message(`Exporting ${bar(job.done, job.total)} ${job.done}/${job.total} ${job.stage}`);
+      }
+    } catch (error) {
+      message(`Export failed: ${error.message}`, true);
+    } finally {
+      exporting = false;
+    }
   }
-  commands.export = exportPage;
+  document.addEventListener("adr-export", event => exportPage(event.detail?.pages?.length ? event.detail.pages : undefined));
+  commands.export = () => exportPage();
   function openCmdline() { cmdbar.hidden = false; cmdinput.value = ""; cmdinput.focus(); }
   function closeCmdline() { cmdbar.hidden = true; cmdinput.blur(); }
   cmdinput.addEventListener("keydown", event => {
