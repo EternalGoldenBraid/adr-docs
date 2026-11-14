@@ -33,6 +33,8 @@ watch(cursor, reveal)
 // Export selection: only in the live preview (exported copies have no export endpoint).
 const canExport = typeof window !== 'undefined' && !window.__ADR_FILES
 const picked = ref(new Set())
+const selecting = ref(false)
+let pendingZ = false
 const descendants = slug => childrenOf(slug).flatMap(c => [c.slug, ...descendants(c.slug)])
 function pick(row, withChildren = false) {
   const next = new Set(picked.value)
@@ -66,6 +68,20 @@ function show() {
   nextTick(() => list.value && list.value.focus())
   reveal()
 }
+function foldAll(shut) {
+  const row = rows.value[cursor.value]
+  let top = row
+  while (top && top.parent && bySlug.value[top.parent]) top = bySlug.value[top.parent]
+  collapsed.value = shut ? new Set(pages.value.filter(p => childrenOf(p.slug).length).map(p => p.slug)) : new Set()
+  if (shut && top) cursor.value = Math.max(0, rows.value.findIndex(r => r.slug === top.slug))
+}
+function foldBelow(row, shut) {
+  const next = new Set(collapsed.value)
+  for (const slug of [row.slug, ...descendants(row.slug)]) {
+    if (shut && childrenOf(slug).length) next.add(slug); else if (!shut) next.delete(slug)
+  }
+  collapsed.value = next
+}
 function fold(row, shut) {
   const next = new Set(collapsed.value)
   if (shut) next.add(row.slug); else next.delete(row.slug)
@@ -81,15 +97,25 @@ function onKey(e) {
   if (open.value) {
     const k = e.key
     const row = rows.value[cursor.value]
-    if (k === 'Escape' || k === 't') open.value = false
+    if (pendingZ) {
+      pendingZ = false
+      if (row && row.kids && (k === 'c' || k === 'o')) foldBelow(row, k === 'c')
+    } else if (k === 'z') pendingZ = true
+    else if (k === 'Escape' && selecting.value) selecting.value = false
+    else if (k === 'Escape' || k === 't') { open.value = false; selecting.value = false }
     else if (k === 'j' || k === 'ArrowDown') cursor.value = Math.min(rows.value.length - 1, cursor.value + 1)
     else if (k === 'k' || k === 'ArrowUp') cursor.value = Math.max(0, cursor.value - 1)
     else if (k === 'Enter' && row) go(row.link)
     else if (k === 'h' && row && row.kids) fold(row, true)
     else if (k === 'l' && row && row.kids) fold(row, false)
-    else if ((k === ' ' || k === 'x') && row && canExport) pick(row)
-    else if (k === 'X' && row && canExport) pick(row, true)
-    else if (k === 'e' && canExport) runExport()
+    else if (k === 'H') foldAll(true)
+    else if (k === 'L') foldAll(false)
+    else if (k === 'v' && canExport) selecting.value = !selecting.value
+    else if ((k === ' ' || k === 'x') && row && selecting.value) pick(row)
+    else if (k === 'X' && row && selecting.value) pick(row, true)
+    else if (k === 'a' && selecting.value) picked.value = new Set(rows.value.map(r => r.slug))
+    else if (k === 'A' && selecting.value) picked.value = new Set()
+    else if (k === 'e' && selecting.value) runExport()
     else return
     e.preventDefault(); e.stopPropagation()
     return
@@ -119,20 +145,30 @@ onUnmounted(() => {
   </span>
   <button class="pt-open" title="Page tree (t)" @click="open ? (open = false) : show()">☰ Tree<b v-if="Object.keys(awaiting).length" class="pt-dot" :style="tintAll" title="Threads with something new for you">{{ Object.values(awaiting).reduce((a, b) => a + b, 0) }}</b></button>
   <div v-if="open" class="pt-pop" ref="list" tabindex="0" role="tree">
+    <div class="pt-tools">
+      <button tabindex="-1" title="Collapse every subtree (H)" @click="foldAll(true)">Collapse all</button>
+      <button tabindex="-1" title="Expand every subtree (L)" @click="foldAll(false)">Expand all</button>
+      <button v-if="canExport" tabindex="-1" :class="{ on: selecting }" title="Select pages to export (v)" @click="selecting = !selecting">{{ selecting ? 'Done selecting' : 'Select' }}</button>
+      <span v-if="selecting" class="pt-mode">-- SELECT --</span>
+    </div>
     <div v-for="(r, i) in rows" :key="r.slug" class="pt-row" :class="{ cur: r.slug === current, at: i === cursor }"
       :style="{ paddingLeft: 10 + r.depth * 18 + 'px' }" role="treeitem" @click="go(r.link)">
       <button v-if="r.kids" class="pt-fold" tabindex="-1" @click.stop="fold(r, !collapsed.has(r.slug))">{{ collapsed.has(r.slug) ? '▸' : '▾' }}</button>
-      <span v-else class="pt-fold"></span><input v-if="canExport" type="checkbox" class="pt-check" tabindex="-1" :checked="picked.has(r.slug)" title="Select this page for export" @click.stop="pick(r)">{{ r.title }}<button v-if="canExport && r.kids" class="pt-kids" tabindex="-1" title="Select or clear this page and all pages below it" @click.stop="pick(r, true)">+ below</button><b v-if="waits(r.slug)" class="pt-dot" :style="tint(r.slug)" title="Threads with something new for you">{{ waits(r.slug) }}</b>
+      <span v-else class="pt-fold"></span><input v-if="selecting" type="checkbox" class="pt-check" tabindex="-1" :checked="picked.has(r.slug)" title="Select this page for export" @click.stop="pick(r)">{{ r.title }}<button v-if="selecting && r.kids" class="pt-kids" tabindex="-1" title="Select or clear this page and all pages below it" @click.stop="pick(r, true)">+ below</button><b v-if="waits(r.slug)" class="pt-dot" :style="tint(r.slug)" title="Threads with something new for you">{{ waits(r.slug) }}</b>
     </div>
-    <div v-if="canExport" class="pt-export">
+    <div v-if="selecting" class="pt-export">
       <button :disabled="!picked.size" @click="runExport">Export {{ picked.size || '' }} selected</button>
     </div>
-    <div class="pt-hint">j/k move · Enter open · h/l fold · {{ canExport ? 'Space tick · X tick with pages below · e export · ' : '' }}t/Esc close</div>
+    <div class="pt-hint">{{ selecting ? 'Space tick · X tick with pages below · a/A all/none · e export · v/Esc stop selecting' : `j/k move · Enter open · h/l fold · zc/zo fold below · H/L all${canExport ? ' · v select' : ''} · t/Esc close` }}</div>
   </div>
 </div>
 </template>
 
 <style scoped>
+.pt-tools { display: flex; gap: 6px; align-items: center; padding: 2px 12px 6px; }
+.pt-tools button { font-size: 11px; padding: 1px 8px; border: 1px solid var(--vp-c-divider); border-radius: 999px; background: none; color: var(--vp-c-text-2); cursor: pointer; }
+.pt-tools button.on { color: var(--vp-c-brand-1); border-color: var(--vp-c-brand-1); }
+.pt-mode { margin-left: auto; font: 700 11px ui-monospace, monospace; color: #74c0fc; }
 .pt-bar { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 6px 0 10px; margin-bottom: 8px; font-size: 13px; border-bottom: 1px solid var(--vp-c-divider); }
 .pt-bar.pad { padding: 8px 16px; }
 .pt-crumbs { display: flex; gap: 6px; align-items: center; }
