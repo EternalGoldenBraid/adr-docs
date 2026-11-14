@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.31.0 - 2026-11-14
+
+- GFM task lists: `- [ ]` and `- [x]` render as read-only checkboxes in the live preview, the built site and exports. Projects with their own VitePress config add `md.use(taskLists)` (`import taskLists from "<adr>/src/task-lists.mjs"`) and import `<adr>/src/theme/task-lists.css` (the ADR theme already does).
+
 ## 0.30.0 - 2026-11-14
 
 - `:grep` also searches comment threads (text, quote and replies) within the same page scope; Enter opens the thread. `-p` searches pages only, `-c` threads only.

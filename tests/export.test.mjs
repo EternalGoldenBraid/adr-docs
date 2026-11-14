@@ -36,3 +36,13 @@ test("export of several pages gives one zip with an html per page and reports pr
   assert.equal(steps.at(-1), 4);
   rmSync(root, { recursive: true, force: true });
 });
+
+test("task lists render as read-only checkboxes", async () => {
+  const { createMarkdownRenderer } = await import("vitepress");
+  const { default: taskLists } = await import("../src/task-lists.mjs");
+  const html = (await createMarkdownRenderer(tmpdir(), {})).use(taskLists).render("- [ ] open\n- [x] done *now*\n- plain [x] text\n\n1. [X] numbered\n");
+  assert.equal((html.match(/<input class="task-box" type="checkbox" disabled>/g) || []).length, 1);
+  assert.equal((html.match(/disabled checked>/g) || []).length, 2);
+  assert.match(html, /<li class="task-item"><input[^>]*> open<\/li>/);
+  assert.match(html, /plain \[x\] text/);
+});
