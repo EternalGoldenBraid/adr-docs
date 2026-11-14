@@ -27,6 +27,26 @@ function stderrLogger() {
   return logger;
 }
 
+// GET /__adr/search?q=<regex>&from=/page&down=N&up=N&case=1 -> {hits:[{link,title,line,text,match}], pages, truncated}.
+function searchPlugin(documentRoot) {
+  return {
+    name: "adr-search",
+    configureServer(server) {
+      server.middlewares.use("/__adr/search", async (request, response) => {
+        const q = new URL(request.url, "http://x").searchParams;
+        const count = name => (q.has(name) ? Number(q.get(name)) : undefined);
+        const { searchPages } = await import("./search.mjs");
+        let code = 200, body;
+        try {
+          body = searchPages(documentRoot, { pattern: q.get("q"), from: q.get("from") ?? undefined, down: count("down"), up: count("up"), caseSensitive: q.get("case") === "1" });
+        } catch (error) { code = 400; body = { error: error.message }; }
+        response.writeHead(code, { "Content-Type": "application/json" });
+        response.end(JSON.stringify(body));
+      });
+    },
+  };
+}
+
 // Export jobs: GET /__adr/export/start?page=/a&page=/b -> {id}; /status?id -> progress; /file?id -> the download.
 // GET /__adr/export?page=/x still returns one page directly. All work with or without an agent session.
 function exportPlugin(documentRoot) {
@@ -108,7 +128,7 @@ export function previewConfig({ documentRoot, connectionFile, workspace, package
       // VitePress supplies fixed optimizer inputs; the document tree needs no dependency scan.
       optimizeDeps: { noDiscovery: true, include: ["cytoscape"] },
       customLogger: stderrLogger(),
-      plugins: exportMode ? [] : [previewComments({ connectionFile }), treeJsonPlugin(documentRoot), exportPlugin(documentRoot)],
+      plugins: exportMode ? [] : [previewComments({ connectionFile }), treeJsonPlugin(documentRoot), exportPlugin(documentRoot), searchPlugin(documentRoot)],
       server: {
         host: "127.0.0.1",
         fs: { allow: [documentRoot, packageRoot, workspace] },

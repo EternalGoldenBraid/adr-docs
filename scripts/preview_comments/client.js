@@ -25,6 +25,10 @@
       .proposal{margin:10px 0;border:1px solid #59616d;border-radius:8px;padding:8px}.proposal pre{margin:0 0 6px;padding:6px;white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.4 ui-monospace,monospace;border-radius:4px}.proposal .del{background:#4a1d24}.proposal .add{background:#16402a}
       .banners[hidden]{display:none}.banners{position:fixed;top:72px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;z-index:5}.banner{max-width:min(640px,90vw);padding:8px 14px;border:1px solid #ff5a4f;border-radius:10px;background:#2a1517;color:#eee;text-align:left}.banner small{color:#ffb3ae;display:block}
       .statusbar{position:fixed;left:0;right:0;bottom:0;display:flex;gap:18px;align-items:center;padding:3px 14px;background:#111318;border-top:1px solid #3a404a;font:12px/1.4 ui-monospace,monospace;color:#b7c1ce;pointer-events:none}.sb-mode{font-weight:700;color:#74c0fc}.sb-hint{order:3;margin-left:auto}.agent-status::before{content:"● ";color:#51cf66}.agent-status.await::before{color:#ff6b6b}
+      .grep{position:fixed;left:50%;bottom:44px;transform:translateX(-50%);width:min(860px,94vw);max-height:50vh;display:flex;flex-direction:column;background:#17191f;border:1px solid #59616d;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,.5);font:13px/1.4 ui-monospace,monospace;color:#d6dbe3;z-index:5}
+      .grep header{padding:6px 12px;border-bottom:1px solid #2f343d;color:#9aa4b2}.grep .grep-list{overflow:auto;padding:4px}
+      .grep-hit{display:block;width:100%;text-align:left;background:none;border:0;border-radius:6px;color:inherit;font:inherit;padding:3px 8px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .grep-hit:focus,.grep-hit:hover{background:#2a3140;outline:0}.grep-hit b{color:#74c0fc;font-weight:600}.grep-hit i{color:#8b949e;font-style:normal}.grep-hit mark{background:rgba(255,208,0,.35);color:inherit}
       .cmdbar{position:fixed;left:0;right:0;bottom:0;display:flex;gap:6px;padding:6px 14px;background:#111318;border-top:1px solid #59616d;font:14px/1.4 ui-monospace,monospace}.cmdbar input{flex:1;background:none;border:0;color:#eee;font:inherit;outline:0}
       .contextual{position:fixed}
       .panel.contextual-panel{position:fixed;margin:0;max-height:calc(100vh - 140px);overflow:auto}
@@ -128,6 +132,7 @@
     <div class="region" hidden><div class="region-box" hidden></div><div class="region-tip">Drag to select a region · Esc cancels</div></div>
     <div class="vim-caret" hidden aria-hidden="true"></div>
     <div class="banners"></div><div class="statusbar" hidden><span class="sb-mode"></span><span class="sb-hint"></span><span class="agent-status" hidden></span></div>
+    <section class="grep" hidden aria-label="Search results"><header></header><div class="grep-list"></div></section>
     <form class="cmdbar" hidden><span>:</span><input class="cmdinput" autocomplete="off" spellcheck="false" aria-label="Command"></form>
     <div class="contextual" hidden><button class="ctx-comment" type="button">Comment</button><span class="swatches" style="display:flex;gap:5px"></span></div><div class="rail"></div>
     <div class="dock"><div class="toolbar" hidden>
@@ -237,7 +242,7 @@
     `${KM.page.region} region screenshot · ${KM.leader}${KM.leaderKeys.history} history · ${KM.leader}${KM.leaderKeys.chat} session chat`,
     `${KM.resize.narrower}/${KM.resize.wider}/${KM.resize.shorter}/${KM.resize.taller} resize panel · t page tree`,
     "In history: j/k move · l open · r resolve · h back · [ ] tabs · i reply · o page · J/K thread",
-    "Commands: :help :history :chat :comment :tree :export :vim off|on :keys",
+    "Search: / or :grep [-d N] [-u N] [-s] <regex> (no flag: all pages; -d 0: this page; -d N: N levels below; -u N: N ancestors)\nCommands: :help :history :chat :comment :tree :export :grep :vim off|on :keys",
     "Keys are configured in ~/.config/agent-doc-review/keymap.json",
   ].join("\n");
   const commands = {
@@ -282,17 +287,95 @@
   }
   document.addEventListener("adr-export", event => exportPage(event.detail?.pages?.length ? event.detail.pages : undefined));
   commands.export = () => exportPage();
-  function openCmdline() { cmdbar.hidden = false; cmdinput.value = ""; cmdinput.focus(); }
+  const grepPanel = find(".grep"), grepList = find(".grep-list");
+  const closeGrep = () => { grepPanel.hidden = true; };
+  // :grep [-d N] [-u N] [-s] <regex>. No depth flag searches every page; -d N searches this page plus N
+  // levels below it (0 = this page only) and -u N adds N ancestors. Smart-case unless -s.
+  async function grep(_first, line = "") {
+    const words = line.split(/\s+/).filter(Boolean);
+    const query = new URLSearchParams();
+    let scoped = false;
+    while (words[0]?.startsWith("-") && words[0].length > 1) {
+      const flag = words.shift();
+      if (flag === "-s") query.set("case", "1");
+      else if (flag === "-d" || flag === "-u") {
+        const n = Number(words.shift());
+        if (!Number.isInteger(n) || n < 0) return message(`${flag} needs a whole number ≥ 0`, true);
+        query.set(flag === "-d" ? "down" : "up", String(n));
+        scoped = true;
+      } else return message(`Unknown flag ${flag} (use -d N, -u N, -s)`, true);
+    }
+    const pattern = words.join(" ");
+    if (!pattern) return message("Usage: :grep [-d N] [-u N] [-s] <regex>", true);
+    query.set("q", pattern);
+    if (scoped) query.set("from", pagePath(location.href));
+    message(`Searching “${pattern}”…`);
+    const response = await fetch("/__adr/search?" + query);
+    const result = await response.json();
+    if (!response.ok) return message(`Bad pattern: ${result.error}`, true);
+    message(`${result.hits.length}${result.truncated ? "+" : ""} match${result.hits.length === 1 ? "" : "es"} in ${result.pages} page${result.pages === 1 ? "" : "s"}`);
+    if (!result.hits.length) return closeGrep();
+    grepPanel.querySelector("header").textContent = `grep ${pattern} · ${result.hits.length}${result.truncated ? "+ (first 200)" : ""} match${result.hits.length === 1 ? "" : "es"} · j/k move · Enter open · Esc close`;
+    const sensitive = query.get("case") === "1" || /[A-Z]/.test(pattern);
+    grepList.replaceChildren(...result.hits.map(hit => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "grep-hit";
+      const where = document.createElement("b");
+      where.textContent = `${hit.title}:${hit.line}`;
+      const text = document.createElement("span");
+      const at = hit.text.indexOf(hit.match);
+      if (at < 0) text.textContent = " " + hit.text;
+      else {
+        const mark = document.createElement("mark");
+        mark.textContent = hit.match;
+        text.append(" " + hit.text.slice(0, at), mark, hit.text.slice(at + hit.match.length));
+      }
+      button.append(where, text);
+      button.addEventListener("click", () => {
+        closeGrep();
+        sessionStorage.setItem("adr-find", JSON.stringify({ text: hit.match, sensitive }));
+        if (pagePath(new URL(hit.link, location.origin)) === pagePath(location.href)) findPending(); else location.assign(hit.link);
+      });
+      return button;
+    }));
+    grepPanel.hidden = false;
+    grepList.firstElementChild.focus();
+  }
+  function findPending() {
+    const raw = sessionStorage.getItem("adr-find");
+    if (!raw) return;
+    sessionStorage.removeItem("adr-find");
+    const { text, sensitive } = JSON.parse(raw);
+    setTimeout(() => { getSelection().removeAllRanges(); window.find(text, sensitive, false, true); }, 400);
+  }
+  grepPanel.addEventListener("keydown", event => {
+    const hits = [...grepList.children], at = hits.indexOf(shadow.activeElement);
+    const move = step => hits[Math.max(0, Math.min(hits.length - 1, at + step))]?.focus();
+    if (event.key === "Enter") return event.stopPropagation();
+    if (event.key === "Escape") closeGrep();
+    else if (event.key === "j" || event.key === "ArrowDown") move(1);
+    else if (event.key === "k" || event.key === "ArrowUp") move(-1);
+    else if (event.key === "g") hits[0]?.focus();
+    else if (event.key === "G") hits.at(-1)?.focus();
+    else return;
+    event.preventDefault();
+    event.stopPropagation();
+  });
+  commands.grep = grep;
+  commands.find = grep;
+  findPending();
+  function openCmdline(initial = "") { cmdbar.hidden = false; cmdinput.value = initial; cmdinput.focus(); }
   function closeCmdline() { cmdbar.hidden = true; cmdinput.blur(); }
   cmdinput.addEventListener("keydown", event => {
     if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); closeCmdline(); }
   });
   cmdbar.addEventListener("submit", event => {
     event.preventDefault();
-    const [name, arg] = cmdinput.value.trim().replace(/^:/, "").split(/\s+/);
+    const [name, ...rest] = cmdinput.value.trim().replace(/^:/, "").split(/\s+/);
     closeCmdline();
     if (!name) return;
-    if (commands[name]) commands[name](arg);
+    if (commands[name]) commands[name](rest[0], rest.join(" "));
     else message(`Not a command: ${name} (try :help)`, true);
   });
   function clearPrefix() {
@@ -1294,6 +1377,7 @@
       return;
     }
     if (event.key === ":") { event.preventDefault(); openCmdline(); return; }
+    if (event.key === "/") { event.preventDefault(); openCmdline("grep "); return; }
     if (event.key === "]" || event.key === "[") { event.preventDefault(); jumpToAwaiting(event.key === "]" ? 1 : -1); return; }
     if (!hasDoc) return;
     if (event.key === "i" && !caretMode) {
