@@ -14,8 +14,11 @@ requester: Nicklas
 date: 2026-11-14          # optional; defaults to the filename date
 summary: One line saying what is asked.
 depends_on: [other-file-id, another]   # optional, filenames without .md
+resume: copilot --resume <session-id>  # optional; how to reopen the owner session
 ---
 ```
+
+Copy `template.md.example` (not `.md`, so the board skips it) to start a ticket.
 
 Steps are checklist lines in the body (`- [ ]` / `- [x]`); the index shows
 progress as done/total. `index.md` is generated (`npm run workstreams`),

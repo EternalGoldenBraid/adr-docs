@@ -1,0 +1,45 @@
+---
+title: Short name, imperative
+status: proposed          # proposed | queued | active | blocked | done | declined
+owner: who does it        # e.g. GPU builder agent, agent-doc-review
+requester: who asked      # e.g. Nicklas (mokki agent)
+date: YYYY-MM-DD
+summary: One line saying what is asked.
+depends_on: []            # ids of other files, without .md
+---
+
+# Short name
+
+Graph node: <node, if any>. Spec: [page](/page).
+
+## Resume
+
+Owner session; resume it from the repo root on its machine:
+
+```bash
+copilot --resume <session-id>
+```
+
+Machine: `<host>`. Branch: `<branch>`.
+
+## Ask
+
+Why this exists and the outcome wanted, in two or three sentences.
+
+## Steps
+
+- [ ] First concrete step.
+- [ ] Next step. Say how it is checked.
+- [ ] Commit on `<branch>`; short report.
+
+## Check
+
+The one observable result that says this is done.
+
+## Stop rule
+
+When to stop and report instead of continuing (optional).
+
+## Notes
+
+Builder notes, results and decisions, added as work proceeds.
