@@ -88,13 +88,15 @@ function inlineStyles(html, dist) {
   });
 }
 
+const normalPage = page => decodeURIComponent(page.split(/[?#]/)[0]).replace(/\.html$/, "").replace(/(.)\/$/, "$1") || "/";
+const zipName = (page, many) => (many ? pageFiles(page).html.replaceAll("/", "-") : "index.html");
 const sourceFor = (root, page) => {
   const slug = decodeURIComponent(page.split(/[?#]/)[0]).replace(/^\/|\.html$/g, "").replace(/\/$/, "");
   return [`${slug}.md`, `${slug ? `${slug}/` : ""}index.md`].find(file => (slug !== "" || file === "index.md") && existsSync(join(root, file)));
 };
 
 // One built page -> standalone html plus the media files it references (copied by the caller).
-async function renderPage(dist, page, inlineLimit, mediaPrefix, warnings) {
+async function renderPage(dist, page, inlineLimit, mediaPrefix, warnings, links = {}) {
   const { html: htmlName, key } = pageFiles(page);
   const htmlPath = join(dist, htmlName);
   if (!existsSync(htmlPath)) throw new Error(`Page not found: ${page}`);
@@ -136,12 +138,14 @@ async function renderPage(dist, page, inlineLimit, mediaPrefix, warnings) {
   });
 
   const shim = "for(const m of['replaceState','pushState']){const o=history[m].bind(history);history[m]=(...a)=>{try{o(...a)}catch{}}}" +
-    `window.__ADR_FILES=${scriptSafe(JSON.stringify(files))};` +
+    `window.__ADR_FILES=${scriptSafe(JSON.stringify(files))};window.__ADR_PAGE=${JSON.stringify(normalPage(page))};window.__ADR_LINKS=${scriptSafe(JSON.stringify(links))};` +
     "const f=window.fetch;window.fetch=(u,o)=>{const p=String(u&&u.url||u).split(/[?#]/)[0].replace(/^[a-z]+:\\/\\/[^/]*/i,'').replace(/^\\.?\\//,'');" +
     "const k=Object.keys(window.__ADR_FILES).find(x=>x===p||p.endsWith('/'+x));" +
     "return k?Promise.resolve(new Response(window.__ADR_FILES[k],{headers:{'Content-Type':'application/json'}})):f(u,o)};" +
     "addEventListener('click',e=>{const a=e.target.closest&&e.target.closest('a[href]');if(!a)return;const h=a.getAttribute('href');" +
-    "if(h&&!h.startsWith('#')&&!/^[a-z][a-z\\d+.-]*:/i.test(h)){e.preventDefault();e.stopImmediatePropagation()}},true);";
+    "if(h&&!h.startsWith('#')&&!/^[a-z][a-z\\d+.-]*:/i.test(h)){e.preventDefault();e.stopImmediatePropagation();" +
+    "const u=new URL(h,'http://x'+window.__ADR_PAGE);const n=decodeURIComponent(u.pathname).replace(/\\.html$/,'').replace(/(.)\\/$/,'$1');" +
+    "if(window.__ADR_LINKS[n])location.href=window.__ADR_LINKS[n]+u.hash}},true);";
   // The route is the file's own path under file://, so any route must resolve to this page.
   html = html.replace(/<script>window\.__VP_HASH_MAP__=[\s\S]*?<\/script>/, whole =>
     `${whole}<script>(()=>{const v=window.__VP_HASH_MAP__[${JSON.stringify(key)}];window.__VP_HASH_MAP__=new Proxy({},{get:()=>v})})()</script>`);
@@ -181,10 +185,11 @@ export async function exportPage({ documentPath, documentRoot, page, pages, outF
   try {
     const dist = join(workspace, "dist");
     const rendered = [];
+    const links = many ? Object.fromEntries(pages.map(item => [normalPage(item), zipName(item, true)])) : {};
     for (const [index, item] of pages.entries()) {
       onProgress({ stage: `Packaging ${item}`, done: index + 1, total });
       const prefix = many ? `${index}-` : "";
-      const result = await renderPage(dist, item, inlineLimit, prefix, warnings);
+      const result = await renderPage(dist, item, inlineLimit, prefix, warnings, links);
       rendered.push({ ...result, page: item });
     }
     const media = rendered.flatMap(item => item.media);
@@ -195,11 +200,8 @@ export async function exportPage({ documentPath, documentRoot, page, pages, outF
     if (asZip) {
       const staging = join(workspace, "bundle");
       mkdirSync(join(staging, "media"), { recursive: true });
-      const taken = new Set();
       for (const item of rendered) {
-        let name = many ? item.htmlName.replaceAll("/", "-") : "index.html";
-        while (taken.has(name)) name = `x-${name}`;
-        taken.add(name);
+        const name = zipName(item.page, many);
         writeFileSync(join(staging, name), item.html);
       }
       for (const item of media) copyFileSync(item.path, join(staging, item.name));

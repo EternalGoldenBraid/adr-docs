@@ -29,9 +29,9 @@ const list = ref(null)
 const canExport = typeof window !== 'undefined' && !window.__ADR_FILES
 const picked = ref(new Set())
 const descendants = slug => childrenOf(slug).flatMap(c => [c.slug, ...descendants(c.slug)])
-function pick(row) {
+function pick(row, withChildren = false) {
   const next = new Set(picked.value)
-  const group = [row.slug, ...descendants(row.slug)]
+  const group = withChildren ? [row.slug, ...descendants(row.slug)] : [row.slug]
   if (next.has(row.slug)) group.forEach(s => next.delete(s)); else group.forEach(s => next.add(s))
   picked.value = next
 }
@@ -82,6 +82,7 @@ function onKey(e) {
     else if (k === 'h' && row && row.kids) fold(row, true)
     else if (k === 'l' && row && row.kids) fold(row, false)
     else if ((k === ' ' || k === 'x') && row && canExport) pick(row)
+    else if (k === 'X' && row && canExport) pick(row, true)
     else if (k === 'e' && canExport) runExport()
     else return
     e.preventDefault(); e.stopPropagation()
@@ -115,12 +116,12 @@ onUnmounted(() => {
     <div v-for="(r, i) in rows" :key="r.slug" class="pt-row" :class="{ cur: r.slug === current, at: i === cursor }"
       :style="{ paddingLeft: 10 + r.depth * 18 + 'px' }" role="treeitem" @click="go(r.link)">
       <button v-if="r.kids" class="pt-fold" tabindex="-1" @click.stop="fold(r, !collapsed.has(r.slug))">{{ collapsed.has(r.slug) ? '▸' : '▾' }}</button>
-      <span v-else class="pt-fold"></span><input v-if="canExport" type="checkbox" class="pt-check" tabindex="-1" :checked="picked.has(r.slug)" title="Select for export" @click.stop="pick(r)">{{ r.title }}<b v-if="waits(r.slug)" class="pt-dot" title="Agent awaits you">{{ waits(r.slug) }}</b>
+      <span v-else class="pt-fold"></span><input v-if="canExport" type="checkbox" class="pt-check" tabindex="-1" :checked="picked.has(r.slug)" title="Select this page for export" @click.stop="pick(r)">{{ r.title }}<button v-if="canExport && r.kids" class="pt-kids" tabindex="-1" title="Select or clear this page and all pages below it" @click.stop="pick(r, true)">+ below</button><b v-if="waits(r.slug)" class="pt-dot" title="Agent awaits you">{{ waits(r.slug) }}</b>
     </div>
     <div v-if="canExport" class="pt-export">
       <button :disabled="!picked.size" @click="runExport">Export {{ picked.size || '' }} selected</button>
     </div>
-    <div class="pt-hint">j/k move · Enter open · h/l fold · {{ canExport ? 'Space tick · e export · ' : '' }}t/Esc close</div>
+    <div class="pt-hint">j/k move · Enter open · h/l fold · {{ canExport ? 'Space tick · X tick with pages below · e export · ' : '' }}t/Esc close</div>
   </div>
 </div>
 </template>
@@ -140,6 +141,7 @@ onUnmounted(() => {
 .pt-dot { margin-left: 6px; padding: 0 6px; border-radius: 999px; background: #e03131; color: #fff; font-size: 11px; }
 .pt-fold { width: 16px; font-size: 11px; opacity: .7; }
 .pt-check { margin: 0 4px 0 2px; accent-color: var(--vp-c-brand-1); }
+.pt-kids { margin-left: auto; padding: 0 6px; border: 1px solid var(--vp-c-divider); border-radius: 6px; font-size: 11px; opacity: .8; }
 .pt-export { padding: 6px 12px 0; }
 .pt-export button { padding: 2px 10px; border: 1px solid var(--vp-c-divider); border-radius: 8px; font-size: 12px; }
 .pt-export button:disabled { opacity: .4; cursor: default; }
