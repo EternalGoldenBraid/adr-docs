@@ -91,6 +91,55 @@ function edgeEl(e) {
   return { group: 'edges', data: { id: e.id, source: e.source, target: e.target, color: e.color, dashed: e.dashed, label: e.label || '' } }
 }
 
+// Edges meeting the same side of a node get their own attachment slot, ordered by where the other end
+// lies so lines do not cross; edges between the same pair keep one order at both ends, so they run side by side.
+function spreadEdges() {
+  const slots = new Map()
+  const place = (edge, own, other) => {
+    const o = own.position(), p = other.position()
+    const horizontal = Math.abs(p.y - o.y) * 2 < (own.data('h') + other.data('h')) // vertical ranges overlap
+    const side = horizontal ? (p.x > o.x ? 'right' : 'left') : (p.y > o.y ? 'bottom' : 'top')
+    const key = own.id() + side
+    if (!slots.has(key)) slots.set(key, { own, side, items: [] })
+    slots.get(key).items.push({ edge, along: horizontal ? p.y : p.x, end: own === edge.source() ? 'sep' : 'tep' })
+  }
+  cy.batch(() => {
+    cy.edges().forEach(e => {
+      if (e.style('display') === 'none' || e.source() === e.target()) return
+      place(e, e.source(), e.target())
+      place(e, e.target(), e.source())
+    })
+    for (const { own, side, items } of slots.values()) {
+      items.sort((a, b) => a.along - b.along || (a.edge.id() < b.edge.id() ? -1 : 1))
+      const w = own.data('w'), h = own.data('h'), vertical = side === 'left' || side === 'right'
+      const span = (vertical ? h : w) * 0.8
+      items.forEach((item, i) => {
+        const offset = Math.round((items.length === 1 ? 0 : (i / (items.length - 1) - 0.5) * span))
+        const at = side === 'top' ? `${offset}px ${-h / 2}px` : side === 'bottom' ? `${offset}px ${h / 2}px`
+          : side === 'left' ? `${-w / 2}px ${offset}px` : `${w / 2}px ${offset}px`
+        item.edge.data(item.end, at)
+        item.edge.scratch(item.end, { x: own.position('x') + parseFloat(at.split(' ')[0]), y: own.position('y') + parseFloat(at.split(' ')[1]), side })
+      })
+    }
+    // Explicit elbows (taxi bends toward node centres once endpoints move): vertical-horizontal-vertical, or horizontal-vertical-horizontal.
+    cy.edges().forEach(e => {
+      const a = e.scratch('sep'), b = e.scratch('tep')
+      if (!a || !b || e.style('display') === 'none') return
+      const c = e.source().position(), t = e.target().position()
+      const dx = t.x - c.x, dy = t.y - c.y, len = Math.hypot(dx, dy)
+      const sideways = a.side === 'left' || a.side === 'right'
+      const bends = sideways
+        ? (Math.abs(b.y - a.y) < 1 ? [] : [{ x: (a.x + b.x) / 2, y: a.y }, { x: (a.x + b.x) / 2, y: b.y }])
+        : (Math.abs(b.x - a.x) < 1 ? [] : [{ x: a.x, y: (a.y + b.y) / 2 }, { x: b.x, y: (a.y + b.y) / 2 }])
+      if (!bends.length || !len) { e.removeData('route'); return }
+      e.data('route', {
+        weights: bends.map(q => ((q.x - c.x) * dx + (q.y - c.y) * dy) / (len * len)),
+        distances: bends.map(q => ((q.y - c.y) * dx - (q.x - c.x) * dy) / len),
+      })
+    })
+  })
+}
+
 function serialise() {
   return {
     nodes: cy.nodes().map(n => {
@@ -128,6 +177,7 @@ function showLayer(id) {
     visible.edgesWith(visible).style('display', 'element')
   })
   showBadges()
+  spreadEdges()
   select(null)
   cy.resize()
   cy.fit(visible, 40)
@@ -304,6 +354,9 @@ onMounted(async () => {
       { selector: 'edge', style: {
         width: 2, 'line-color': 'data(color)', 'target-arrow-color': 'data(color)', 'target-arrow-shape': 'triangle',
         'curve-style': 'taxi', 'taxi-direction': 'vertical', 'taxi-turn': '50%', 'taxi-radius': 8, opacity: 0.85 } },
+      { selector: 'edge[sep]', style: { 'source-endpoint': 'data(sep)', 'target-endpoint': 'data(tep)' } },
+      { selector: 'edge[sep][!route]', style: { 'curve-style': 'straight' } },
+      { selector: 'edge[route]', style: { 'curve-style': 'segments', 'segment-weights': e => e.data('route').weights, 'segment-distances': e => e.data('route').distances, 'edge-distances': 'node-position' } },
       { selector: 'node[kind = "dot"]', style: { label: '', 'border-width': 0 } },
       { selector: 'edge[label]', style: { label: 'data(label)', 'font-size': 14, 'font-weight': 600, color: 'data(color)', 'text-background-color': '#0b1220', 'text-background-opacity': 1, 'text-background-padding': 4, 'text-background-shape': 'round-rectangle' } },
       { selector: 'edge[?dashed]', style: { 'line-style': 'dashed' } },
@@ -415,6 +468,7 @@ onMounted(async () => {
   cy.on('dragfree', 'node', e => {
     const p = e.target.position()
     e.target.position({ x: Math.round(p.x / 10) * 10, y: Math.round(p.y / 10) * 10 })
+    spreadEdges()
     save()
   })
   cy.on('render', scheduleLabels)
