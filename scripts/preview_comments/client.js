@@ -242,7 +242,7 @@
     `${KM.page.region} region screenshot · ${KM.leader}${KM.leaderKeys.history} history · ${KM.leader}${KM.leaderKeys.chat} session chat`,
     `${KM.resize.narrower}/${KM.resize.wider}/${KM.resize.shorter}/${KM.resize.taller} resize panel · t page tree`,
     "In history: j/k move · l open · r resolve · h back · [ ] tabs · i reply · o page · J/K thread",
-    "Search: / or :grep [-d N] [-u N] [-s] <regex> (no flag: all pages; -d 0: this page; -d N: N levels below; -u N: N ancestors)\nCommands: :help :history :chat :comment :tree :export :grep :vim off|on :keys",
+    "Search: / or :grep [-d N] [-u N] [-s] <regex> (no flag: all pages; -d 0: this page; -d N: N levels below; -u N: N ancestors; -1 = all)\nCommands: :help :history :chat :comment :tree :export :grep :vim off|on :keys",
     "Keys are configured in ~/.config/agent-doc-review/keymap.json",
   ].join("\n");
   const commands = {
@@ -300,7 +300,7 @@
       if (flag === "-s") query.set("case", "1");
       else if (flag === "-d" || flag === "-u") {
         const n = Number(words.shift());
-        if (!Number.isInteger(n) || n < 0) return message(`${flag} needs a whole number ≥ 0`, true);
+        if (!Number.isInteger(n) || n < -1) return message(`${flag} needs a whole number ≥ 0, or -1 for all`, true);
         query.set(flag === "-d" ? "down" : "up", String(n));
         scoped = true;
       } else return message(`Unknown flag ${flag} (use -d N, -u N, -s)`, true);

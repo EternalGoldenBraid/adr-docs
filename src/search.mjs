@@ -5,8 +5,10 @@ import { readPageTree } from "./page-tree.mjs";
 const LIMIT = 200;
 
 // Pages reachable from `from` (a site link): itself, `down` levels of descendants, `up` ancestors.
-// down/up undefined means unlimited descendants and no ancestors; with no `from` every page is searched.
+// down/up undefined means unlimited descendants and no ancestors; -1 means all levels; with no `from` every page is searched.
 export function scopePages(pages, from, { down, up } = {}) {
+  if (down < 0) down = Infinity;
+  if (up < 0) up = Infinity;
   const here = from === undefined ? undefined : pages.find(page => page.link === from);
   if (!here) return pages;
   const keep = new Map([[here.slug, here]]);

@@ -2,7 +2,7 @@
 
 ## 0.29.0 - 2026-11-14
 
-- Search: `/` or `:grep [-d N] [-u N] [-s] <regex>` greps the Markdown of the page tree and lists file:line matches (j/k, Enter opens the page and selects the match). No flag searches every page; `-d 0` this page, `-d N` this page plus N levels below, `-u N` also N ancestors; smart-case unless `-s`. Unpublished pages are skipped; results are capped at 200.
+- Search: `/` or `:grep [-d N] [-u N] [-s] <regex>` greps the Markdown of the page tree and lists file:line matches (j/k, Enter opens the page and selects the match). No flag searches every page; `-d 0` this page, `-d N` this page plus N levels below, `-u N` also N ancestors; `-1` means all levels; smart-case unless `-s`. Unpublished pages are skipped; results are capped at 200.
 
 ## 0.28.2 - 2026-11-14
 

@@ -68,7 +68,7 @@ native input.
 | `s` | Select a region and attach its screenshot (see below). |
 | `-h` | Open comment history. |
 | `:export` | Download this page as an offline file (also the **Export** button). One `.html`, or a `.zip` when media is over 2 MB; localhost iframes are replaced by a note. Progress shows in the status line. To export several pages, open the tree (`t`), tick pages (Space/`x`; `X` or **+ below** includes descendants), press `e`: one `.zip`, an `.html` per page with working links between them. |
-| `/` or `:grep [-d N] [-u N] [-s] <regex>` | Search the Markdown of the page tree. A list of `page:line` matches opens (`j`/`k` move, `Enter` opens the page and selects the match, `Esc` closes). No flag searches every page; `-d 0` only this page, `-d N` this page plus N levels below, `-u N` also N ancestors (combine freely). Smart-case like ripgrep unless `-s`. Unpublished pages are skipped; at most 200 matches. |
+| `/` or `:grep [-d N] [-u N] [-s] <regex>` | Search the Markdown of the page tree. A list of `page:line` matches opens (`j`/`k` move, `Enter` opens the page and selects the match, `Esc` closes). No flag searches every page; `-d 0` only this page, `-d N` this page plus N levels below, `-u N` also N ancestors; `-1` means all levels (`-d 1 -u -1`: this page, its children and every ancestor). Smart-case like ripgrep unless `-s`. Unpublished pages are skipped; at most 200 matches. |
 | `Space` inside a caveat | Open or close its details. |
 | `Esc` | Leave visual mode or close a panel, preserving drafts. |
 
