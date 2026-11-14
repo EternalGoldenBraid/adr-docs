@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.27.2 - 2026-11-14
+
+- Resolved threads no longer stay in the Open/This page/Chat lists or count as unread when Copilot replies after they were resolved; only unresolved threads (or ones awaiting you) stay visible. They remain under Resolved.
+
 ## 0.27.1 - 2026-11-14
 
 - Export picker: ticking a page selects only that page. Each parent row has a **+ below** button (and `X`) to tick or clear it together with all its descendants.
