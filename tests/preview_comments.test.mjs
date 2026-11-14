@@ -374,6 +374,22 @@ test("threads link to other threads; links are validated and removable without w
   rmSync(directory, { recursive: true, force: true });
 });
 
+test("an agent reply can carry a proposal that stays in the thread", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "preview-comments-"));
+  writeFileSync(join(directory, "page.md"), "# Page\n\nText.");
+  const bridge = await startCommentBridge({
+    sessionId: randomUUID(), documentRoot: directory, storageRoot: directory, previewOrigin: "http://127.0.0.1:8767",
+    onError: error => assert.fail(error.message), notify: async () => {},
+  });
+  const id = bridge.add({ page: "/page", kind: "page", quote: "Page", comment: "a" }).id;
+  bridge.update({ id: randomUUID(), commentId: id, proposal: { before: "Text.", after: "Better." } });
+  const [reply] = bridge.list().find(c => c.id === id).replies;
+  assert.deepEqual(reply.proposal, { before: "Text.", after: "Better." });
+  assert.equal(reply.author, "copilot");
+  await bridge.close();
+  rmSync(directory, { recursive: true, force: true });
+});
+
 test("page tree: parent and order front matter shape the top bar and tree.json", async () => {
   const { readPageTree, topBar, nestedTree } = await import("../src/page-tree.mjs");
   const directory = mkdtempSync(join(tmpdir(), "page-tree-"));

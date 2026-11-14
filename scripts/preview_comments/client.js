@@ -484,16 +484,16 @@
     return row;
   }
   const open_ = url => window.open(url, "_blank", "noopener");
-  function proposalCard(comment, run) {
+  function proposalCard(proposal, comment, from, run) {
     const card = document.createElement("div");
     card.className = "proposal";
-    for (const [cls, label, text] of [["del", "−", comment.proposal.before], ["add", "+", comment.proposal.after]]) {
+    for (const [cls, label, text] of [["del", "−", proposal.before], ["add", "+", proposal.after]]) {
       const pre = document.createElement("pre");
       pre.className = cls;
       pre.textContent = text.split("\n").map(line => `${label} ${line}`).join("\n");
       card.append(pre);
     }
-    const verdict = comment.replies.find(reply => reply.author !== "copilot" && /^(✓ Accepted|✗ Rejected)/.test(reply.comment));
+    const verdict = comment.replies.slice(from).find(reply => reply.author !== "copilot" && /^(✓ Accepted|✗ Rejected)/.test(reply.comment));
     const row = document.createElement("div");
     row.className = "actions";
     if (verdict) row.textContent = verdict.comment.split(/[ .—]/).slice(0, 2).join(" ");
@@ -517,7 +517,7 @@
         onEdit: text => run({ editComment: text }),
       }));
     }
-    if (comment.proposal) nodes.push(proposalCard(comment, run));
+    if (comment.proposal) nodes.push(proposalCard(comment.proposal, comment, 0, run));
     if (comment.images?.length) nodes.push(thumbnails(comment.images));
     for (const reply of comment.replies) {
       const mine = reply.author !== "copilot";
@@ -526,6 +526,7 @@
         onEdit: mine ? text => run({ editReply: { id: reply.id, text } }) : undefined,
         onDelete: () => run({ removeReply: reply.id }),
       }));
+      if (reply.proposal) nodes.push(proposalCard(reply.proposal, comment, comment.replies.indexOf(reply) + 1, run));
     }
     return nodes;
   }
