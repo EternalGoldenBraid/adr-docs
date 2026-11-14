@@ -112,7 +112,10 @@ export async function startCommentBridge({
       if (record.addRefs) comment.refs = [...new Set([...(comment.refs || []), ...record.addRefs])];
       if (record.removeRefs) comment.refs = (comment.refs || []).filter(id => !record.removeRefs.includes(id));
       if (record.removeReply) comment.replies = comment.replies.filter(item => item.id !== record.removeReply);
-      if (record.resolved !== undefined) comment.resolved = record.resolved;
+      if (record.resolved !== undefined) {
+        if (record.resolved && !comment.resolved) comment.resolvedAt = record.at;
+        comment.resolved = record.resolved;
+      }
       if (record.color !== undefined) comment.color = record.color;
       if (record.removed !== undefined) comment.removed = record.removed;
       if (record.clear) Object.assign(comment, { comment: "", note: false, highlight: true, replies: [], resolved: false, seen: true });

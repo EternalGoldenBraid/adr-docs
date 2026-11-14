@@ -419,3 +419,18 @@ test("keymap overrides are deep-merged over defaults", async () => {
   writeFileSync(file, "{bad");
   assert.equal(loadKeymap({ ADR_KEYMAP: file }, () => {}).page.region, "s");
 });
+
+test("resolving records when, so later replies can resurface the thread", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "preview-comments-"));
+  writeFileSync(join(directory, "page.md"), "# Page\n\nText.");
+  const bridge = await startCommentBridge({
+    sessionId: randomUUID(), documentRoot: directory, storageRoot: directory, previewOrigin: "http://127.0.0.1:8768",
+    onError: error => assert.fail(error.message), notify: async () => {},
+  });
+  const id = bridge.add({ page: "/page", kind: "page", quote: "Page", comment: "a" }).id;
+  bridge.update({ id: randomUUID(), commentId: id, reply: "done", resolved: true });
+  const thread = bridge.list().find(c => c.id === id);
+  assert.equal(thread.resolvedAt, thread.replies[0].at);
+  await bridge.close();
+  rmSync(directory, { recursive: true, force: true });
+});
