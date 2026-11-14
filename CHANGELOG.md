@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.28.1 - 2026-11-14
+
+- The page tree, breadcrumbs, tab title and `]`/`[` jump now also flag pages with threads that have an agent reply you have not seen (on threads you started too), not only threads the agent opened. Resolved threads count only for replies sent after resolving.
+
 ## 0.28.0 - 2026-11-14
 
 - Classification banner: `classification:` and `classification-level:` (restricted / internal / public) in the root `index.md` front matter show a thin fixed strip on every page, in the preview, the static build and offline exports. Requested via the mokki agent.
