@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useData, useRouter, withBase } from 'vitepress'
 
 defineProps({ pad: Boolean })
@@ -26,8 +26,10 @@ const tint = slug => { const c = tints.value[slug === 'index' ? '/' : '/' + slug
 const tintAll = computed(() => { const v = Object.values(tints.value); return v.length ? { background: v[0] } : undefined })
 const open = ref(false)
 const cursor = ref(0)
+const reveal = () => nextTick(() => list.value?.querySelector('.pt-row.at')?.scrollIntoView({ block: 'nearest' }))
 const collapsed = ref(new Set())
 const list = ref(null)
+watch(cursor, reveal)
 // Export selection: only in the live preview (exported copies have no export endpoint).
 const canExport = typeof window !== 'undefined' && !window.__ADR_FILES
 const picked = ref(new Set())
@@ -62,6 +64,7 @@ function show() {
   open.value = true
   cursor.value = Math.max(0, rows.value.findIndex(r => r.slug === current.value))
   nextTick(() => list.value && list.value.focus())
+  reveal()
 }
 function fold(row, shut) {
   const next = new Set(collapsed.value)
