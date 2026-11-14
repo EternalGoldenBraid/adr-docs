@@ -113,7 +113,21 @@ function workstreamSummary(documentRoot) {
   return Object.fromEntries(readBoard(directory).items.map(i => [i.id, { status: i.status, owner: i.owner, done: i.steps.done, total: i.steps.total }]));
 }
 
+// One site-wide banner from the root index.md front matter:
+//   classification: "RESTRICTED · restricted-demo org only"
+//   classification-level: restricted | internal | public   (colour; inferred from the label's first word if omitted)
+export function classificationConfig(documentRoot) {
+  const file = join(documentRoot, "index.md");
+  if (!existsSync(file)) return undefined;
+  const front = readFileSync(file, "utf8").match(/^---\n([\s\S]*?)\n---/)?.[1] ?? "";
+  const key = name => front.match(new RegExp(`^${name}:\\s*(.+)$`, "m"))?.[1].trim().replace(/^["']|["']$/g, "");
+  const label = key("classification");
+  if (!label) return undefined;
+  const level = (key("classification-level") ?? label.split(/[\s·:-]/)[0]).toLowerCase();
+  return { label, level: ["restricted", "internal", "public"].includes(level) ? level : "internal" };
+}
+
 export function treeThemeConfig(documentRoot, options) {
   const pages = readPageTree(documentRoot, options);
-  return { nav: topBar(pages), pageTree: pages, workstreams: workstreamSummary(documentRoot) };
+  return { nav: topBar(pages), pageTree: pages, workstreams: workstreamSummary(documentRoot), classification: classificationConfig(documentRoot) };
 }
