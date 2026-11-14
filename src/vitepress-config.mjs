@@ -59,7 +59,7 @@ export function previewConfig({ documentRoot, connectionFile, workspace, package
   return {
     // An export renders one page, so unrelated pages (even with broken front matter) cannot break it.
     ...(onlyPage ? { srcExclude: markdownFiles(documentRoot).filter(file => file !== onlyPage).map(file => file.replace(/[\\*?[\]{}()!]/g, "\\$&")) } : {}),
-    ...(exportMode ? { base: "./" } : {}),
+    ...(exportMode ? { base: "./", ignoreDeadLinks: true } : {}),
     srcDir: `${workspace}/source`,
     cacheDir: `${workspace}/cache`,
     outDir: `${workspace}/dist`,
