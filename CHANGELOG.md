@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.23.1 - 2026-11-14
+
+- `update_doc_review_comment` accepts an optional `proposal` (`before`/`after`): the diff card is posted as a reply inside the existing thread, with its own Accept/Reject. Several cards per thread work. Requested via the demo agent.
+
 ## 0.23.0 - 2026-11-14
 
 - Vim normal mode scrolls the page smoothly: `j`/`k` tap or hold, `gg`/`G` animate. Line-by-line caret motion (`h/j/k/l/w/b/0/$`) now needs caret mode (`i`, status `CARET`, `Esc` to leave); the caret is shown only there. Graph layer unchanged. Requested via the demo agent.

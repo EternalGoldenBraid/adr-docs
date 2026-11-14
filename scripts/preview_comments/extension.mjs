@@ -71,6 +71,7 @@ export async function connectPreviewComments(config) {
           comment_id: { type: "string", description: "The saved comment ID." },
           reply: { type: "string", description: "Reply text to display in the comment thread." },
           resolved: { type: "boolean", description: "True to resolve; false to reopen. Omit to keep the status." },
+          proposal: { type: "object", description: "Optional proposed edit shown as a diff card in this thread, with Accept/Reject buttons. Accepting replies to you; apply the edit yourself then.", properties: { before: { type: "string" }, after: { type: "string" } } },
           link_comment_ids: { type: "array", items: { type: "string" }, description: "Link this thread to other threads (ids); the user sees them as jumpable links with backlinks." },
           update_id: { type: "string", description: "Optional UUID reused when retrying the same update." },
         },
@@ -79,6 +80,7 @@ export async function connectPreviewComments(config) {
         const input = { id: args.update_id ?? randomUUID(), commentId: args.comment_id };
         if (args.reply !== undefined) input.reply = args.reply;
         if (args.resolved !== undefined) input.resolved = args.resolved;
+        if (args.proposal !== undefined) input.proposal = args.proposal;
         if (args.link_comment_ids !== undefined) input.addRefs = args.link_comment_ids;
         return JSON.stringify(bridge.update(input));
       },

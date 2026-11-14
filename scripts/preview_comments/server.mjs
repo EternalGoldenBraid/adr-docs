@@ -87,6 +87,7 @@ export async function startCommentBridge({
         comment.replies.push({
           id: record.id, at: record.at, author: record.author, comment: record.reply,
           ...(record.note ? { note: true } : {}),
+          ...(record.proposal ? { proposal: record.proposal } : {}),
         });
       }
       let wake = (record.reply !== undefined && !record.note) || record.resolved !== undefined;
@@ -209,6 +210,10 @@ export async function startCommentBridge({
       const ids = [...new Set(input[key].map(id => identifier(id, "Linked comment ID")))];
       if (name === "addRefs" && ids.some(id => id === value.commentId || !comments.has(id))) throw new Error("Linked comments must be other threads in this session.");
       if (ids.length) value[name] = ids;
+    }
+    if (author === "copilot" && input.proposal && typeof input.proposal === "object") {
+      value.proposal = { before: String(input.proposal.before ?? "").slice(0, 8000), after: String(input.proposal.after ?? "").slice(0, 8000) };
+      value.reply ??= "Proposed edit:";
     }
     if (author === "user" && input.removeReply) value.removeReply = identifier(input.removeReply, "Reply ID");
     if (author === "user" && typeof input.removed === "boolean") value.removed = input.removed;

@@ -34,7 +34,7 @@ Then ask: `Use the document-review skill to review /absolute/path/to/doc.md`.
 | --- | --- |
 | `start_doc_review` | Start the preview for an absolute `document_path`. |
 | `read_doc_review_comments` | Fetch unread threads (`include_seen` for all). |
-| `update_doc_review_comment` | Reply and/or resolve a thread. |
+| `update_doc_review_comment` | Reply and/or resolve a thread; optional `proposal` (before/after) posts a diff card inside the thread. |
 | `stop_doc_review` | Close the preview; comments are kept. |
 
 Reading or replying never resolves a thread; only you do.
