@@ -67,7 +67,7 @@ native input.
 | `c` in visual mode, or `-c` | Open a comment on the selection. `-c` also resumes an unsent draft. |
 | `s` | Select a region and attach its screenshot (see below). |
 | `-h` | Open comment history. |
-| `:export` | Download this page as an offline file (also the **Export** button). One `.html`, or a `.zip` when media is over 2 MB; localhost iframes are replaced by a note. Progress shows in the status line. To export several pages, open the tree (`t`), tick pages (Space/`x`; `X` or **+ below** includes descendants), press `e`: one `.zip`, an `.html` per page with working links between them. |
+| `:export` | Download this page as an offline file (also the **Export** button). One `.html`, or a `.zip` when media is over 2 MB; localhost iframes are replaced by a note. Progress shows in the status line. To export several pages, open the tree (`t`), press `v` (or **Select**) for select mode, tick pages (Space/`x`; `X` or **+ below** includes descendants; `a`/`A` all/none), press `e`: one `.zip`, an `.html` per page with working links between them. |
 | `/` or `:grep [-d N] [-u N] [-s] [-p\|-c] <regex>` | Search the Markdown of the page tree and the comment threads (quote, comment, replies) on those pages; `-p` pages only, `-c` threads only; thread rows start with 💬 and `Enter` opens the thread. A list of `page:line` matches opens (`j`/`k` move, `Enter` opens the page and selects the match, `Esc` closes). No flag searches every page; `-d 0` only this page, `-d N` this page plus N levels below, `-u N` also N ancestors; `-1` means all levels (`-d 1 -u -1`: this page, its children and every ancestor). Smart-case like ripgrep unless `-s`. Unpublished pages are skipped; at most 200 matches. |
 | `Space` inside a caveat | Open or close its details. |
 | `Esc` | Leave visual mode or close a panel, preserving drafts. |
@@ -117,6 +117,8 @@ Textareas and other form controls retain their native input behavior, as do
 modified browser shortcuts. Mouse selection and equation/figure commenting
 remain available. A browser without `Selection.modify` reports that keyboard
 selection is unsupported.
+
+In the tree popup: `j`/`k` move, `Enter` opens, `h`/`l` fold one row, `zc`/`zo` fold or unfold a row with everything below it, `H`/`L` collapse or expand all (also the **Collapse all** / **Expand all** buttons). Checkboxes appear only in select mode (`v`, **Select**; `Esc` leaves it and keeps the ticks).
 
 ## Region screenshots
 
