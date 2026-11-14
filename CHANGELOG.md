@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.28.2 - 2026-11-14
+
+- Tree, breadcrumb and "Pages below" badges take the colour of the most recently active thread they count, instead of always red. Marking a thread seen updates the badges at once.
+
 ## 0.28.1 - 2026-11-14
 
 - The page tree, breadcrumbs, tab title and `]`/`[` jump now also flag pages with threads that have an agent reply you have not seen (on threads you started too), not only threads the agent opened. Resolved threads count only for replies sent after resolving.
