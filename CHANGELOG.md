@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.32.1 - 2026-11-14
+
+- The page tree popup scrolls to keep the Vim cursor row in view (`j`/`k` past the visible rows, and on open).
+
 ## 0.32.0 - 2026-11-14
 
 - Seen state is stored on the server (`userseen` log events, `userSeen` on each thread), so unread badges, the Tree counts and the `]` beacon agree across browsers, ports and cleared storage. The first browser to meet an existing store uploads what it already knew; browser storage stays as a fallback.
