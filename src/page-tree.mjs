@@ -14,7 +14,7 @@ export function unpublished(documentRoot, directory = documentRoot) {
   });
 }
 
-function markdownFiles(root, directory = root) {
+export function markdownFiles(root, directory = root) {
   return readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
     const path = join(directory, entry.name);
     if (entry.isDirectory()) return entry.name === "node_modules" || entry.name === "dist" || entry.name.startsWith(".") ? [] : markdownFiles(root, path);
