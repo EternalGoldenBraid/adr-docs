@@ -3,6 +3,7 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import mathjax from "markdown-it-mathjax3";
+import taskLists from "./task-lists.mjs";
 import { markdownFiles, treeThemeConfig, treeJsonPlugin } from "./page-tree.mjs";
 import { previewComments } from "../scripts/preview_comments/vite-plugin.mjs";
 
@@ -120,7 +121,7 @@ export function previewConfig({ documentRoot, connectionFile, workspace, package
       ["style", {}, '.vp-doc mjx-container[display="true"] { overflow-y: hidden; }'],
     ],
     appearance: "force-dark",
-    markdown: { config: md => md.use(mathjax, { tex: { tags: "ams" } }) },
+    markdown: { config: md => md.use(mathjax, { tex: { tags: "ams" } }).use(taskLists) },
     vue: { template: { compilerOptions: { isCustomElement: tag => tag.startsWith("mjx-") } } },
     themeConfig: { outline: "deep", ...treeThemeConfig(documentRoot) },
     vite: {
