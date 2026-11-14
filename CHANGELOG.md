@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.24.0 - 2026-11-14
+
+- `adr <file.md> [port]`: standalone launcher (package `bin`), no Copilot session needed. Each document gets its own stable comment store instead of one shared placeholder session. Install with `ln -s <repo>/bin/preview.mjs ~/.local/bin/adr` (or `npm link` where the global prefix is writable). Validates the file and port.
+
 ## 0.23.1 - 2026-11-14
 
 - `update_doc_review_comment` accepts an optional `proposal` (`before`/`after`): the diff card is posted as a reply inside the existing thread, with its own Accept/Reject. Several cards per thread work. Requested via the mokki agent.
