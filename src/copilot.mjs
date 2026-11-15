@@ -3,7 +3,10 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { commentAttention } from "../scripts/preview_comments/extension.mjs";
 import { startDocumentPreview } from "./preview.mjs";
+import { remoteBridge } from "./remote-bridge.mjs";
 import { readBoard } from "./workstreams.mjs";
+
+const stateRoot = () => join(process.env.XDG_STATE_HOME || join(homedir(), ".local", "state"), "agent-doc-review");
 
 export async function connectDocumentReview({
   joinSession: joinOverride, startPreview = startDocumentPreview,
@@ -42,7 +45,7 @@ export async function connectDocumentReview({
       },
       handler: async args => {
         if (active || starting) throw new Error("A document preview is already open or starting. Stop it with stop_doc_review first.");
-        const storageRoot = join(process.env.XDG_STATE_HOME || join(homedir(), ".local", "state"), "agent-doc-review");
+        const storageRoot = stateRoot();
         starting = startPreview({
           documentPath: args.document_path, sessionId: session.sessionId,
           storageRoot, port: args.port ?? 0,
@@ -63,9 +66,20 @@ export async function connectDocumentReview({
       description: "Fetch unread document feedback and persist read receipts. Reading does not resolve threads.",
       parameters: {
         type: "object",
-        properties: { include_seen: { type: "boolean", description: "Also include previously read threads." } },
+        properties: {
+          include_seen: { type: "boolean", description: "Also include previously read threads." },
+          as: { type: "string", description: "Your agent name: return only threads addressed to it and mark them read for it. Omit when you own the preview." },
+          store: { type: "string", description: "Session id of the agent whose preview holds the threads. Requires `as`." },
+        },
       },
-      handler: args => JSON.stringify(requirePreview().bridge.read({ includeSeen: args.include_seen === true })),
+      handler: args => {
+        if (args.store && args.store !== session.sessionId) {
+          if (!args.as) throw new Error("`as` (your agent name) is required with `store`.");
+          const query = new URLSearchParams({ as: args.as, includeSeen: args.include_seen === true ? "1" : "0" });
+          return remoteBridge(stateRoot(), args.store, `/read?${query}`).then(JSON.stringify);
+        }
+        return JSON.stringify(requirePreview().bridge.read({ includeSeen: args.include_seen === true, ...(args.as ? { as: args.as } : {}) }));
+      },
     }, {
       name: "update_doc_review_comment",
       description: "Reply to a document comment and/or explicitly resolve or reopen it. Replies alone preserve its status.",
@@ -77,6 +91,7 @@ export async function connectDocumentReview({
           proposal: { type: "object", description: "Optional proposed edit shown as a diff card in this thread, with Accept/Reject buttons. Accepting replies to you; apply the edit yourself then.", properties: { before: { type: "string" }, after: { type: "string" } } },
           link_comment_ids: { type: "array", items: { type: "string" }, description: "Link this thread to other threads (ids); the user sees them as jumpable links with backlinks." },
           update_id: { type: "string", description: "UUID reused for an unchanged retry." },
+          store: { type: "string", description: "Session id of the agent whose preview holds the thread, when it is not yours." },
         },
       },
       handler: args => {
@@ -85,6 +100,9 @@ export async function connectDocumentReview({
         if (args.resolved !== undefined) input.resolved = args.resolved;
         if (args.proposal !== undefined) input.proposal = args.proposal;
         if (args.link_comment_ids !== undefined) input.addRefs = args.link_comment_ids;
+        if (args.store && args.store !== session.sessionId) {
+          return remoteBridge(stateRoot(), args.store, "/agent-update", { method: "POST", body: JSON.stringify(input) }).then(JSON.stringify);
+        }
         return JSON.stringify(requirePreview().bridge.update(input));
       },
     }, {
@@ -101,6 +119,7 @@ export async function connectDocumentReview({
           proposal: { type: "object", description: "Optional proposed edit shown as a diff card with Accept/Reject buttons. Accepting replies to you; apply the edit yourself then.", properties: { before: { type: "string" }, after: { type: "string" } } },
           refs: { type: "array", items: { type: "string" }, description: "Ids of existing threads this one relates to; shown as links with backlinks." },
           color: { type: "string", enum: ["red", "yellow", "green", "blue", "pink"], description: "Defaults to red (the agent colour)." },
+          to: { type: "array", items: { type: "string" }, description: "Agent names that should see this thread; omit for the preview's owner only." },
         },
       },
       handler: args => JSON.stringify(requirePreview().bridge.add(args)),

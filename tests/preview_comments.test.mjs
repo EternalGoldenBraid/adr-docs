@@ -458,3 +458,27 @@ test("seen state is stored on the server and survives a restart", async () => {
   await again.close();
   rmSync(directory, { recursive: true, force: true });
 });
+
+test("comments addressed to other agents stay out of the owner's unread and are read per agent", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "preview-comments-"));
+  writeFileSync(join(directory, "page.md"), "# Page\n\nText.");
+  const sessionId = randomUUID();
+  const bridge = await startCommentBridge({ sessionId, documentRoot: directory, storageRoot: directory, previewOrigin: "http://127.0.0.1:8770", onError: error => assert.fail(error.message), notify: async () => {} });
+  const call = async (path, body) => {
+    const { port, token } = JSON.parse(readFileSync(bridge.connectionFile, "utf8"));
+    const response = await fetch(`http://127.0.0.1:${port}${path}`, { method: body ? "POST" : "GET", headers: { Authorization: `Bearer ${token}` }, body: body && JSON.stringify(body) });
+    return { status: response.status, body: await response.json() };
+  };
+  const post = (comment, to) => call("/comments", { id: randomUUID(), sessionId, url: "http://127.0.0.1:8770/page", section: "Page", kind: "page", quote: "Page", comment, ...(to ? { to } : {}) });
+  assert.equal((await post("for owner")).status, 200);
+  assert.equal((await post("for bob", ["bob"])).status, 200);
+  assert.equal(bridge.pending().count, 1);
+  assert.equal(bridge.pending("bob").count, 1);
+  assert.equal((await call("/read?as=bob")).body.comments.map(c => c.comment).join(), "for bob");
+  assert.equal(bridge.pending("bob").count, 0);
+  assert.equal(bridge.pending().count, 1);
+  assert.equal((await post("bad", ["no spaces"])).status, 400);
+  assert.equal((await call("/settings", { owner: "alice", team: ["alice", "bob"], default: "last" })).body.default, "last");
+  await bridge.close();
+  rmSync(directory, { recursive: true, force: true });
+});
