@@ -370,6 +370,8 @@ export async function startCommentBridge({
         const query = new URLSearchParams(readRoute[1]);
         const as = nameFor(query.get("as") || ownerName());
         if (!NAME.test(as)) return reply(response, 400, { error: "Invalid agent name." });
+        // With a roster, an unknown name would silently read nothing; say which names exist instead.
+        if (query.get("as") && agents().length && !teamNames().includes(as)) return reply(response, 400, { error: `Unknown agent "${as}". Use as=<name> from the team page: ${teamNames().join(", ")} (or your session id).` });
         return reply(response, 200, { sessionId, comments: readAs(as, query.get("includeSeen") === "1") });
       }
       const download = request.method === "GET" && /^\/attachments\/([\da-f]{64})$/.exec(request.url);

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.40.2 - 2026-11-15
+
+- Reading threads `as` a name that is not on the team page now fails with the list of valid names (for example `predictive-coding-lead`) instead of returning nothing.
+
 ## 0.40.1 - 2026-11-15
 
 - Team graph Command view: tidy tree layout keeps each agent's reports under it; node labels show name and a truncated "Working on" line instead of the role.
