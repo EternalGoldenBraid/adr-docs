@@ -6,6 +6,7 @@ import RerunViewer from "../components/RerunViewer.vue";
 import WorkstreamLinks from "../components/WorkstreamLinks.vue";
 import ClassificationBanner from "../components/ClassificationBanner.vue";
 import WorkstreamBoard from "../components/WorkstreamBoard.vue";
+import WorkstreamNow from "../components/WorkstreamNow.vue";
 import PageTree from "../components/PageTree.vue";
 import "./task-lists.css";
 import "./layout.css";
@@ -16,5 +17,5 @@ const tree = pad => () => h(PageTree, { pad });
 export default {
   extends: DefaultTheme,
   Layout: () => h(DefaultTheme.Layout, null, { "doc-before": tree(false), "page-top": tree(true), "home-hero-before": tree(true), "layout-top": () => h(ClassificationBanner), "layout-bottom": () => h(WorkstreamLinks) }),
-  enhanceApp({ app }) { app.component("DocGraph", DocGraph); app.component("TeamGraph", TeamGraph); app.component("RerunViewer", RerunViewer); app.component("WorkstreamBoard", WorkstreamBoard); },
+  enhanceApp({ app }) { app.component("DocGraph", DocGraph); app.component("TeamGraph", TeamGraph); app.component("RerunViewer", RerunViewer); app.component("WorkstreamBoard", WorkstreamBoard); app.component("WorkstreamNow", WorkstreamNow); },
 };

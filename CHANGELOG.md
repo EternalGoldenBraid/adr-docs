@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.41.0 - 2026-11-15
+
+- `jk` typed quickly in a comment text field (with vim keys on) acts as `Esc`, matching nvim configs that map it.
+- Work board: `priority:` front matter orders tickets within a status (queued rows show their rank); `machine:` front matter; owner and machine filter chips; new `<WorkstreamNow queued="3" />` strip (active plus next queued) for any page. Docs say how to put a folder index in the top bar (`parent: none` + `nav:`).
+
 ## 0.40.2 - 2026-11-15
 
 - Reading threads `as` a name that is not on the team page now fails with the list of valid names (for example `predictive-coding-lead`) instead of returning nothing.
