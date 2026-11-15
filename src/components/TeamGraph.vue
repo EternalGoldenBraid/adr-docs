@@ -39,20 +39,32 @@ function build() {
       group('g:' + m.machine, m.machine)
       if (m.topic) { parent = 'g:' + m.machine + ':' + m.topic; group(parent, m.topic, 'g:' + m.machine) } else parent = 'g:' + m.machine
     }
-    const label = m.name + (m.work && mode !== 'command' ? '\n' + m.work : '') + (mode === 'command' && m.role ? '\n' + m.role : '')
+    const label = m.name + (m.work ? '\n' + (m.work.length > 26 ? m.work.slice(0, 25) + '…' : m.work) : '')
     elements.push({ data: { id: id(m), label, parent, colour: COLOURS[state(m)], human: !m.session }, position })
   }
   if (mode === 'command') {
+    // Tidy tree: each subtree takes the width of its leaves, so children stay under their parent.
     const byName = new Map(members.map(m => [slug(m.name), m]))
+    const kids = new Map(members.map(m => [id(m), []]))
+    const top = []
     for (const m of members) {
       const boss = m.reportsTo && byName.get(slug(m.reportsTo))
-      if (boss) elements.push({ data: { id: 'e:' + id(m), source: id(boss), target: id(m) } })
+      if (boss && boss !== m) { kids.get(id(boss)).push(m); elements.push({ data: { id: 'e:' + id(m), source: id(boss), target: id(m) } }) } else top.push(m)
     }
+    const place = (m, left, depth, trail) => {
+      const children = trail.has(id(m)) ? [] : kids.get(id(m))
+      let width = 0
+      for (const child of children) width += place(child, left + width, depth + 1, new Set([...trail, id(m)]))
+      width = Math.max(width, 1)
+      const node = elements.find(e => e.data.id === id(m))
+      node.position = { x: (left + width / 2) * 200, y: depth * 150 }
+      return width
+    }
+    let left = 0
+    for (const m of top) left += place(m, left, 0, new Set())
   }
   cy.json({ elements })
-  cy.layout(mode === 'command'
-    ? { name: 'breadthfirst', directed: true, spacingFactor: 1.5, padding: 30, animate: false }
-    : { name: 'preset', padding: 30 }).run()
+  cy.layout({ name: 'preset', padding: 30 }).run()
   cy.fit(undefined, 30)
 }
 

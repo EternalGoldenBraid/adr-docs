@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.40.1 - 2026-11-15
+
+- Team graph Command view: tidy tree layout keeps each agent's reports under it; node labels show name and a truncated "Working on" line instead of the role.
+
 ## 0.40.0 - 2026-11-15
 
 - `<TeamGraph />` has Topic, Machine and Command views (tab remembered): topic groups, machine groups with nested topics, and a top-down reports-to tree (humans shown without a status colour). Larger labels. The roster reads two new optional columns, `Topic` and `Reports to`.
