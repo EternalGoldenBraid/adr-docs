@@ -132,6 +132,7 @@ function nodeEl(n) {
   const d = { id: n.id, title: n.title, body: n.body, status: n.status, kind: n.kind, topics: n.topics, link: n.link || '',
     w: n.w, h: n.h, fill: n.fill, stroke: n.stroke, font: n.font }
   if (n.image) d.image = n.image
+  if (n.video) d.video = n.video
   if (SHAPES.has(n.shape)) d.shape = n.shape
   if (n.parent) d.parent = n.parent
   if (n.inside) d.inside = n.inside
@@ -197,7 +198,7 @@ function serialise() {
       const d = n.data()
       return { id: d.id, title: d.title, body: d.body, status: d.status, kind: d.kind, parent: d.parent || null, inside: d.inside || null,
         x: Math.round(n.position('x')), y: Math.round(n.position('y')), w: d.w, h: d.h,
-        fill: d.fill, stroke: d.stroke, font: d.font, topics: d.topics, ...(d.link ? { link: d.link } : {}), ...(d.image ? { image: d.image } : {}), ...(d.shape ? { shape: d.shape } : {}) }
+        fill: d.fill, stroke: d.stroke, font: d.font, topics: d.topics, ...(d.link ? { link: d.link } : {}), ...(d.image ? { image: d.image } : {}), ...(d.video ? { video: d.video } : {}), ...(d.shape ? { shape: d.shape } : {}) }
     }),
     edges: cy.edges().map(e => ({ id: e.id(), source: e.data('source'), target: e.data('target'),
       color: e.data('color'), dashed: !!e.data('dashed'), label: e.data('label') || '', ...(e.data('loop') != null ? { loop: e.data('loop') } : {}) })),
@@ -570,7 +571,7 @@ function say(text) {
 
 function present() {
   const nodes = cy.nodes().filter(n => !n.isParent() && !['text', 'dot'].includes(n.data('kind')))
-    .map(n => ({ id: n.id(), title: n.data('title') || '', body: n.data('body') || '', link: n.data('link') || '', image: n.data('image') || '' }))
+    .map(n => ({ id: n.id(), title: n.data('title') || '', body: n.data('body') || '', link: n.data('link') || '', image: n.data('image') || '', video: n.data('video') || '' }))
   if (!nodes.length) return say('Nothing to present')
   const ids = new Set(nodes.map(n => n.id))
   const edges = cy.edges().map(e => ({ source: e.data('source'), target: e.data('target'), dashed: !!e.data('dashed') })).filter(e => ids.has(e.source) && ids.has(e.target))
