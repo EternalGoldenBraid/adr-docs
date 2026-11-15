@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.54.1 - 2026-11-15
+
+- Presentation mode uses Vim motions: `gg`/`G` replace Home/End (arrows stay as duplicates); `:present` works from the page command line; `:help` has a Graph tab.
+
 ## 0.54.0 - 2026-11-15
 
 - DocGraph presentation mode: **▶ Present** / `:present` shows a graph full screen, one node at a time. `→ ←` follow the solid (story) edges, `↓ ↑` go into and out of dashed drill-down chains, `Enter` previews the node's link, `o` opens it, `Esc` exits; a minimap shows the position.

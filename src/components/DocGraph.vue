@@ -653,11 +653,13 @@ const onVim = e => { vimOn.value = e.detail.enabled }
 onMounted(() => {
   window.addEventListener('keydown', onKey)
   document.addEventListener('adr-graph-active', onOther)
+  document.addEventListener('adr-present', present)
   document.addEventListener('pointerdown', onOutside, true)
 })
 onUnmounted(() => {
   window.removeEventListener('keydown', onKey)
   document.removeEventListener('adr-graph-active', onOther)
+  document.removeEventListener('adr-present', present)
   document.removeEventListener('pointerdown', onOutside, true)
   deactivate()
 })

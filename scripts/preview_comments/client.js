@@ -266,13 +266,18 @@
       "Tabs: [ ] switch · A all · P this page · O open · C chat · R resolved · N notes · P then A page history",
       "In a thread: j/k messages · J/K next/previous thread · r resolve · i reply · n new child thread · s attach region · h back",
     ]],
+    ["Graph", [
+      ":present (or ▶ Present on a graph) shows a DocGraph full screen, one node at a time",
+      "→/← or l/h follow the story (solid edges) · ↓/↑ or j/k go into / out of a drill-down (dashed edges) · gg/G first/last · Enter preview link · o open page · Esc exit",
+      "Click a graph to enter it: hjkl pan, + - 0 zoom, v select nodes, i edit, : commands (:present :fit :w :help), Esc back to the page",
+    ]],
     ["Text fields", [
       "Esc or jk → normal mode (h j k l w b e 0 ^ $ gg G · x dd D cc cw yy p P u Ctrl-r · i a I A o O · v V then y d c)",
       "Esc or jk again leaves the field",
     ]],
     ["Search & commands", [
       "/ or :grep [-d N] [-u N] [-s] [-p|-c] <regex> searches pages and threads (no flag: all pages; -d 0: this page; -d N: N levels below; -u N: N ancestors; -1 = all)",
-      "Commands: :help :man :history :chat :comment :tree :export :figure :restart :grep :vim off|on :keys",
+      "Commands: :help :man :history :chat :comment :tree :present :export :figure :restart :grep :vim off|on :keys",
       "Keys are configured in ~/.config/agent-doc-review/keymap.json",
     ]],
   ];
@@ -304,6 +309,7 @@
     keys: () => message(JSON.stringify(KM.resize) + "\n" + JSON.stringify(KM.leaderKeys)),
     history: () => openHistory(), chat: () => open(sessionTarget()),
     comment: () => commentSelection(),
+    present: () => document.dispatchEvent(new CustomEvent("adr-present")),
     tree: () => document.dispatchEvent(new KeyboardEvent("keydown", { key: "t", bubbles: true })),
     settings: () => loadSettings().then(() => message(`owner: ${settings.owner}\nteam: ${settings.team.join(", ") || "(none)"}\ndefault recipients: ${settings.default}\n:owner NAME · :team A B C · :default owner|last`)),
     mesh: () => openMesh(),
