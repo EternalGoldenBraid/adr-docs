@@ -6,7 +6,15 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { resolveLaunch, USAGE } from "../src/launch.mjs";
 import { startDocumentPreview } from "../src/preview.mjs";
+import { listServers } from "../src/servers.mjs";
 
+const storageRoot = join(process.env.XDG_STATE_HOME || join(homedir(), ".local", "state"), "agent-doc-review");
+if (process.argv[2] === "list" && process.argv.length === 3) {
+  const rows = listServers(storageRoot, { prune: true });
+  if (!rows.length) console.log("No ADR servers running.");
+  for (const row of rows) console.log(`${row.url}  pid ${row.pid}  store ${row.store}\n    ${row.root ?? ""}`);
+  process.exit(0);
+}
 let launch;
 try {
   launch = resolveLaunch(process.argv.slice(2));
@@ -17,7 +25,7 @@ try {
 const preview = await startDocumentPreview({
   documentPath: launch.document,
   sessionId: launch.store,
-  storageRoot: join(process.env.XDG_STATE_HOME || join(homedir(), ".local", "state"), "agent-doc-review"),
+  storageRoot,
   port: launch.port,
   notify: () => {},
   ownerViaMesh: true,

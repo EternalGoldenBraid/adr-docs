@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.47.0 - 2026-11-15
+
+- `adr list` shows the running ADR servers (url, pid, store, folder) and removes stale entries. `connection.json` now records `pid`, `documentRoot` and `startedAt`.
+- `adr` refuses ports that browsers block (e.g. 6666, 6665–6669), which looked like a dead server.
+
 ## 0.46.0 - 2026-11-15
 
 - `adr <folder> --port N` serves a whole folder of pages from its `index.md`, so a site can be opened without an agent session. The port can also be given as before, as a second argument.

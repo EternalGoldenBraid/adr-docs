@@ -2,8 +2,9 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { isBlockedPort } from "./servers.mjs";
 
-export const USAGE = "usage: adr <dir | file.md> [port] [--port N] [--store UUID]";
+export const USAGE = "usage: adr <dir | file.md> [port] [--port N] [--store UUID]\n       adr list    show running ADR servers";
 const UUID = /^[\da-f]{8}(-[\da-f]{4}){3}-[\da-f]{12}$/i;
 
 // A directory is served from its index.md. Its comment store is, in order: --store, the UUID in
@@ -31,6 +32,7 @@ export function resolveLaunch(argv, cwd = process.cwd()) {
     port = portArg;
   }
   if (port !== undefined && !/^\d+$/.test(port)) throw new Error(`port must be a number, got ${port}`);
+  if (port !== undefined && isBlockedPort(port)) throw new Error(`port ${port} is blocked by browsers (ERR_UNSAFE_PORT); pick another, e.g. 5180`);
   const path = resolve(cwd, target);
   if (!existsSync(path)) throw new Error(`${path} does not exist`);
   const directory = statSync(path).isDirectory();

@@ -50,3 +50,20 @@ test("bad launches are rejected before anything starts", () => {
     assert.throws(() => resolveLaunch(["docs"], root), /no index\.md/);
   } finally { rmSync(root, { recursive: true }); }
 });
+
+test("browser-blocked ports are refused, and stale servers are not listed", async () => {
+  const { listServers } = await import("../src/servers.mjs");
+  const root = site();
+  try {
+    assert.throws(() => resolveLaunch(["docs", "6666"], root), /blocked by browsers/);
+    const store = join(root, "state");
+    for (const [name, pid] of [["live", process.pid], ["dead", 2 ** 22 + 1]]) {
+      mkdirSync(join(store, name), { recursive: true });
+      writeFileSync(join(store, name, "connection.json"), JSON.stringify({ pid, previewOrigin: `http://127.0.0.1:${name === "live" ? 5180 : 5181}`, documentRoot: "/x" }));
+    }
+    assert.deepEqual(listServers(store, { prune: true }).map(row => row.store), ["live"]);
+    assert.deepEqual(listServers(store).map(row => row.store), ["live"]);
+  } finally {
+    rmSync(root, { recursive: true });
+  }
+});

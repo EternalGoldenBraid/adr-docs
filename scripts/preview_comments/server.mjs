@@ -482,7 +482,7 @@ export async function startCommentBridge({
     server.listen(0, "127.0.0.1", accept);
   });
   writeFileSync(connectionFile, JSON.stringify({
-    port: server.address().port, token, sessionId, previewOrigin,
+    port: server.address().port, token, sessionId, previewOrigin, pid: process.pid, documentRoot, startedAt: new Date().toISOString(),
   }), { mode: 0o600 });
   return {
     connectionFile,
