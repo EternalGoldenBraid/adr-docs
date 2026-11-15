@@ -159,6 +159,7 @@ onMounted(() => {
   window.addEventListener('keydown', onKey, true)
   window.addEventListener('blur', onBlur)
   window.addEventListener('focus', onFocus)
+  document.dispatchEvent(new CustomEvent('adr-presenting'))
   savedTargets = window.previewCommentTargets
   window.previewCommentTargets = { get: id => (id === current.value ? slideTarget() : savedTargets?.get?.(id) || null) }
   document.documentElement.requestFullscreen?.().catch(() => {})
