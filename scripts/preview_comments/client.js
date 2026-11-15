@@ -42,6 +42,7 @@
       .thread{margin:0!important}.thread>*{margin-left:20px;margin-right:20px}
       .history-head h2{margin:0}.history-head .history-counts{margin-left:auto;margin-right:12px}
       .icon{padding:2px 9px;border-radius:6px;line-height:1.4}
+      .help-panel{width:min(640px,94vw)}.help-tabs{display:flex;gap:6px;margin:8px 0;flex-wrap:wrap}.help-tabs button{background:#2a2e36;color:inherit;border:1px solid #59616d;border-radius:6px;padding:3px 10px;cursor:pointer}.help-tabs button[aria-selected=true]{background:#3b4a63;border-color:#8ab4f8}.help-body{white-space:pre-wrap;font:13px/1.5 ui-monospace,monospace;margin:0;max-height:50vh;overflow:auto}
       .mesh-panel{width:min(640px,94vw)}.mesh-table{width:100%;border-collapse:collapse;font-size:13px}.mesh-table th,.mesh-table td{text-align:left;padding:4px 8px;border-bottom:1px solid #3a404a}
       .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:#59616d}.dot.active{background:#51cf66}.dot.idle{background:#fcc419}
       .tabs{display:flex;gap:2px;margin-top:4px!important;margin-bottom:6px!important;border-bottom:1px solid #3a404a}
@@ -136,6 +137,10 @@
     <section class="panel mesh-panel" hidden aria-label="Team status">
       <div class="history-head"><h2>Team</h2><small class="mesh-note"></small><button class="mesh-close icon" type="button" aria-label="Close">✕</button></div>
       <table class="mesh-table"><thead><tr><th>Who</th><th>Status</th><th>Machine</th><th>Harness</th><th>Session</th></tr></thead><tbody></tbody></table>
+    </section>
+    <section class="panel help-panel" hidden aria-label="Help">
+      <div class="history-head"><h2>Help</h2><small>[ ] or h/l switch tab · Esc closes</small><button class="help-close icon" type="button" aria-label="Close">✕</button></div>
+      <div class="help-tabs" role="tablist"></div><pre class="help-body"></pre>
     </section>
     <div class="status" role="status" aria-live="polite"></div>
     <div class="region" hidden><div class="region-box" hidden></div><div class="region-tip">Drag to select a region · Esc cancels</div></div>
@@ -248,17 +253,54 @@
     vimButton.setAttribute("aria-pressed", String(vimEnabled));
   }
   const cmdbar = find(".cmdbar"), cmdinput = find(".cmdinput");
-  const helpText = () => [
-    `j/k scroll smoothly · i caret mode (h/j/k/l/w/b/0/$ move, Esc leaves) · ${KM.page.visual} select · ${KM.page.comment} comment (page if nothing selected)`,
-    `] / [ next / previous thread awaiting you (across pages)`,
-    `${KM.page.region} region screenshot · ${KM.leader}${KM.leaderKeys.history} history · ${KM.leader}${KM.leaderKeys.chat} session chat`,
-    `${KM.resize.narrower}/${KM.resize.wider}/${KM.resize.shorter}/${KM.resize.taller} resize panel · t page tree`,
-    "In history: j/k move · l open · r resolve · h back · [ ] tabs · A all · P page · O open · C chat · R resolved · N notes · P+A page history · i reply · n new child thread · o page · J/K thread\nIn a text field: Esc or jk → normal mode (h j k l w b e 0 ^ $ gg G · x dd D cc cw yy p P u Ctrl-r · i a I A o O · v V then y d c); Esc or jk again leaves the field",
-    "Search: / or :grep [-d N] [-u N] [-s] [-p|-c] <regex> pages and threads (no flag: all pages; -d 0: this page; -d N: N levels below; -u N: N ancestors; -1 = all)\nCommands: :help :history :chat :comment :tree :export :figure :restart :grep :vim off|on :keys",
-    "Keys are configured in ~/.config/agent-doc-review/keymap.json",
-  ].join("\n");
+  const helpTabs = () => [
+    ["Page", [
+      `j/k scroll smoothly · i caret mode (h/j/k/l/w/b/0/$ move, Esc leaves)`,
+      `${KM.page.visual} select · V paragraph · ${KM.page.comment} comment (page if nothing selected)`,
+      `] / [ next / previous thread awaiting you (across pages)`,
+      `${KM.page.region} region screenshot · ${KM.leader}${KM.leaderKeys.history} history · ${KM.leader}${KM.leaderKeys.chat} session chat`,
+      `${KM.resize.narrower}/${KM.resize.wider}/${KM.resize.shorter}/${KM.resize.taller} resize panel · t page tree`,
+    ]],
+    ["History", [
+      "j/k move · l or Enter open · r resolve · o go to page · g/G ends",
+      "Tabs: [ ] switch · A all · P this page · O open · C chat · R resolved · N notes · P then A page history",
+      "In a thread: j/k messages · J/K next/previous thread · r resolve · i reply · n new child thread · s attach region · h back",
+    ]],
+    ["Text fields", [
+      "Esc or jk → normal mode (h j k l w b e 0 ^ $ gg G · x dd D cc cw yy p P u Ctrl-r · i a I A o O · v V then y d c)",
+      "Esc or jk again leaves the field",
+    ]],
+    ["Search & commands", [
+      "/ or :grep [-d N] [-u N] [-s] [-p|-c] <regex> searches pages and threads (no flag: all pages; -d 0: this page; -d N: N levels below; -u N: N ancestors; -1 = all)",
+      "Commands: :help :man :history :chat :comment :tree :export :figure :restart :grep :vim off|on :keys",
+      "Keys are configured in ~/.config/agent-doc-review/keymap.json",
+    ]],
+  ];
+  let helpIndex = 0;
+  const helpPanel = find(".help-panel");
+  function showHelp(index = helpIndex) {
+    const tabs = helpTabs();
+    helpIndex = (index + tabs.length) % tabs.length;
+    find(".help-tabs").replaceChildren(...tabs.map(([name], i) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.role = "tab"; b.textContent = name; b.setAttribute("aria-selected", String(i === helpIndex));
+      b.addEventListener("click", () => showHelp(i));
+      return b;
+    }));
+    find(".help-body").textContent = tabs[helpIndex][1].join("\n\n");
+    helpPanel.hidden = false;
+  }
+  find(".help-close").addEventListener("click", () => { helpPanel.hidden = true; });
+  document.addEventListener("keydown", event => {
+    if (helpPanel.hidden || event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
+    const next = ["]", "l", "ArrowRight", "Tab"].includes(event.key), prev = ["[", "h", "ArrowLeft"].includes(event.key);
+    if (event.key === "Escape") helpPanel.hidden = true;
+    else if (next || prev) showHelp(helpIndex + (next ? 1 : -1));
+    else return;
+    event.preventDefault(); event.stopImmediatePropagation();
+  }, true);
   const commands = {
-    help: () => message(helpText()), man: () => message(helpText()),
+    help: () => showHelp(), man: () => showHelp(),
     keys: () => message(JSON.stringify(KM.resize) + "\n" + JSON.stringify(KM.leaderKeys)),
     history: () => openHistory(), chat: () => open(sessionTarget()),
     comment: () => commentSelection(),

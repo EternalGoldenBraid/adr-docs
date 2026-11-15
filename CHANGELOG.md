@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.53.0 - 2026-11-15
+
+- `:help` / `:man` open a tabbed help panel (Page, History, Text fields, Search & commands); `[`/`]` or `h`/`l` switch tabs, `Esc` closes.
+
 ## 0.52.0 - 2026-11-15
 
 - History tab shortcuts (capitals, list view): `A` All, `P` This page, `O` Open, `C` Chat, `R` Resolved, `N` Notes; `P` then `A` (either order, within 0.8 s) opens Page history.

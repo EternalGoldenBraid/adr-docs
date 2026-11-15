@@ -32,7 +32,7 @@ row and moves to the next, `[`/`]` (or `k` from the first row, then `h`/`l`) swi
 thread `j`/`k` step through the messages (and scroll), `J`/`K` go to the next or previous thread, `r` resolves (back to the list
 on the next thread), `i` focuses the reply box, `o` opens the page (also on a focused thread in the list), `s` attaches
 a region, `n` starts a linked child thread from the selected text (or the focused message), `h` goes back. `Esc` leaves a text field, then the thread, then closes
-the panel. `:help` lists these too.
+the panel. `:help` (or `:man`) lists these in a tabbed panel: Page, History, Text fields, Search & commands; `[`/`]` switch tabs.
 
 **Vim in text fields** (with vim keys on): a field starts in insert mode; `Esc` or `jk` (typed quickly) enters normal mode (orange border, the cursor is a highlighted character), and `Esc` or `jk` again leaves the field so `h`/`l` pick the To: recipients (`i` returns). Normal mode: `h j k l`, `w b e`, `0 ^ $`, `gg G`; `i a I A o O` insert; `x dd D cc C`, `d`/`c`/`y` plus `w e b $ 0 ^ h l`, `yy`, `p P`, `u`, `Ctrl-r`. `v` / `V` start a visual selection (purple border; `o` swaps ends); `y`, `d`/`x`, `c` act on it, `Esc` returns to normal. No counts or `.` repeat.
 
