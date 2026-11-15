@@ -1574,12 +1574,14 @@
     node.style.top = best[1] + "px";
   }
   function offer(chosen, anchor) {
+    if (document.querySelector(".gp")) { contextual.hidden = true; return; }
     if (!panel.hidden || !history.hidden || historySaving || find("button[type=submit]").disabled) return;
     offeredTarget = chosen;
     offeredAnchor = anchor;
     contextual.hidden = false;
     position(contextual, anchor);
   }
+  document.addEventListener("adr-presenting", () => { contextual.hidden = true; });
   contextual.addEventListener("mousedown", event => event.preventDefault());
   document.addEventListener("focusin", event => {
     const picked = elementSelection(event.target);

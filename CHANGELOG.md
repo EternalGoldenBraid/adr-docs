@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.56.4 - 2026-11-15
+
+- Fix: the selection toolbar (Comment + colour dots) no longer appears over the presenter. Clicking ▶ Present focused the button, which offered the toolbar; offers are now suppressed while presenting (comment with `c` or by selecting text).
+
 ## 0.56.3 - 2026-11-15
 
 - Fix: `Esc` in the presenter's link preview no longer closes the whole presentation. The browser consumes that `Esc` to leave fullscreen, and the presenter used to close with it; now it just leaves fullscreen and stays open (`Esc` on the slide still closes).
