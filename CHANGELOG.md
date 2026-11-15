@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.39.2 - 2026-11-15
+
+- Team status shows why a peer machine could not be resolved (`errors` from `/mesh`, shown in the Team panel).
+
 ## 0.39.1 - 2026-11-15
 
 - Team status now resolves roster agents on enrolled peer machines (the `Machine` column matching a `machines.json` peer) over the mesh's SSH route, so remote agents no longer show offline. Cached for 15 s.
