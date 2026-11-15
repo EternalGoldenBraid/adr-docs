@@ -86,6 +86,44 @@ function drawLabels() {
   })
   for (const [id, el] of labelEls) if (!live.has(id)) { el.remove(); labelEls.delete(id) }
 }
+// Whole graph as a large PNG for figures: the canvas (edges, groups) plus the HTML node labels, which cy.png() cannot see.
+async function exportPng(scale = 3) {
+  const dark = document.documentElement.classList.contains('dark')
+  const box = cy.elements().boundingBox()
+  const base = await createImageBitmap(cy.png({ output: 'blob', full: true, scale, bg: dark ? '#1b1b1f' : '#ffffff' }))
+  const canvas = document.createElement('canvas')
+  canvas.width = base.width; canvas.height = base.height
+  const g = canvas.getContext('2d')
+  g.drawImage(base, 0, 0)
+  const wrap = (text, width) => {
+    const out = []
+    for (const para of String(text).split('\n')) {
+      let line = ''
+      for (const word of para.split(/\s+/).filter(Boolean)) {
+        const next = line ? line + ' ' + word : word
+        if (line && g.measureText(next).width > width) { out.push(line); line = word } else line = next
+      }
+      out.push(line)
+    }
+    return out
+  }
+  g.textAlign = 'center'; g.textBaseline = 'top'
+  cy.nodes('[kind = "node"]').forEach(n => {
+    if (n.style('display') === 'none') return
+    const d = n.data(), p = n.position()
+    const cx = (p.x - box.x1) * scale, top = (p.y - d.h / 2 - box.y1) * scale, width = (d.w - 16) * scale, line = 13 * 1.25 * scale
+    g.fillStyle = d.font
+    g.font = `700 ${13 * scale}px sans-serif`
+    const title = wrap((d.title || '') + (d.status ? '  ' + d.status : '') + (d.badge || ''), width)
+    g.font = `400 ${12 * scale}px sans-serif`
+    const body = d.body ? wrap(d.body, width) : []
+    const maxLines = Math.max(1, Math.floor((d.h - 12) / 16.25))
+    const rows = [...title.map(t => ({ t, bold: true })), ...body.map(t => ({ t }))].slice(0, maxLines)
+    let y = top + Math.max(6 * scale, (d.h * scale - rows.length * line) / 2)
+    for (const r of rows) { g.font = `${r.bold ? 700 : 400} ${(r.bold ? 13 : 12) * scale}px sans-serif`; g.fillText(r.t, cx, y); y += line }
+  })
+  return new Promise(done => canvas.toBlob(done, 'image/png'))
+}
 const scheduleLabels = () => { if (!labelFrame) labelFrame = requestAnimationFrame(drawLabels) }
 
 function nodeEl(n) {
@@ -486,6 +524,7 @@ onMounted(async () => {
     save()
   })
   cy.on('render', scheduleLabels)
+  host.value._adrExportPng = exportPng
   // Compact nodes (any kind but 'node') show only the title, so the body is the hover text.
   cy.on('mouseover', 'node', e => { if (e.target.data('kind') !== 'node' && e.target.data('kind') !== 'lane') host.value.title = e.target.data('body') || '' })
   cy.on('mouseout', 'node', () => { host.value.title = '' })
