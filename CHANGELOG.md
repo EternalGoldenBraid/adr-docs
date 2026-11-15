@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.38.0 - 2026-11-15
+## 0.39.0 - 2026-11-15
 
 - `<TeamGraph />`: live team graph for the team page. One node per roster agent, coloured by mesh status (active / idle / offline), grouped into subgraphs by the roster's new `Working on` column. Needs a running preview.
 - Composer: Esc leaves the comment field (draft kept) and focuses the **To:** chips; `h`/`l` move between chips, Space toggles, `i` returns to the text, Esc again closes.
