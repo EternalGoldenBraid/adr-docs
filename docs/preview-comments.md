@@ -66,6 +66,7 @@ native input.
 | `gg` / `G` | Scroll smoothly to the document start or end. |
 | `L` / `H` | Move to the top or bottom of the visible document. |
 | `v` | Enter visual selection; motions extend the selection. Press again to return to normal mode. |
+| `V` | Select the whole paragraph (or list item, heading, table cell) under the caret and enter visual mode; `c` comments on it. |
 | `c` in visual mode, or `-c` | Open a comment on the selection. `-c` also resumes an unsent draft. |
 | `s` | Select a region and attach its screenshot (see below). |
 | `-h` | Open comment history. |

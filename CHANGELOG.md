@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.49.0 - 2026-11-15
+
+- `V` in the page vim modes selects the whole paragraph (or list item, heading, table cell) under the caret and enters visual mode, so `c` comments on it.
+
 ## 0.48.0 - 2026-11-15
 
 - `adr <folder> -d` (`--detach`) starts the server in the background and prints its URL.

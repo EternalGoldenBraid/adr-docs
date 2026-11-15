@@ -242,7 +242,7 @@
     bar.hidden = !vimEnabled;
     find(".sb-hint").textContent = !history.hidden ? (selectedThread
       ? "j/k scroll messages · J/K next/prev thread · r resolve · i reply · o page · h back · Esc"
-      : "j/k move (k at top → tabs) · l open · o go to page · r resolve · [ ] tabs · Esc close") : visual ? "c comment · Esc cancel · hjkl extend" : caretMode ? `hjklwb move caret · ${KM.page.visual} select · ${KM.page.comment} comment · Esc scroll mode` : `j/k scroll · i caret · ${KM.page.visual} select text · ${KM.page.comment} comment · ${KM.leader}${KM.leaderKeys.history} threads · ] next awaiting · : commands · :help`;
+      : "j/k move (k at top → tabs) · l open · o go to page · r resolve · [ ] tabs · Esc close") : visual ? "c comment · Esc cancel · hjkl extend" : caretMode ? `hjklwb move caret · ${KM.page.visual} select · V paragraph · ${KM.page.comment} comment · Esc scroll mode` : `j/k scroll · i caret · ${KM.page.visual} select text · ${KM.page.comment} comment · ${KM.leader}${KM.leaderKeys.history} threads · ] next awaiting · : commands · :help`;
     find(".sb-mode").textContent = `-- ${mode}${prefix ? " " + prefix : ""} --`;
     vimButton.setAttribute("aria-pressed", String(vimEnabled));
   }
@@ -1763,6 +1763,23 @@
       caretMode = true;
       if (ensureCursor()) showCaret(true);
       return;
+    }
+    if (event.key === "V" && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      if (ensureCursor()) {
+        const selected = getSelection();
+        const node = selected.focusNode;
+        const element = node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement;
+        const block = element?.closest("p, li, h1, h2, h3, h4, h5, h6, blockquote, pre, td, th, dd, dt, figcaption");
+        if (block && document.querySelector(".vp-doc").contains(block)) {
+          event.preventDefault();
+          caretMode = true;
+          selected.selectAllChildren(block);
+          visual = true;
+          modeLabel();
+          showCaret(true);
+          return;
+        }
+      }
     }
     const { motions, visual: vKey, documentStart, documentEnd, viewTop, viewBottom, details: dKey } = KM.page;
     if (!motions[event.key] && ![vKey, documentStart, documentEnd, viewTop, viewBottom, dKey].includes(event.key)) return;
