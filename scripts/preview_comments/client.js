@@ -269,7 +269,7 @@
     ["Graph", [
       ":present (or ▶ Present on a graph) shows a DocGraph full screen, one node at a time",
       "→/← or l/h follow the story (solid edges) · ↓/↑ or j/k go into / out of a drill-down (dashed edges) · gg/G first/last · Enter preview link · o open page · Esc exit",
-      "Click a graph to enter it: hjkl pan, + - 0 zoom, v select nodes, i edit, : commands (:present :fit :w :help), Esc back to the page",
+      "`c` comments on the slide in presentation mode. Click a graph to enter it: hjkl pan, + - 0 zoom, v select nodes, i edit, : commands (:present :fit :w :help), Esc back to the page",
     ]],
     ["Text fields", [
       "Esc or jk → normal mode (h j k l w b e 0 ^ $ gg G · x dd D cc cw yy p P u Ctrl-r · i a I A o O · v V then y d c)",
