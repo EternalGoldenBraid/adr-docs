@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.45.0 - 2026-11-15
+
+- New **Page history** tab in the thread list: every thread on the current page, resolved ones included, so an accidentally resolved thread can be found and reopened.
+
 ## 0.44.1 - 2026-11-15
 
 - Fix: exporting a page ran `vite build` in the extension process and left `NODE_ENV=production` set, which broke the live preview ("404 PAGE NOT FOUND", `__VP_HASH_MAP__ is not defined`). The export now restores `NODE_ENV` afterwards.
