@@ -5,6 +5,9 @@ import {
   readFileSync, realpathSync, unlinkSync, writeFileSync,
 } from "node:fs";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
+import { homedir } from "node:os";
+import { DatabaseSync } from "node:sqlite";
+import { readRoster } from "../../src/roster.mjs";
 
 function append(file, record) {
   const fd = openSync(file, "a", 0o600);
@@ -44,7 +47,7 @@ const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 class CommentConflict extends Error {}
 
 export async function startCommentBridge({
-  sessionId, documentRoot, previewOrigin, storageRoot, notify, onError,
+  sessionId, documentRoot, previewOrigin, storageRoot, notify, onError, mesh,
 }) {
   const root = realpathSync(documentRoot);
   const directory = join(storageRoot, sessionId);
@@ -70,8 +73,52 @@ export async function startCommentBridge({
     }
     return [...new Set(value)];
   };
-  const addressed = (comment, name) => comment.to?.length ? comment.to.includes(name) : name === settings.owner;
-  const readBy = (comment, name) => name === settings.owner ? comment.seen : Boolean(comment.readBy?.[name]);
+  // The team page (src/roster.mjs) is the source of the team when it lists agent sessions; settings are the fallback.
+  let rosterAt = 0, rosterRows = [];
+  const roster = () => {
+    if (Date.now() - rosterAt > 2000) {
+      try { rosterRows = readRoster(documentRoot); } catch { rosterRows = []; }
+      rosterAt = Date.now();
+    }
+    return rosterRows;
+  };
+  const agents = () => roster().filter(row => row.session);
+  const ownerName = () => agents().find(row => row.session === sessionId)?.slug ?? settings.owner;
+  const teamNames = () => agents().length ? agents().map(row => row.slug) : settings.team;
+  const nameFor = value => agents().find(row => row.session === value)?.slug ?? value;
+  const effective = () => ({ ...settings, owner: ownerName(), team: teamNames(), roster: roster(), fromRoster: agents().length > 0 });
+  const addressed = (comment, name) => comment.to?.length ? comment.to.includes(name) : name === ownerName();
+  const readBy = (comment, name) => name === ownerName() ? comment.seen : Boolean(comment.readBy?.[name]);
+
+  function meshStatus() {
+    const known = agents();
+    let live = new Map();
+    try {
+      const db = new DatabaseSync(process.env.ADR_MESH_DB || join(homedir(), ".copilot", "extensions", "agent-mesh", "agent-mesh.db"), { readOnly: true });
+      try {
+        const marks = known.map(() => "?").join(",");
+        const columns = db.prepare("PRAGMA table_info(agent_sessions)").all().some(column => column.name === "kind") ? "kind" : "'agent' AS kind";
+        live = new Map(db.prepare(`SELECT session_id, status, ${columns}, last_heartbeat FROM agent_sessions WHERE session_id IN (${marks})`).all(...known.map(row => row.session)).map(row => [row.session_id, row]));
+      } finally { db.close(); }
+    } catch { /* no local mesh database */ }
+    return roster().map(row => {
+      const seen = live.get(row.session);
+      return { ...row, status: !row.session ? "human" : seen ? seen.status : "unknown", lastSeen: seen?.last_heartbeat ?? null, kind: seen?.kind ?? (row.session ? "agent" : "human") };
+    });
+  }
+  // Quiet mesh note to each addressed agent other than the owner; they pull the thread when they choose.
+  function announce(comment, text) {
+    if (!mesh || !comment.to?.length) return;
+    for (const name of comment.to) {
+      const target = agents().find(row => row.slug === name);
+      if (!target || name === ownerName()) continue;
+      const page = new URL(comment.url).pathname;
+      const preview = text.replace(/\s+/g, " ").slice(0, 100);
+      Promise.resolve(mesh.send(target.session, `ADR comment for you on ${page} (thread ${comment.id.slice(0, 8)}): "${preview}". ` +
+        `Read: read_doc_review_comments(as="${target.slug}", store="${sessionId}"); reply: update_doc_review_comment(store="${sessionId}", comment_id="${comment.id}").`))
+        .catch(error => onError?.(error));
+    }
+  }
   let revision = 0;
   let latestFeedbackId;
   let seenInit = false;
@@ -90,7 +137,7 @@ export async function startCommentBridge({
       for (const id of record.ids) {
         const comment = comments.get(id);
         if (!comment) throw new Error(`Read receipt has no comment: ${id}`);
-        if (record.by && record.by !== settings.owner) comment.readBy[record.by] = true;
+        if (record.by && record.by !== ownerName()) comment.readBy[record.by] = true;
         else comment.seen = true;
       }
     } else if (record.event === "userseen") {
@@ -168,7 +215,7 @@ export async function startCommentBridge({
   const withFiles = comment => comment.images?.length
     ? { ...comment, imageFiles: comment.images.map(imageFile) } : comment;
 
-  function unread(as = settings.owner) {
+  function unread(as = ownerName()) {
     return [...comments.values()].filter(comment => comment.wake && addressed(comment, as) && !readBy(comment, as));
   }
 
@@ -291,11 +338,12 @@ export async function startCommentBridge({
       if (request.method === "GET" && request.url === "/history") {
         return reply(response, 200, { sessionId, revision, seenInit, comments: [...comments.values()] });
       }
-      if (request.method === "GET" && request.url === "/settings") return reply(response, 200, settings);
+      if (request.method === "GET" && request.url === "/settings") return reply(response, 200, effective());
+      if (request.method === "GET" && request.url === "/mesh") return reply(response, 200, { members: meshStatus() });
       const readRoute = request.method === "GET" && /^\/read\?(.*)$/.exec(request.url);
       if (readRoute) {
         const query = new URLSearchParams(readRoute[1]);
-        const as = query.get("as") || settings.owner;
+        const as = nameFor(query.get("as") || ownerName());
         if (!NAME.test(as)) return reply(response, 400, { error: "Invalid agent name." });
         return reply(response, 200, { sessionId, comments: readAs(as, query.get("includeSeen") === "1") });
       }
@@ -342,7 +390,7 @@ export async function startCommentBridge({
           settings = next;
           writeFileSync(settingsFile, JSON.stringify(settings), { mode: 0o600 });
           revision++;
-          return reply(response, 200, settings);
+          return reply(response, 200, effective());
         } catch (error) {
           return reply(response, 400, { error: error.message });
         }
@@ -371,6 +419,7 @@ export async function startCommentBridge({
       if (request.url === "/updates") {
         const result = saveUpdate(input);
         saved = true;
+        if (input.reply !== undefined && !input.note) announce(comments.get(input.commentId), input.reply);
         await notify();
         return reply(response, 200, { ...result, awaitingReview: !comments.get(input.commentId).seen });
       }
@@ -389,6 +438,7 @@ export async function startCommentBridge({
         comment = comments.get(comment.id);
       }
       saved = true;
+      if (!comment.note && !comment.highlight) announce(comment, comment.comment);
       await notify();
       reply(response, 200, { id: comment.id, saved: true, awaitingReview: !comment.seen });
     } catch (error) {
@@ -432,7 +482,7 @@ export async function startCommentBridge({
       const rows = unread(as);
       return { count: rows.length, latestId: rows.length ? latestFeedbackId : undefined };
     },
-    read: ({ includeSeen = false, as = settings.owner } = {}) => readAs(as, includeSeen),
+    read: ({ includeSeen = false, as = ownerName() } = {}) => readAs(as, includeSeen),
     close: async () => {
       unlinkSync(connectionFile);
       await new Promise((accept, reject) => server.close(error => error ? reject(error) : accept()));

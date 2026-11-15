@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.37.0 - 2026-11-15
+
+- The team page is the roster: a Markdown table with `Who`, `Session` and optional `Role`, `Machine`, `Harness` columns (page named by `team-page:` in the root `index.md`, default `team.md`). Rows with a session id become the **To:** recipients and the owner is the row matching this preview's session; `:team`/`:owner` remain the fallback.
+- Addressed agents get one quiet (normal priority) mesh note pointing at the thread; they pull it when they choose. Needs the mesh with quiet delivery.
+- `:mesh` shows the roster members' live mesh status, machine and harness.
+
 ## 0.36.0 - 2026-11-15
 
 - Address comments to specific agents: `to` recipients with **To:** chips, `:owner`/`:team`/`:default`/`:settings`, per-agent read state, and `as`/`store` on the agent tools so other agents read and reply to threads addressed to them. Pull-based: nothing is pushed to agents.

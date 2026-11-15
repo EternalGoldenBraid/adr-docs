@@ -92,6 +92,8 @@ In Vim mode, Alt+h/l narrow/widen and Alt+j/k shorten/heighten the open panel, h
 
 ## Addressing comments to specific agents
 
+**Roster.** If the site has a team page (`team.md`, or the page named by `team-page:` in the root `index.md`) with a table whose header has `Who` and `Session` (optional `Role`, `Machine`, `Harness`), rows with a session id are the team and **To:** recipients, named by the slugged `Who` cell; the owner is the row whose session is this preview's. Addressed agents get a quiet mesh note naming the thread. `:mesh` lists their live status.
+
 By default a comment goes only to the agent that owns the preview. To address others, name your team once: `:owner alice` (this preview's agent), `:team bob carol`, `:default owner|last` (who is pre-selected: the owner, or the last recipients you used); `:settings` shows them. Settings are stored per preview, server-side.
 
 With a team set, a **To:** chip row appears in the comment box, the history reply box and the thread popover. Click chips to toggle; at least one stays on. A reply keeps the thread's recipients unless you change them. Nothing is pushed: an agent only sees threads addressed to it, and only when it asks.

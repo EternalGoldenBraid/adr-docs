@@ -254,6 +254,7 @@
     comment: () => commentSelection(),
     tree: () => document.dispatchEvent(new KeyboardEvent("keydown", { key: "t", bubbles: true })),
     settings: () => loadSettings().then(() => message(`owner: ${settings.owner}\nteam: ${settings.team.join(", ") || "(none)"}\ndefault recipients: ${settings.default}\n:owner NAME · :team A B C · :default owner|last`)),
+    mesh: () => api("mesh").then(v => message(v.members.map(m => `${m.name.padEnd(22)} ${(m.status).padEnd(8)} ${(m.machine || "-").padEnd(14)} ${m.harness || "-"}  ${m.session.slice(0, 8)}`).join("\n") || "No team page found.")).catch(e => message(e.message, true)),
     owner: name => name ? api("settings", { owner: name }).then(v => { settings = v; message("Owner: " + name); }).catch(e => message(e.message, true)) : message("Usage: :owner NAME (this preview's agent)", true),
     team: (_first, line = "") => api("settings", { team: line.trim().split(/[\s,]+/).filter(Boolean) }).then(v => { settings = v; message("Team: " + (v.team.join(", ") || "(none)")); }).catch(e => message(e.message, true)),
     default: arg => ["owner", "last"].includes(arg) ? api("settings", { default: arg }).then(v => { settings = v; message("Default recipients: " + arg); }).catch(e => message(e.message, true)) : message("Usage: :default owner|last", true),
