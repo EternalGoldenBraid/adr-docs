@@ -80,11 +80,13 @@ const map = computed(() => {
   return { dots, cols: story.value.length, rows: Math.max(1, ...dots.map(d => d.row + 1)) }
 })
 
+let lastG = 0
 const keys = {
-  ArrowRight: () => step(1), l: () => step(1), PageDown: () => step(1), ' ': () => step(1),
-  ArrowLeft: () => step(-1), h: () => step(-1), PageUp: () => step(-1),
+  ArrowRight: () => step(1), l: () => step(1),
+  ArrowLeft: () => step(-1), h: () => step(-1),
   ArrowDown: down, j: down, ArrowUp: up, k: up,
-  Home: () => go(story.value[0]), End: () => go(story.value[story.value.length - 1]),
+  G: () => go(story.value[story.value.length - 1]),
+  g: () => { if (lastG && Date.now() - lastG < 700) { lastG = 0; go(story.value[0]) } else lastG = Date.now() },
   Enter: toggleEmbed, e: toggleEmbed, o: openPage,
 }
 function onKey(e) {
@@ -139,7 +141,7 @@ onUnmounted(() => {
         :class="{ now: d.id === current, deep: d.row > 0 }"
         :style="{ gridColumn: d.col + 1, gridRow: d.row + 1 }" :title="byId.get(d.id)?.title" @click="go(d.id)" />
     </nav>
-    <div class="gp-hint">← → story · ↓ deeper · ↑ back · Enter preview link · o open page · Esc exit</div>
+    <div class="gp-hint">← → story · ↓ deeper · ↑ back · Enter preview link · o open page · gg/G first/last · Esc exit</div>
   </div>
 </Teleport>
 </template>
