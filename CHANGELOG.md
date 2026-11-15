@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.54.0 - 2026-11-15
+
+- DocGraph presentation mode: **▶ Present** / `:present` shows a graph full screen, one node at a time. `→ ←` follow the solid (story) edges, `↓ ↑` go into and out of dashed drill-down chains, `Enter` previews the node's link, `o` opens it, `Esc` exits; a minimap shows the position.
+
 ## 0.53.0 - 2026-11-15
 
 - `:help` / `:man` open a tabbed help panel (Page, History, Text fields, Search & commands); `[`/`]` or `h`/`l` switch tabs, `Esc` closes.
