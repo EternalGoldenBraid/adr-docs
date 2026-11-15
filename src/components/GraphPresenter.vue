@@ -71,7 +71,7 @@ function toggleEmbed() {
   }
 }
 
-// Enter dives into the previewed page (its own Vim keys apply); Esc or jk climbs back to the slide.
+// Enter dives into the previewed page (its own Vim keys apply); Esc climbs back to the slide.
 function focusFrame() {
   frame.value?.focus()
   try { frame.value?.contentWindow?.focus() } catch (_) { /* cross-origin: the user can click in */ }
@@ -82,14 +82,9 @@ function backToSlide() {
   frame.value?.blur()
   window.focus()
 }
-let lastJ = 0
 function frameKey(e) {
-  if (e.ctrlKey || e.metaKey || e.altKey) return
-  const typing = e.target?.matches?.('input,textarea,select,[contenteditable]:not([contenteditable="false"])')
-  let leave = e.key === 'Escape' && !typing
-  if (e.key === 'j' && !typing) lastJ = Date.now()
-  else if (e.key === 'k' && !typing && Date.now() - lastJ < 300) leave = true
-  if (!leave) return
+  if (e.key !== 'Escape' || e.ctrlKey || e.metaKey || e.altKey) return
+  if (e.target?.matches?.('input,textarea,select,[contenteditable]:not([contenteditable="false"])')) return
   e.preventDefault(); e.stopImmediatePropagation()
   backToSlide()
 }
@@ -195,7 +190,7 @@ onUnmounted(() => {
           <h1>{{ node.title }}</h1>
           <p v-if="node.body" class="gp-body">{{ node.body }}</p>
           <button v-if="node.link" type="button" class="gp-link" @click="toggleEmbed">
-            ↗ {{ node.link }} <small>{{ embed ? (inPreview ? 'Esc / jk: back to slide' : 'Enter: hide preview') : 'Enter: preview' }} · o: open page</small>
+            ↗ {{ node.link }} <small>{{ embed ? (inPreview ? 'Esc: back to slide' : 'Enter: hide preview') : 'Enter: preview' }} · o: open page</small>
           </button>
         </div>
         <video v-if="node.video" :key="node.id" class="gp-video" :src="imageSrc(node.video)" :poster="node.image ? imageSrc(node.image) : undefined"
@@ -209,7 +204,7 @@ onUnmounted(() => {
         :class="{ now: d.id === current, deep: d.row > 0 }"
         :style="{ gridColumn: d.col + 1, gridRow: d.row + 1 }" :title="byId.get(d.id)?.title" @click="go(d.id)" />
     </nav>
-    <div class="gp-hint">← → story · ↓ deeper · ↑ back · c comment · Enter preview link (Esc / jk back) · o open page · gg/G first/last · Esc exit</div>
+    <div class="gp-hint">← → story · ↓ deeper · ↑ back · c comment · Enter preview link (Esc back) · o open page · gg/G first/last · Esc exit</div>
   </div>
 </Teleport>
 </template>
