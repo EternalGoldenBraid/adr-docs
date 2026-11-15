@@ -21,6 +21,8 @@ const hasTree = computed(() => pages.value.some(p => p.parent))
 const awaiting = ref({})
 const waits = slug => awaiting.value[slug === 'index' ? '/' : '/' + slug] || 0
 const tints = ref({})
+const hidden = slug => descendants(slug).reduce((n, d) => n + waits(d), 0)
+const hiddenTint = slug => { const d = descendants(slug).find(x => waits(x)); return d ? tint(d) : undefined }
 const onAwait = e => { awaiting.value = e.detail?.pages || {}; tints.value = Object.fromEntries(Object.entries(e.detail?.colors || {}).map(([k, v]) => [k, `rgb(${e.detail.palette?.[v] || '255,90,79'})`])) }
 const tint = slug => { const c = tints.value[slug === 'index' ? '/' : '/' + slug]; return c ? { background: c } : undefined }
 const tintAll = computed(() => { const v = Object.values(tints.value); return v.length ? { background: v[0] } : undefined })
@@ -154,7 +156,7 @@ onUnmounted(() => {
     <div v-for="(r, i) in rows" :key="r.slug" class="pt-row" :class="{ cur: r.slug === current, at: i === cursor }"
       :style="{ paddingLeft: 10 + r.depth * 18 + 'px' }" role="treeitem" @click="go(r.link)">
       <button v-if="r.kids" class="pt-fold" tabindex="-1" @click.stop="fold(r, !collapsed.has(r.slug))">{{ collapsed.has(r.slug) ? '▸' : '▾' }}</button>
-      <span v-else class="pt-fold"></span><input v-if="selecting" type="checkbox" class="pt-check" tabindex="-1" :checked="picked.has(r.slug)" title="Select this page for export" @click.stop="pick(r)">{{ r.title }}<button v-if="selecting && r.kids" class="pt-kids" tabindex="-1" title="Select or clear this page and all pages below it" @click.stop="pick(r, true)">+ below</button><b v-if="waits(r.slug)" class="pt-dot" :style="tint(r.slug)" title="Threads with something new for you">{{ waits(r.slug) }}</b>
+      <span v-else class="pt-fold"></span><input v-if="selecting" type="checkbox" class="pt-check" tabindex="-1" :checked="picked.has(r.slug)" title="Select this page for export" @click.stop="pick(r)">{{ r.title }}<button v-if="selecting && r.kids" class="pt-kids" tabindex="-1" title="Select or clear this page and all pages below it" @click.stop="pick(r, true)">+ below</button><b v-if="waits(r.slug)" class="pt-dot" :style="tint(r.slug)" title="Threads with something new for you">{{ waits(r.slug) }}</b><b v-if="collapsed.has(r.slug) && hidden(r.slug)" class="pt-dot" :style="hiddenTint(r.slug)" title="Something new on pages folded below">↓{{ hidden(r.slug) }}</b>
     </div>
     <div v-if="selecting" class="pt-export">
       <button :disabled="!picked.size" @click="runExport">Export {{ picked.size || '' }} selected</button>
