@@ -90,7 +90,7 @@ The agent can show a status line (`set_doc_review_status`) and attach a before/a
 
 ## Command line
 
-`:` opens a command line at the bottom of the page: `:help`, `:history`, `:chat`, `:comment`, `:tree`, `:keys`, `:vim on|off`.
+`:` opens a command line at the bottom of the page (Tab completes command names): `:help`, `:history`, `:chat`, `:comment`, `:tree`, `:keys`, `:vim on|off`.
 
 ## Resizing and key bindings
 
@@ -280,3 +280,5 @@ Tickets in `workstreams/*.md` follow the schema in `workstreams/README.md`. The 
 Within a status, tickets sort by `priority:` (lower first, unnumbered last); the queued group shows its rank. Owner chips (and `machine:` chips) on the board filter it. `<WorkstreamNow queued="3" />` puts a compact strip (all active tickets plus the next queued ones) on any page. To show the board in the top bar, give its index `parent: none` (an explicit top-level page) and a `nav:` label.
 
 Links to `/workstreams/<id>` pages show a status chip (status, owner, progress) automatically.
+
+With a team configured, the **To:** recipients in a comment box form a grid; press `Esc` twice in the text box, then `h j k l` to move, `Space` to toggle. The box opens beside or above/below the commented element so it does not cover it when there is room.

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.56.0 - 2026-11-15
+
+- `:` command line completes with Tab (Shift+Tab backwards): a unique prefix completes, several matches are listed and cycled.
+- Recipient chips form a grid (columns follow the panel width); `h j k l` move between them in the comment box.
+- The comment box is placed where it covers the least of the thing being commented on: below, above, right or left.
+
 ## 0.55.1 - 2026-11-15
 
 - Presentation mode: a DocGraph node can have a `video` (mp4 path, resolved like `image`); it autoplays muted and looped, with controls on hover, and `image` becomes its poster. The key hint no longer hides under the status bar.
