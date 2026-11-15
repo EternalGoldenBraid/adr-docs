@@ -154,13 +154,11 @@ function close() {
   if (document.fullscreenElement) document.exitFullscreen().catch(() => {})
   emit('close')
 }
-const onFullscreen = () => { if (!document.fullscreenElement) emit('close') }
 
 onMounted(() => {
   window.addEventListener('keydown', onKey, true)
   window.addEventListener('blur', onBlur)
   window.addEventListener('focus', onFocus)
-  document.addEventListener('fullscreenchange', onFullscreen)
   savedTargets = window.previewCommentTargets
   window.previewCommentTargets = { get: id => (id === current.value ? slideTarget() : savedTargets?.get?.(id) || null) }
   document.documentElement.requestFullscreen?.().catch(() => {})
@@ -169,7 +167,6 @@ onUnmounted(() => {
   window.removeEventListener('keydown', onKey, true)
   window.removeEventListener('blur', onBlur)
   window.removeEventListener('focus', onFocus)
-  document.removeEventListener('fullscreenchange', onFullscreen)
   clearTimeout(noticeTimer)
   window.previewCommentTargets = savedTargets
 })
