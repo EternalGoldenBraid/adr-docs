@@ -1,8 +1,12 @@
 # Changelog
 
+## 0.56.2 - 2026-11-15
+
+- Fix: scrolling the presenter's link preview with `j` then `k` no longer jumps back to the slide; only `Esc` leaves the preview.
+
 ## 0.56.1 - 2026-11-15
 
-- Presenter: `Enter` on a linked node opens the preview and moves focus into it, so the page's own Vim keys work there; `Esc` or `jk` returns to the slide. The preview has a yellow border while it has focus.
+- Presenter: `Enter` on a linked node opens the preview and moves focus into it, so the page's own Vim keys work there; `Esc` returns to the slide (`jk` was dropped in 0.56.2: it clashed with scrolling). The preview has a yellow border while it has focus.
 
 ## 0.56.0 - 2026-11-15
 
