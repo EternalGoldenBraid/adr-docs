@@ -15,7 +15,7 @@
       :host{position:fixed;right:24px;bottom:24px;z-index:10000;color:#eee;font:14px/1.5 system-ui}
       *{box-sizing:border-box}button,textarea{font:inherit}
       button{border:1px solid #59616d;border-radius:8px;padding:8px 14px;cursor:pointer;background:#292d35;color:#eee}
-      button:hover{background:#363e4b}button:focus-visible,textarea:focus-visible{outline:2px solid #74c0fc;outline-offset:3px}
+      button:hover{background:#363e4b}button:focus-visible,textarea:focus-visible{outline:2px solid #74c0fc;outline-offset:3px}textarea[data-vmode=normal]{border-color:#ffb02e;caret-color:transparent}textarea[data-vmode=visual]{border-color:#b197fc;caret-color:transparent}textarea[data-vmode=normal]::selection,textarea[data-vmode=visual]::selection{background:#ffb02e88}
       button:disabled{opacity:.6;cursor:wait}button.primary{background:#164a75;border-color:#74c0fc}
       [hidden]{display:none!important}.panel{width:min(var(--pw,540px),calc(100vw - 48px));padding:20px;background:#1b1d22;border:1px solid #59616d;border-radius:12px;box-shadow:0 12px 40px #0008;margin-bottom:12px}
       h2{font-size:17px;margin:0 0 4px}small{color:#b7c1ce}.quote{margin:12px 0;padding:10px;border-left:3px solid #74c0fc;background:#252a32;max-height:120px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}
@@ -127,9 +127,9 @@
         <details class="quote-box"><summary class="quote-summary">Selected content</summary><div class="quote thread-quote"></div></details>
         <div class="thread-links"></div>
         <div class="thread-messages"></div>
-        <form class="reply-form"><div class="to to-reply" hidden></div><textarea id="thread-reply" aria-label="Your reply" placeholder="Reply (i to focus · Ctrl+Enter sends · Esc leaves)" required maxlength="4000"></textarea>
+        <form class="reply-form"><div class="to to-reply" hidden></div><textarea id="thread-reply" aria-label="Your reply" placeholder="Reply (i to focus · Ctrl+Enter sends · Esc/jk normal mode, again leaves)" required maxlength="4000"></textarea>
         <div class="actions"><button class="thread-region" type="button" title="Attach a screenshot of a region (s)">Region</button>
-        <button class="thread-branch" type="button" title="Select text in this thread, then start a linked child thread from it">↳ New thread</button>
+        <button class="thread-branch" type="button" title="Start a linked child thread from the selected text or focused message (n)">↳ New thread</button>
         <button class="primary reply-send" type="submit">Reply</button></div></form>
       </section>
     </section>
@@ -252,7 +252,7 @@
     `] / [ next / previous thread awaiting you (across pages)`,
     `${KM.page.region} region screenshot · ${KM.leader}${KM.leaderKeys.history} history · ${KM.leader}${KM.leaderKeys.chat} session chat`,
     `${KM.resize.narrower}/${KM.resize.wider}/${KM.resize.shorter}/${KM.resize.taller} resize panel · t page tree`,
-    "In history: j/k move · l open · r resolve · h back · [ ] tabs · i reply · o page · J/K thread",
+    "In history: j/k move · l open · r resolve · h back · [ ] tabs · i reply · n new child thread · o page · J/K thread\nIn a text field: Esc or jk → normal mode (h j k l w b e 0 ^ $ gg G · x dd D cc cw yy p P u Ctrl-r · i a I A o O · v V then y d c); Esc or jk again leaves the field",
     "Search: / or :grep [-d N] [-u N] [-s] [-p|-c] <regex> pages and threads (no flag: all pages; -d 0: this page; -d N: N levels below; -u N: N ancestors; -1 = all)\nCommands: :help :history :chat :comment :tree :export :figure :grep :vim off|on :keys",
     "Keys are configured in ~/.config/agent-doc-review/keymap.json",
   ].join("\n");
@@ -1258,15 +1258,22 @@
   }
   const branchButton = find(".thread-branch");
   branchButton.addEventListener("mousedown", event => event.preventDefault());
-  branchButton.addEventListener("click", () => {
+  // Quote = the text selected in the thread, else the focused message (keyboard use).
+  function branchThread() {
     const parent = currentThread();
     const picked = (shadow.getSelection?.() ?? getSelection());
-    const quote = picked.toString().trim();
-    const inside = picked.rangeCount && find(".thread-messages").contains(picked.getRangeAt(0).commonAncestorContainer);
-    if (!parent || !quote || !inside) { message("Select text inside this thread's messages first", true); return; }
-    open({ kind: parent.kind, url: parent.url, section: parent.section, anchor: parent.anchor, quote: quote.slice(0, 4096) }, undefined);
+    const messages = find(".thread-messages");
+    let quote = picked.toString().trim();
+    if (!(picked.rangeCount && messages.contains(picked.getRangeAt(0).commonAncestorContainer))) quote = "";
+    if (!quote) {
+      const focused = [...messages.children].find(node => node === shadow.activeElement || node.contains(shadow.activeElement));
+      quote = (focused?.querySelector(".body, p, div")?.textContent || focused?.textContent || "").trim();
+    }
+    if (!parent || !quote) { message("Select text in this thread, or focus a message (j/k), then n", true); return; }
+    open({ kind: parent.kind, url: parent.url, section: parent.section, anchor: parent.anchor, quote: quote.slice(0, 1000) }, undefined);
     branchOf = parent.id;
-  });
+  }
+  branchButton.addEventListener("click", branchThread);
   find(".attach-region").addEventListener("click", regionDraft);
   find(".thread-region").addEventListener("click", () => regionThread(ids => updateThread({ id: crypto.randomUUID(), addImages: ids })));
   document.addEventListener("keydown", event => {
@@ -1296,6 +1303,7 @@
       if (key === "h" || key === "ArrowLeft") leaveThread();
       else if (key === "r") triage(selectedThread);
       else if (key === "i") replyInput.focus();
+      else if (key === "n") branchThread();
       else if (key === "o") find(".thread-source").click();
       else if (key === KM.page.region) find(".thread-region").click();
       else if (key === "J" && ids[here + 1]) selectThread(ids[here + 1]);
@@ -1474,19 +1482,196 @@
     if (selecting) open(chosen, anchor);
     else offer(chosen, anchor);
   });
-  // jk typed quickly in a text field acts as Esc (like the common vim mapping); the typed j is removed.
-  let lastJ = 0;
-  shadow.addEventListener("keydown", event => {
-    const field = event.target;
-    if (!vimEnabled || !field.matches?.("textarea") || event.ctrlKey || event.metaKey || event.altKey || event.isComposing) return;
-    if (event.key === "j") { lastJ = Date.now(); return; }
-    if (event.key === "k" && Date.now() - lastJ < 400 && field.value[field.selectionStart - 1] === "j" && field.selectionStart === field.selectionEnd) {
-      event.preventDefault();
-      lastJ = 0;
-      field.setRangeText("", field.selectionStart - 1, field.selectionStart, "end");
+  // Vim inside text fields. Insert → (Esc | jk) → normal → (Esc | jk) leaves the field; v/V visual.
+  // The cursor in normal/visual mode is the selected character, so the browser's own selection draws it.
+  const textState = new WeakMap();
+  let textReg = { text: "", line: false };
+  const tstate = field => textState.get(field) || textState.set(field, { mode: "insert", cur: 0, anchor: 0, col: 0, pending: "", lastJ: 0, jFrom: null, line: false }).get(field);
+  function textVim(event) {
+    const t = event.target;
+    if (!vimEnabled || !t.matches?.("textarea") || event.isComposing || event.metaKey || event.altKey) return;
+    const st = tstate(t), key = event.key;
+    const stop = () => { event.preventDefault(); event.stopImmediatePropagation(); };
+    const v = () => t.value;
+    const ls = i => i <= 0 ? 0 : v().lastIndexOf("\n", i - 1) + 1;
+    const le = i => { const n = v().indexOf("\n", i); return n < 0 ? v().length : n; };
+    const clamp = c => {
+      c = Math.max(0, Math.min(c, v().length));
+      return (c === v().length || v()[c] === "\n") && c > ls(c) ? c - 1 : c;
+    };
+    const render = () => {
+      t.dataset.vmode = st.mode;
+      if (st.mode === "insert") return;
+      let lo = Math.min(st.anchor, st.cur), hi = Math.max(st.anchor, st.cur) + 1;
+      if (st.mode === "normal") { lo = st.cur; hi = st.cur + 1; }
+      else if (st.line) { lo = ls(lo); hi = le(hi - 1); }
+      if (hi > v().length || v()[hi - 1] === "\n") hi = Math.max(lo, hi - 1);
+      t.setSelectionRange(lo, hi, "forward");
+    };
+    const normal = c => { st.mode = "normal"; st.pending = ""; st.cur = clamp(c); st.col = st.cur - ls(st.cur); render(); };
+    const insertAt = pos => { st.mode = "insert"; st.pending = ""; t.dataset.vmode = "insert"; t.setSelectionRange(pos, pos); };
+    const edit = (s, e, text) => { t.setSelectionRange(s, e); document.execCommand(text ? "insertText" : "delete", false, text); };
+    const yank = (text, line) => { textReg = { text, line }; navigator.clipboard?.writeText(text).catch(() => {}); };
+    const tokens = () => [...v().matchAll(/[A-Za-z0-9_]+|[^\sA-Za-z0-9_]+/g)].map(m => [m.index, m.index + m[0].length]);
+    const wordFwd = c => (tokens().find(([s]) => s > c) || [v().length])[0];
+    const wordBack = c => ([...tokens()].reverse().find(([s]) => s < c) || [0])[0];
+    const wordEnd = c => { const hit = tokens().find(([, e]) => e - 1 > c); return hit ? hit[1] - 1 : Math.max(0, v().length - 1); };
+    const firstNonBlank = i => { const s = ls(i); return s + (/^\s*/.exec(v().slice(s, le(i)))[0].length); };
+    const vertical = delta => {
+      const s = delta > 0 ? le(st.cur) + 1 : ls(st.cur) - 1;
+      if (delta > 0 ? s > v().length : s < 0) return st.cur;
+      const start = ls(s), end = le(start);
+      return Math.min(start + st.col, Math.max(start, end - 1));
+    };
+    const move = k => {
+      const c = st.cur;
+      switch (k) {
+        case "h": case "ArrowLeft": return Math.max(ls(c), c - 1);
+        case "l": case "ArrowRight": return Math.min(Math.max(ls(c), le(c) - 1), c + 1);
+        case "j": case "ArrowDown": return vertical(1);
+        case "k": case "ArrowUp": return vertical(-1);
+        case "w": return wordFwd(c);
+        case "b": return wordBack(c);
+        case "e": return wordEnd(c);
+        case "0": return ls(c);
+        case "^": return firstNonBlank(c);
+        case "$": return Math.max(ls(c), le(c) - 1);
+        case "G": return ls(v().length);
+        default: return null;
+      }
+    };
+    const vertKeys = new Set(["j", "k", "ArrowUp", "ArrowDown"]);
+    const lineOf = i => [ls(i), le(i)];
+    const delLine = (s, e) => {
+      const from = e >= v().length && s > 0 ? s - 1 : s, to = e < v().length ? e + 1 : e;
+      edit(from, to, "");
+      normal(from >= v().length ? ls(Math.max(0, v().length - 1)) : from);
+    };
+    const run = (op, s, e, line) => {
+      if (op === "y") { yank(v().slice(s, e), line); normal(s); return; }
+      yank(v().slice(s, e), line);
+      if (line && op === "d") { delLine(s, e); return; }
+      edit(s, e, "");
+      if (op === "c") insertAt(s); else normal(s);
+    };
+
+    if (event.ctrlKey) {
+      if (st.mode !== "insert" && key === "r") { stop(); document.execCommand("redo"); normal(t.selectionStart); }
+      return;
+    }
+    if (st.mode === "insert") {
+      if (key === "Escape") { stop(); normal(t.selectionStart - 1); return; }
+      if (key === "j") { st.lastJ = Date.now(); return; }
+      if (key === "k" && Date.now() - st.lastJ < 400 && v()[t.selectionStart - 1] === "j" && t.selectionStart === t.selectionEnd) {
+        stop();
+        st.lastJ = 0;
+        const at = t.selectionStart;
+        edit(at - 1, at, "");
+        normal(at - 2);
+        return;
+      }
+      st.lastJ = 0;
+      return;
+    }
+
+    if (key === "Escape") {
+      if (st.mode === "visual") { stop(); normal(st.cur); }
+      else st.pending = "";
+      return;
+    }
+    if (["Shift", "Control", "Alt", "Meta", "CapsLock", "Tab"].includes(key)) return;
+    stop();
+    const visual = st.mode === "visual";
+    const pending = st.pending;
+    st.pending = "";
+
+    if (!visual && "dcy".includes(pending) && pending) {
+      if (key === pending) { const [s, e] = lineOf(st.cur); if (pending === "c") { yank(v().slice(s, e), true); edit(s, e, ""); insertAt(s); } else run(pending, s, e, true); return; }
+      const c = st.cur;
+      let range = null;
+      if (key === "w") range = [c, pending === "c" && /\S/.test(v()[c] || "") ? wordEnd(c) + 1 : Math.max(c + 1, Math.min(wordFwd(c), le(c)))];
+      else if (key === "e") range = [c, wordEnd(c) + 1];
+      else if (key === "b") range = [wordBack(c), c];
+      else if (key === "$") range = [c, le(c)];
+      else if (key === "0") range = [ls(c), c];
+      else if (key === "^") range = [Math.min(firstNonBlank(c), c), Math.max(firstNonBlank(c), c)];
+      else if (key === "h") range = [Math.max(ls(c), c - 1), c];
+      else if (key === "l") range = [c, Math.min(le(c), c + 1)];
+      if (range && range[1] > range[0]) run(pending, range[0], range[1], false);
+      else if (range) normal(c);
+      return;
+    }
+    if (pending === "g") { if (key === "g") { st.cur = 0; st.col = 0; render(); } return; }
+
+    if (key === "j" && !visual) st.jFrom = { cur: st.cur, col: st.col, at: Date.now() };
+    if (key === "k" && !visual && st.jFrom && Date.now() - st.jFrom.at < 400) {
+      st.cur = st.jFrom.cur; st.col = st.jFrom.col; st.jFrom = null; render();
       document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
-    } else lastJ = 0;
-  }, true);
+      return;
+    }
+    if (key !== "j") st.jFrom = null;
+
+    const target = move(key);
+    if (target !== null) {
+      st.cur = clamp(target);
+      if (!vertKeys.has(key)) st.col = st.cur - ls(st.cur);
+      render();
+      return;
+    }
+    if (key === "g") { st.pending = "g"; return; }
+
+    if (visual) {
+      if (key === "o") { [st.anchor, st.cur] = [st.cur, st.anchor]; render(); return; }
+      if (key === "v") { if (st.line) st.line = false; else { normal(st.cur); return; } render(); return; }
+      if (key === "V") { if (!st.line) st.line = true; else { normal(st.cur); return; } render(); return; }
+      if ("ydxc".includes(key)) {
+        let lo = Math.min(st.anchor, st.cur), hi = Math.max(st.anchor, st.cur) + 1;
+        if (st.line) { lo = ls(lo); hi = le(hi - 1); }
+        const op = key === "x" ? "d" : key;
+        if (op === "y") { yank(v().slice(lo, hi), st.line); normal(lo); }
+        else if (st.line && op === "d") { yank(v().slice(lo, hi), true); delLine(lo, hi); }
+        else { run(op, lo, hi, st.line && op === "c"); }
+      }
+      return;
+    }
+
+    const c = st.cur;
+    switch (key) {
+      case "i": insertAt(c); break;
+      case "a": insertAt(Math.min(c + 1, le(c))); break;
+      case "I": insertAt(firstNonBlank(c)); break;
+      case "A": insertAt(le(c)); break;
+      case "o": edit(le(c), le(c), "\n"); insertAt(t.selectionStart); break;
+      case "O": { const s = ls(c); edit(s, s, "\n"); insertAt(s); break; }
+      case "v": st.mode = "visual"; st.line = false; st.anchor = c; render(); break;
+      case "V": st.mode = "visual"; st.line = true; st.anchor = c; render(); break;
+      case "d": case "c": case "y": st.pending = key; break;
+      case "x": if (c < v().length && v()[c] !== "\n") run("d", c, c + 1, false); break;
+      case "D": if (le(c) > c) run("d", c, le(c), false); break;
+      case "C": run("c", c, le(c), false); break;
+      case "p": case "P": {
+        if (!textReg.text) break;
+        if (textReg.line) {
+          if (key === "p") { const e = le(c); edit(e, e, "\n" + textReg.text); normal(e + 1); }
+          else { const s = ls(c); edit(s, s, textReg.text + "\n"); normal(s); }
+        } else {
+          const at = key === "p" && le(c) > c ? c + 1 : c;
+          edit(at, at, textReg.text);
+          normal(at + textReg.text.length - 1);
+        }
+        break;
+      }
+      case "u": document.execCommand("undo"); normal(t.selectionStart); break;
+      default: break;
+    }
+  }
+  shadow.addEventListener("keydown", textVim, true);
+  shadow.addEventListener("focusout", event => {
+    if (!event.target.matches?.("textarea")) return;
+    const st = tstate(event.target);
+    st.mode = "insert"; st.pending = ""; st.line = false;
+    delete event.target.dataset.vmode;
+  });
   document.addEventListener("keydown", event => {
     if (event.isComposing) return;
     if (vimEnabled && event.altKey && resizeKey(event)) { event.preventDefault(); return; }
