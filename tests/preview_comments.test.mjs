@@ -482,3 +482,27 @@ test("comments addressed to other agents stay out of the owner's unread and are 
   await bridge.close();
   rmSync(directory, { recursive: true, force: true });
 });
+
+test("without a hosting agent, the store's owner is told over the mesh too, including of unaddressed comments", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "preview-comments-"));
+  const owner = randomUUID(), bob = randomUUID();
+  writeFileSync(join(directory, "page.md"), "# Page\n\nText.");
+  writeFileSync(join(directory, "team.md"), `| Who | Session |\n|---|---|\n| Owner | ${owner} |\n| Bob | ${bob} |\n`);
+  for (const ownerViaMesh of [false, true]) {
+    const sent = [];
+    const bridge = await startCommentBridge({
+      sessionId: owner, documentRoot: directory, storageRoot: join(directory, String(ownerViaMesh)), previewOrigin: "http://127.0.0.1:8770",
+      onError: error => assert.fail(error.message), notify: async () => {}, ownerViaMesh,
+      mesh: { send: async session => { sent.push(session); } },
+    });
+    const { port, token } = JSON.parse(readFileSync(bridge.connectionFile, "utf8"));
+    for (const to of [undefined, ["owner"], ["bob"]]) {
+      const response = await fetch(`http://127.0.0.1:${port}/comments`, { method: "POST", headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ id: randomUUID(), sessionId: owner, url: "http://127.0.0.1:8770/page", section: "Page", kind: "page", quote: "Page", comment: "hi", ...(to ? { to } : {}) }) });
+      assert.equal(response.status, 200);
+    }
+    assert.deepEqual(sent, ownerViaMesh ? [owner, owner, bob] : [bob]);
+    await bridge.close();
+  }
+  rmSync(directory, { recursive: true, force: true });
+});

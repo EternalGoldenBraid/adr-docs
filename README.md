@@ -16,11 +16,17 @@ npm run readme                       # the landing page, with a graph demo
 npm run preview -- path/to/doc.md    # any Markdown file
 npm run export -- doc.md --page /x   # offline copy of one page; repeat --page for several (or the Export button / :export)
 adr path/to/doc.md 5190              # same, from anywhere (ln -s $PWD/bin/preview.mjs ~/.local/bin/adr)
+adr path/to/site --port 5174         # a whole folder of pages, from its index.md
 npm run example:paper                # fetch an arXiv paper for the example
 ```
 
 Open the printed `127.0.0.1` link. Viewing needs no agent. Comments are saved
-to disk and wait until an agent reads them.
+to disk and wait until an agent reads them. Comments addressed to agents that are
+online reach them over the agent mesh without an agent hosting the preview.
+
+Each served page or folder has its own comment store, printed at startup. To keep
+one store for a site whoever launches it, put its UUID in `<folder>/.adr-store`,
+or pass `--store UUID`. Agents read it with `read_doc_review_comments(store=...)`.
 
 ## With Copilot CLI
 
