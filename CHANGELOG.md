@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.56.1 - 2026-11-15
+
+- Presenter: `Enter` on a linked node opens the preview and moves focus into it, so the page's own Vim keys work there; `Esc` or `jk` returns to the slide. The preview has a yellow border while it has focus.
+
 ## 0.56.0 - 2026-11-15
 
 - `:` command line completes with Tab (Shift+Tab backwards): a unique prefix completes, several matches are listed and cycled.
