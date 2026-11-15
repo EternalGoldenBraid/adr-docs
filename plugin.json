@@ -1,6 +1,6 @@
 {
   "name": "agent-doc-review",
-  "version": "0.35.0",
+  "version": "0.35.1",
   "description": "Review live Markdown, equations and figures with persistent comments in the current Copilot CLI session",
   "extensions": "./extensions",
   "skills": "./skills"

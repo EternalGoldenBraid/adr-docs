@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.35.1 - 2026-11-15
+
+- Page tree: a folded row shows a `↓n` badge for threads needing you on the pages hidden below it.
+
 ## 0.35.0 - 2026-11-14
 
 - DocGraph: optional node `image` (shown inside the node) and `shape` (ellipse, rectangle, diamond, ...).
