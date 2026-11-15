@@ -37,7 +37,14 @@ async function buildSite(documentRoot, onlyPages) {
   writeFileSync(join(workspace, ".vitepress", "config.mjs"),
     `import { previewConfig } from ${JSON.stringify(pathToFileURL(join(packageRoot, "src/vitepress-config.mjs")).href)};\n` +
     `export default previewConfig(${JSON.stringify({ documentRoot, connectionFile: "", workspace, packageRoot, exportMode: true, onlyPages })});\n`);
-  await build(workspace);
+  // vite build sets NODE_ENV=production process-wide, which breaks the live preview server.
+  const hadEnv = Object.prototype.hasOwnProperty.call(process.env, "NODE_ENV");
+  const savedEnv = process.env.NODE_ENV;
+  try {
+    await build(workspace);
+  } finally {
+    if (hadEnv) process.env.NODE_ENV = savedEnv; else delete process.env.NODE_ENV;
+  }
   return workspace;
 }
 
