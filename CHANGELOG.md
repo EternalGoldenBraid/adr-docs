@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.43.0 - 2026-11-15
+
+- `:figure` / **Figure** button saves a graph (4× PNG with node labels), inline SVG, image or canvas as a large figure file, for papers and slides instead of small screenshots. Equations and arbitrary page blocks are not covered yet.
+
 ## 0.42.0 - 2026-11-15
 
 - Child threads: select text inside a thread's messages and press **↳ New thread** to start a new thread from that quote, linked (`→`) to its parent. The server now accepts `refs` on user comments.

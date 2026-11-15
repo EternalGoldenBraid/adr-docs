@@ -148,6 +148,7 @@
     <button class="vim-mode" type="button" title="h/j/k/l: move · v: select · c: comment (page if nothing selected) · -m: session chat · s: region screenshot · -h: history · Esc: normal">Vim</button>
     <button class="history-toggle" type="button">History</button>
     <button class="export-page" type="button" title="Download this page as a file that opens offline (:export)">Export</button>
+    <button class="figure-save" type="button" title="Save a graph, SVG, image or canvas as a large figure file (:figure)">Figure</button>
     <button class="toggle" type="button">Comment</button></div>
     <button class="pill" type="button" aria-expanded="false"><span class="dot"></span><span class="pill-label">Comments</span></button></div>`;
   document.body.append(host);
@@ -252,7 +253,7 @@
     `${KM.page.region} region screenshot · ${KM.leader}${KM.leaderKeys.history} history · ${KM.leader}${KM.leaderKeys.chat} session chat`,
     `${KM.resize.narrower}/${KM.resize.wider}/${KM.resize.shorter}/${KM.resize.taller} resize panel · t page tree`,
     "In history: j/k move · l open · r resolve · h back · [ ] tabs · i reply · o page · J/K thread",
-    "Search: / or :grep [-d N] [-u N] [-s] [-p|-c] <regex> pages and threads (no flag: all pages; -d 0: this page; -d N: N levels below; -u N: N ancestors; -1 = all)\nCommands: :help :history :chat :comment :tree :export :grep :vim off|on :keys",
+    "Search: / or :grep [-d N] [-u N] [-s] [-p|-c] <regex> pages and threads (no flag: all pages; -d 0: this page; -d N: N levels below; -u N: N ancestors; -1 = all)\nCommands: :help :history :chat :comment :tree :export :figure :grep :vim off|on :keys",
     "Keys are configured in ~/.config/agent-doc-review/keymap.json",
   ].join("\n");
   const commands = {
@@ -302,6 +303,67 @@
   }
   document.addEventListener("adr-export", event => exportPage(event.detail?.pages?.length ? event.detail.pages : undefined));
   commands.export = () => exportPage();
+  // :figure — click a graph, inline SVG, image or canvas; it downloads at print size (graphs 4x PNG, SVG as SVG).
+  let picking = false;
+  function saveBlob(blob, name) {
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = name;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 10000);
+  }
+  async function figureBlob(node) {
+    let graph = node;
+    while (graph && !graph._cyreg?.cy) graph = graph.parentElement;
+    if (graph) {
+      const dark = document.documentElement.classList.contains("dark");
+      if (graph._adrExportPng) return { blob: await graph._adrExportPng(4), ext: "png" };
+      return { blob: graph._cyreg.cy.png({ output: "blob", full: true, scale: 4, bg: dark ? "#1b1b1f" : "#ffffff" }), ext: "png" };
+    }
+    const svg = node.closest("svg");
+    if (svg && !svg.closest("mjx-container")) {
+      const copy = svg.cloneNode(true);
+      const box = svg.getBoundingClientRect();
+      copy.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+      if (!copy.getAttribute("viewBox")) copy.setAttribute("viewBox", `0 0 ${box.width} ${box.height}`);
+      copy.setAttribute("width", Math.round(box.width * 2));
+      copy.setAttribute("height", Math.round(box.height * 2));
+      return { blob: new Blob([new XMLSerializer().serializeToString(copy)], { type: "image/svg+xml" }), ext: "svg" };
+    }
+    const canvas = node.closest("canvas");
+    if (canvas) return { blob: await new Promise(done => canvas.toBlob(done, "image/png")), ext: "png" };
+    const image = node.closest("img");
+    if (image) {
+      const response = await fetch(image.currentSrc || image.src);
+      const blob = await response.blob();
+      return { blob, ext: (blob.type.split("/")[1] || "png").replace("svg+xml", "svg") };
+    }
+    return null;
+  }
+  function stopPicking() { picking = false; find(".figure-save").classList.remove("on"); document.body.style.cursor = ""; }
+  async function pickFigure(event) {
+    if (host.contains(event.target)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    stopPicking();
+    try {
+      const found = await figureBlob(event.target);
+      if (!found) { message("That is not a graph, SVG, image or canvas", true); return; }
+      saveBlob(await found.blob, `${pagePath(location.href).replace(/\W+/g, "-").replace(/^-|-$/g, "") || "page"}-figure.${found.ext}`);
+      message(`Saved figure (${found.ext})`);
+    } catch (error) { message(`Figure failed: ${error.message}`, true); }
+  }
+  function startFigure() {
+    if (picking) { stopPicking(); message(""); return; }
+    picking = true;
+    find(".figure-save").classList.add("on");
+    document.body.style.cursor = "crosshair";
+    message("Click a graph, SVG, image or canvas to save it (Esc cancels)");
+  }
+  document.addEventListener("click", event => { if (picking) pickFigure(event); }, true);
+  document.addEventListener("keydown", event => { if (picking && event.key === "Escape") { stopPicking(); message(""); } }, true);
+  commands.figure = startFigure;
+  find(".figure-save").addEventListener("click", startFigure);
   const grepPanel = find(".grep"), grepList = find(".grep-list");
   const closeGrep = () => { grepPanel.hidden = true; };
   // :grep [-d N] [-u N] [-s] <regex>. No depth flag searches every page; -d N searches this page plus N
