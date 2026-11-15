@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.44.1 - 2026-11-15
+
+- Fix: exporting a page ran `vite build` in the extension process and left `NODE_ENV=production` set, which broke the live preview ("404 PAGE NOT FOUND", `__VP_HASH_MAP__ is not defined`). The export now restores `NODE_ENV` afterwards.
+
 ## 0.44.0 - 2026-11-15
 
 - Vim modes in comment and reply text fields: insert, normal (motions, `x dd D cc C`, `d/c/y` + motion, `yy p P`, `u`, `Ctrl-r`, `i a I A o O`) and visual (`v`, `V`). `Esc`/`jk` goes insert → normal → leaves the field.
