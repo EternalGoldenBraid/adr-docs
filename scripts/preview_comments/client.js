@@ -24,7 +24,7 @@
       .hint{margin:10px 0 0;color:#b7c1ce}
       .proposal{margin:10px 0;border:1px solid #59616d;border-radius:8px;padding:8px}.proposal pre{margin:0 0 6px;padding:6px;white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.4 ui-monospace,monospace;border-radius:4px}.proposal .del{background:#4a1d24}.proposal .add{background:#16402a}
       .banners[hidden]{display:none}.banners{position:fixed;top:72px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;z-index:5}.banner{max-width:min(640px,90vw);padding:8px 14px;border:1px solid #ff5a4f;border-radius:10px;background:#2a1517;color:#eee;text-align:left}.banner small{color:#ffb3ae;display:block}
-      .statusbar{position:fixed;left:0;right:0;bottom:0;display:flex;gap:18px;align-items:center;padding:3px 14px;background:#111318;border-top:1px solid #3a404a;font:12px/1.4 ui-monospace,monospace;color:#b7c1ce;pointer-events:none}.sb-mode{font-weight:700;color:#74c0fc}.sb-hint{order:3;margin-left:auto}.sb-stale{color:#e3b341;font-weight:700;white-space:nowrap}.sb-mode{white-space:nowrap}.agent-status::before{content:"● ";color:#51cf66}.agent-status.await::before{color:#ff6b6b}
+      .statusbar{position:fixed;left:0;right:0;bottom:0;display:flex;gap:18px;align-items:center;padding:3px 14px;background:#111318;border-top:1px solid #3a404a;font:12px/1.4 ui-monospace,monospace;color:#b7c1ce;pointer-events:none}.sb-mode{font-weight:700;color:#74c0fc}.sb-hint{order:3;margin-left:auto}.sb-stale{color:#e3b341;font-weight:700;white-space:nowrap}.sb-mode{white-space:nowrap}.agent-status::before{content:"● ";color:#51cf66}.agent-status.await::before{color:#ff6b6b}.agent-status.blocked{color:#fff;background:#d6336c;font-weight:700;padding:0 8px;border-radius:3px}.agent-status.blocked::before{content:"⛔ "}.dot.blocked{background:#f03e3e;animation:adrblink 1s infinite}@keyframes adrblink{50%{opacity:.3}}
       .grep{position:fixed;left:50%;bottom:44px;transform:translateX(-50%);width:min(860px,94vw);max-height:50vh;display:flex;flex-direction:column;background:#17191f;border:1px solid #59616d;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,.5);font:13px/1.4 ui-monospace,monospace;color:#d6dbe3;z-index:5}
       .grep header{padding:6px 12px;border-bottom:1px solid #2f343d;color:#9aa4b2}.grep .grep-list{overflow:auto;padding:4px}
       .grep-hit{display:block;width:100%;text-align:left;background:none;border:0;border-radius:6px;color:inherit;font:inherit;padding:3px 8px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -239,7 +239,7 @@
     const mode = !vimEnabled ? "OFF" : !history.hidden ? "HISTORY" : !panel.hidden ? "COMMENT" : externalMode || (visual ? "VISUAL" : caretMode ? "CARET" : "NORMAL");
     vimButton.textContent = "Vim";
     const bar = find(".statusbar");
-    bar.hidden = !vimEnabled;
+    bar.hidden = !vimEnabled && !find(".agent-status")?.classList.contains("blocked");
     find(".sb-hint").textContent = !history.hidden ? (selectedThread
       ? "j/k scroll messages · J/K next/prev thread · r resolve · i reply · o page · h back · Esc"
       : "j/k move (k at top → tabs) · l open · o go to page · r resolve · [ ] tabs · Esc close") : visual ? "c comment · Esc cancel · hjkl extend" : caretMode ? `hjklwb move caret · ${KM.page.visual} select · V paragraph · ${KM.page.comment} comment · Esc scroll mode` : `j/k scroll · i caret · ${KM.page.visual} select text · ${KM.page.comment} comment · ${KM.leader}${KM.leaderKeys.history} threads · ] next awaiting · : commands · :help`;
@@ -2379,11 +2379,24 @@
   addEventListener("hashchange", () => { landed = ""; });
   setInterval(land, 250);
   const agentLine = find(".agent-status");
+  let blocked = false;
   async function pollAgent() {
     try {
       const { agent } = await api("status");
+      const now = agent?.state === "blocked";
       agentLine.hidden = !agent || agent.state === "idle" || !agent.text;
-      if (!agentLine.hidden) agentLine.textContent = `Copilot · ${agent.state}: ${agent.text}`;
+      agentLine.classList.toggle("blocked", now);
+      if (!agentLine.hidden) agentLine.textContent = now ? `Copilot needs help: ${agent.text}` : `Copilot · ${agent.state}: ${agent.text}`;
+      find(".dot").classList.toggle("blocked", now);
+      if (now && !blocked) {
+        find(".statusbar").hidden = false;
+        if (globalThis.Notification?.permission === "granted") new Notification("Copilot is blocked", { body: agent.text });
+        else if (globalThis.Notification?.permission === "default") Notification.requestPermission();
+      }
+      if (now !== blocked) {
+        blocked = now;
+        document.title = now ? `⛔ ${document.title}` : document.title.replace(/^⛔ /, "");
+      }
     } catch { agentLine.hidden = true; }
   }
   setInterval(pollAgent, 2500);

@@ -79,9 +79,9 @@ export async function connectDocumentReview({
         },
       },
       handler: args => {
-        if (args.store && args.store !== session.sessionId) {
-          if (!args.as) throw new Error("`as` (your agent name) is required with `store`.");
-          const query = new URLSearchParams({ as: args.as, includeSeen: args.include_seen === true ? "1" : "0" });
+        if (args.store && (args.store !== session.sessionId || !active)) {
+          if (!args.as && args.store !== session.sessionId) throw new Error("`as` (your agent name) is required with `store`.");
+          const query = new URLSearchParams({ includeSeen: args.include_seen === true ? "1" : "0", ...(args.as ? { as: args.as } : {}) });
           return remoteBridge(stateRoot(), args.store, `/read?${query}`).then(JSON.stringify);
         }
         return JSON.stringify(requirePreview().bridge.read({ includeSeen: args.include_seen === true, ...(args.as ? { as: args.as } : {}) }));
@@ -106,7 +106,7 @@ export async function connectDocumentReview({
         if (args.resolved !== undefined) input.resolved = args.resolved;
         if (args.proposal !== undefined) input.proposal = args.proposal;
         if (args.link_comment_ids !== undefined) input.addRefs = args.link_comment_ids;
-        if (args.store && args.store !== session.sessionId) {
+        if (args.store && (args.store !== session.sessionId || !active)) {
           return remoteBridge(stateRoot(), args.store, "/agent-update", { method: "POST", body: JSON.stringify(input) }).then(JSON.stringify);
         }
         return JSON.stringify(requirePreview().bridge.update(input));
@@ -132,7 +132,7 @@ export async function connectDocumentReview({
     }, {
       name: "set_doc_review_status",
       description: "Show a short status line in the user's browser (e.g. state 'reading', text 'Reading the methods section'). Use state 'idle' with empty text to clear it.",
-      parameters: { type: "object", required: ["state"], properties: { state: { type: "string", description: "idle, reading, thinking, editing or waiting." }, text: { type: "string", description: "Up to 120 characters." } } },
+      parameters: { type: "object", required: ["state"], properties: { state: { type: "string", description: "idle, reading, thinking, editing, waiting (needs attention) or blocked (stuck, needs help; requires text, stays loud until you set another state)." }, text: { type: "string", description: "Up to 120 characters." } } },
       handler: args => JSON.stringify(requirePreview().bridge.setStatus(args)),
     }, {
       name: "stop_doc_review",

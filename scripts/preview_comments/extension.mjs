@@ -104,7 +104,7 @@ export async function connectPreviewComments(config) {
     }, {
       name: "set_preview_status",
       description: "Show a short status line in the user's browser (e.g. state 'reading', text 'Reading the methods section'). Use state 'idle' with empty text to clear it.",
-      parameters: { type: "object", required: ["state"], properties: { state: { type: "string", description: "idle, reading, thinking, editing or waiting." }, text: { type: "string", description: "Up to 120 characters." } } },
+      parameters: { type: "object", required: ["state"], properties: { state: { type: "string", description: "idle, reading, thinking, editing, waiting (needs attention) or blocked (stuck, needs help; requires text, stays loud until you set another state)." }, text: { type: "string", description: "Up to 120 characters." } } },
       handler: args => JSON.stringify({ bridge }.bridge.setStatus(args)),
     }],
   });
