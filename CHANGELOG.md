@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.36.0 - 2026-11-15
+
+- Address comments to specific agents: `to` recipients with **To:** chips, `:owner`/`:team`/`:default`/`:settings`, per-agent read state, and `as`/`store` on the agent tools so other agents read and reply to threads addressed to them. Pull-based: nothing is pushed to agents.
+
 ## 0.35.1 - 2026-11-15
 
 - Page tree: a folded row shows a `↓n` badge for threads needing you on the pages hidden below it.

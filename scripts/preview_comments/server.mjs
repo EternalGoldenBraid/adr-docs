@@ -59,6 +59,19 @@ export async function startCommentBridge({
     : [];
   const comments = new Map();
   const updates = new Map();
+  const settingsFile = join(directory, "settings.json");
+  let settings = { owner: "owner", team: [], default: "owner", last: [] };
+  try { settings = { ...settings, ...JSON.parse(readFileSync(settingsFile, "utf8")) }; } catch { /* first run: defaults */ }
+  const NAME = /^[\w.-]{1,40}$/;
+  const names = (value, label) => {
+    if (value === undefined) return undefined;
+    if (!Array.isArray(value) || value.length > 12 || !value.every(name => typeof name === "string" && NAME.test(name))) {
+      throw new Error(`${label} must list at most 12 short names.`);
+    }
+    return [...new Set(value)];
+  };
+  const addressed = (comment, name) => comment.to?.length ? comment.to.includes(name) : name === settings.owner;
+  const readBy = (comment, name) => name === settings.owner ? comment.seen : Boolean(comment.readBy?.[name]);
   let revision = 0;
   let latestFeedbackId;
   let seenInit = false;
@@ -66,7 +79,7 @@ export async function startCommentBridge({
   function apply(record) {
     if (record.event === "comment") {
       const quiet = Boolean(record.highlight || record.note || record.author === "copilot");
-      comments.set(record.id, { ...record, seen: quiet, resolved: false, replies: [] });
+      comments.set(record.id, { ...record, seen: quiet, wake: !quiet, readBy: {}, resolved: false, replies: [] });
       if (!quiet) latestFeedbackId = record.id;
     }
     else if (record.event === "queued") {
@@ -77,7 +90,8 @@ export async function startCommentBridge({
       for (const id of record.ids) {
         const comment = comments.get(id);
         if (!comment) throw new Error(`Read receipt has no comment: ${id}`);
-        comment.seen = true;
+        if (record.by && record.by !== settings.owner) comment.readBy[record.by] = true;
+        else comment.seen = true;
       }
     } else if (record.event === "userseen") {
       // The user has read up to this reply (or "root" for an agent-started thread); shared by every browser.
@@ -121,11 +135,14 @@ export async function startCommentBridge({
         if (record.resolved && !comment.resolved) comment.resolvedAt = record.at;
         comment.resolved = record.resolved;
       }
+      if (record.to) comment.to = record.to;
       if (record.color !== undefined) comment.color = record.color;
       if (record.removed !== undefined) comment.removed = record.removed;
       if (record.clear) Object.assign(comment, { comment: "", note: false, highlight: true, replies: [], resolved: false, seen: true });
       if (record.author === "user" && wake) {
         comment.seen = false;
+        comment.wake = true;
+        comment.readBy = {};
         latestFeedbackId = record.id;
       }
     } else throw new Error(`Unknown comment-log event: ${record.event}`);
@@ -151,8 +168,8 @@ export async function startCommentBridge({
   const withFiles = comment => comment.images?.length
     ? { ...comment, imageFiles: comment.images.map(imageFile) } : comment;
 
-  function unread() {
-    return [...comments.values()].filter(comment => !comment.seen);
+  function unread(as = settings.owner) {
+    return [...comments.values()].filter(comment => comment.wake && addressed(comment, as) && !readBy(comment, as));
   }
 
   function normalize(input) {
@@ -181,6 +198,7 @@ export async function startCommentBridge({
       ...(input.note === true && input.highlight !== true ? { note: true } : {}),
       color: COLORS.includes(input.color) ? input.color : "yellow",
       ...(images.length ? { images } : {}),
+      ...(names(input.to, "to")?.length ? { to: names(input.to, "to") } : {}),
     };
   }
 
@@ -200,6 +218,7 @@ export async function startCommentBridge({
       if (typeof input.resolved !== "boolean") throw new Error("Resolved must be a boolean.");
       value.resolved = input.resolved;
     }
+    if (author === "user" && names(input.to, "to")?.length) value.to = names(input.to, "to");
     if (author === "user" && COLORS.includes(input.color)) value.color = input.color;
     if (author === "user" && input.clear === true) value.clear = true;
     if (author === "user" && input.note === true && value.reply !== undefined) value.note = true;
@@ -227,7 +246,7 @@ export async function startCommentBridge({
     if (author === "user" && typeof input.removed === "boolean") value.removed = input.removed;
     if (value.reply === undefined && value.resolved === undefined && value.color === undefined && value.removed === undefined && !value.clear &&
         !value.promote && value.editComment === undefined && !value.editReply && !value.removeReply &&
-        !value.addImages && !value.addRefs && !value.removeRefs) {
+        !value.to && !value.addImages && !value.addRefs && !value.removeRefs) {
       throw new Error("An update needs a reply, resolved state, colour, image, link, edit or removal.");
     }
     const previous = updates.get(value.id);
@@ -249,6 +268,17 @@ export async function startCommentBridge({
     };
   }
 
+  function readAs(as, includeSeen = false) {
+    const rows = unread(as);
+    const result = (includeSeen ? [...comments.values()].filter(comment => addressed(comment, as)) : rows).map(withFiles);
+    if (rows.length) {
+      const receipt = { event: "seen", ids: rows.map(comment => comment.id), by: as, at: new Date().toISOString() };
+      append(log, receipt);
+      apply(receipt);
+    }
+    return result;
+  }
+
   const server = createServer(async (request, response) => {
     let saved = false;
     try {
@@ -261,13 +291,21 @@ export async function startCommentBridge({
       if (request.method === "GET" && request.url === "/history") {
         return reply(response, 200, { sessionId, revision, seenInit, comments: [...comments.values()] });
       }
+      if (request.method === "GET" && request.url === "/settings") return reply(response, 200, settings);
+      const readRoute = request.method === "GET" && /^\/read\?(.*)$/.exec(request.url);
+      if (readRoute) {
+        const query = new URLSearchParams(readRoute[1]);
+        const as = query.get("as") || settings.owner;
+        if (!NAME.test(as)) return reply(response, 400, { error: "Invalid agent name." });
+        return reply(response, 200, { sessionId, comments: readAs(as, query.get("includeSeen") === "1") });
+      }
       const download = request.method === "GET" && /^\/attachments\/([\da-f]{64})$/.exec(request.url);
       if (download) {
         if (!existsSync(imageFile(download[1]))) return reply(response, 404, { error: "Unknown image attachment." });
         response.writeHead(200, { "Content-Type": "image/png", "Cache-Control": "private, max-age=31536000, immutable" });
         return response.end(readFileSync(imageFile(download[1])));
       }
-      if (request.method !== "POST" || !["/comments", "/updates", "/attachments", "/userseen"].includes(request.url)) {
+      if (request.method !== "POST" || !["/comments", "/updates", "/attachments", "/userseen", "/settings", "/agent-update"].includes(request.url)) {
         return reply(response, 404, { error: "Unknown comment endpoint." });
       }
       const chunks = [];
@@ -282,6 +320,29 @@ export async function startCommentBridge({
       if (request.url === "/attachments") {
         try {
           return reply(response, 200, { id: saveImage(Buffer.concat(chunks)) });
+        } catch (error) {
+          return reply(response, 400, { error: error.message });
+        }
+      }
+      if (request.url === "/settings" || request.url === "/agent-update") {
+        try {
+          const body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+          if (request.url === "/agent-update") return reply(response, 200, saveUpdate(normalizeUpdate(body, "copilot")));
+          const next = { ...settings };
+          if (body.owner !== undefined) {
+            if (typeof body.owner !== "string" || !NAME.test(body.owner)) throw new Error("Owner must be a short name.");
+            next.owner = body.owner;
+          }
+          if (body.team !== undefined) next.team = names(body.team, "team");
+          if (body.last !== undefined) next.last = names(body.last, "last");
+          if (body.default !== undefined) {
+            if (!["owner", "last"].includes(body.default)) throw new Error("Default must be owner or last.");
+            next.default = body.default;
+          }
+          settings = next;
+          writeFileSync(settingsFile, JSON.stringify(settings), { mode: 0o600 });
+          revision++;
+          return reply(response, 200, settings);
         } catch (error) {
           return reply(response, 400, { error: error.message });
         }
@@ -367,20 +428,11 @@ export async function startCommentBridge({
       return { saved: true };
     },
     update: (input, author = "copilot") => saveUpdate(normalizeUpdate(input, author)),
-    pending: () => {
-      const rows = unread();
+    pending: (as) => {
+      const rows = unread(as);
       return { count: rows.length, latestId: rows.length ? latestFeedbackId : undefined };
     },
-    read: ({ includeSeen = false } = {}) => {
-      const rows = unread();
-      const result = (includeSeen ? [...comments.values()] : rows).map(withFiles);
-      if (rows.length) {
-        const receipt = { event: "seen", ids: rows.map(comment => comment.id), at: new Date().toISOString() };
-        append(log, receipt);
-        apply(receipt);
-      }
-      return result;
-    },
+    read: ({ includeSeen = false, as = settings.owner } = {}) => readAs(as, includeSeen),
     close: async () => {
       unlinkSync(connectionFile);
       await new Promise((accept, reject) => server.close(error => error ? reject(error) : accept()));

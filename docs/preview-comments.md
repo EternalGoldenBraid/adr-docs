@@ -90,6 +90,14 @@ The agent can show a status line (`set_doc_review_status`) and attach a before/a
 
 In Vim mode, Alt+h/l narrow/widen and Alt+j/k shorten/heighten the open panel, history or bubble popover; sizes persist. All page-layer bindings (motions, `v`, `c`, `s`, the `-` leader, resize keys and step) are defined in `scripts/preview_comments/keymap.json`. To customise, create `~/.config/agent-doc-review/keymap.json` (or point `ADR_KEYMAP` at a file) containing only the entries to change, e.g. `{"resize": {"wider": "A-L", "step": 60}}`; `A-`/`C-` prefixes mean Alt/Ctrl. Reload the page to apply.
 
+## Addressing comments to specific agents
+
+By default a comment goes only to the agent that owns the preview. To address others, name your team once: `:owner alice` (this preview's agent), `:team bob carol`, `:default owner|last` (who is pre-selected: the owner, or the last recipients you used); `:settings` shows them. Settings are stored per preview, server-side.
+
+With a team set, a **To:** chip row appears in the comment box, the history reply box and the thread popover. Click chips to toggle; at least one stays on. A reply keeps the thread's recipients unless you change them. Nothing is pushed: an agent only sees threads addressed to it, and only when it asks.
+
+Agents read with `read_doc_review_comments` (`as`: its own name; `store`: the owning agent's session id when the preview isn't its own). The tool returns threads addressed to that name and marks them read for it only, independent of other recipients. `update_doc_review_comment` accepts `store` to reply in someone else's preview; `add_doc_review_comment` accepts `to`.
+
 ## DocGraph node images and shapes
 
 A node may carry `"image": "/public-path.png"` (or an http/data URL) and `"shape": "ellipse"` (also `rectangle`, `diamond`, `hexagon`, `octagon`, `barrel`, `round-tag`). The image is drawn inside the node above the title, scaled to fit the node's `w`/`h`; set those to size the box. Both survive edit mode, `:w` and export.

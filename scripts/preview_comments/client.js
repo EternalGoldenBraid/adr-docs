@@ -96,12 +96,13 @@
       .shot{position:relative}.shot img{display:block;max-width:120px;max-height:90px;border:1px solid #59616d;border-radius:6px}
       .shot button{position:absolute;top:2px;right:2px;padding:0 6px;border-radius:50%;font-size:12px;line-height:18px}
       .thumbs{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.thumbs img{display:block;max-width:100%;max-height:200px;border:1px solid #59616d;border-radius:6px;cursor:zoom-in;background:#fff}
+      .to{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:6px 0}.to small{opacity:.7}.to button{padding:1px 9px;border:1px solid #59616d;border-radius:999px;background:transparent;color:inherit;font:inherit;font-size:12px;cursor:pointer;opacity:.7}.to button.on{opacity:1;border-color:#74c0fc;background:rgba(116,192,252,.18)}
       .region{position:fixed;inset:0;cursor:crosshair;background:rgba(0,0,0,.3);touch-action:none;user-select:none}
       .region-box{position:fixed;border:2px dashed #74c0fc;background:rgba(116,192,252,.15);pointer-events:none}
       .region-tip{position:fixed;top:12px;left:50%;transform:translateX(-50%);padding:6px 12px;border-radius:999px;background:#1b1d22;border:1px solid #59616d;pointer-events:none}
     </style>
     <section class="panel" hidden aria-labelledby="comment-title">
-      <h2 id="comment-title">Comment to Copilot</h2><small class="receiver"></small>
+      <h2 id="comment-title">Comment to Copilot</h2><small class="receiver"></small><div class="to to-new" hidden></div>
       <div class="quote"></div>
       <form><label for="comment-body">Your comment</label>
       <textarea id="comment-body" required maxlength="4000"></textarea>
@@ -123,7 +124,7 @@
         <details class="quote-box"><summary class="quote-summary">Selected content</summary><div class="quote thread-quote"></div></details>
         <div class="thread-links"></div>
         <div class="thread-messages"></div>
-        <form class="reply-form"><textarea id="thread-reply" aria-label="Your reply" placeholder="Reply (i to focus · Ctrl+Enter sends · Esc leaves)" required maxlength="4000"></textarea>
+        <form class="reply-form"><div class="to to-reply" hidden></div><textarea id="thread-reply" aria-label="Your reply" placeholder="Reply (i to focus · Ctrl+Enter sends · Esc leaves)" required maxlength="4000"></textarea>
         <div class="actions"><button class="thread-region" type="button" title="Attach a screenshot of a region (s)">Region</button>
         <button class="primary reply-send" type="submit">Reply</button></div></form>
       </section>
@@ -252,6 +253,10 @@
     history: () => openHistory(), chat: () => open(sessionTarget()),
     comment: () => commentSelection(),
     tree: () => document.dispatchEvent(new KeyboardEvent("keydown", { key: "t", bubbles: true })),
+    settings: () => loadSettings().then(() => message(`owner: ${settings.owner}\nteam: ${settings.team.join(", ") || "(none)"}\ndefault recipients: ${settings.default}\n:owner NAME · :team A B C · :default owner|last`)),
+    owner: name => name ? api("settings", { owner: name }).then(v => { settings = v; message("Owner: " + name); }).catch(e => message(e.message, true)) : message("Usage: :owner NAME (this preview's agent)", true),
+    team: (_first, line = "") => api("settings", { team: line.trim().split(/[\s,]+/).filter(Boolean) }).then(v => { settings = v; message("Team: " + (v.team.join(", ") || "(none)")); }).catch(e => message(e.message, true)),
+    default: arg => ["owner", "last"].includes(arg) ? api("settings", { default: arg }).then(v => { settings = v; message("Default recipients: " + arg); }).catch(e => message(e.message, true)) : message("Usage: :default owner|last", true),
     vim: arg => { if ((arg === "off") === vimEnabled) vimButton.click(); },
   };
   let exporting = false;
@@ -534,6 +539,34 @@
     status.textContent = text;
     status.classList.toggle("error", error);
   }
+  let settings = { owner: "owner", team: [], default: "owner", last: [] };
+  const loadSettings = () => api("settings").then(value => { settings = value; }).catch(() => {});
+  const recipients = () => [...new Set([settings.owner, ...settings.team])];
+  const defaultTo = () => settings.default === "last" && settings.last.length ? settings.last : [settings.owner];
+  // Chips choose who a message is for. Hidden until a team is configured (:team), so single-agent use is unchanged.
+  function chipRow(holder, selected, onChange) {
+    holder.hidden = recipients().length < 2;
+    if (holder.hidden) return;
+    const label = document.createElement("small");
+    label.textContent = "To:";
+    holder.replaceChildren(label, ...recipients().map(name => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.textContent = name;
+      chip.classList.toggle("on", selected.has(name));
+      chip.addEventListener("click", () => {
+        if (selected.has(name)) selected.delete(name); else selected.add(name);
+        if (!selected.size) selected.add(settings.owner);
+        onChange?.();
+        chipRow(holder, selected, onChange);
+      });
+      return chip;
+    }));
+  }
+  const toValue = (selected, shown) => shown && recipients().length > 1 ? { to: [...selected] } : {};
+  const rememberTo = selected => {
+    if (recipients().length > 1) api("settings", { last: [...selected] }).then(value => { settings = value; }).catch(() => {});
+  };
   async function api(path, body) {
     const response = await fetch("/__preview_comments/" + path, {
       method: body ? "POST" : "GET",
@@ -736,6 +769,7 @@
     find(".thread-resolve").textContent = isNote(comment) ? "Remove" : comment.resolved ? "Reopen" : "Resolve";
     markSeen(comment);
     renderLinks(comment);
+    if (find(".to-reply").dataset.for !== comment.id) { find(".to-reply").dataset.for = comment.id; renderReplyTo(comment); }
     find(".thread-messages").replaceChildren(...threadNodes(comment, values => updateThread(values)));
     for (const item of find(".thread-messages").children) item.tabIndex = -1;
   }
@@ -953,6 +987,11 @@
     replyDrafts.set(selectedThread, { ...replyDrafts.get(selectedThread), text: replyInput.value });
     host.dataset.replyDrafts = String([...replyDrafts.values()].filter(draft => draft.text.trim()).length);
   });
+  let replyTo = new Set();
+  function renderReplyTo(comment) {
+    replyTo = new Set(comment?.to?.length ? comment.to : defaultTo());
+    chipRow(find(".to-reply"), replyTo);
+  }
   find(".reply-form").addEventListener("submit", event => {
     event.preventDefault();
     if (!replyInput.value.trim() || historySaving) return;
@@ -960,7 +999,8 @@
     if (!draft.id || draft.submitted !== replyInput.value) draft.id = crypto.randomUUID();
     draft.submitted = replyInput.value;
     replyDrafts.set(selectedThread, draft);
-    updateThread({ id: draft.id, reply: replyInput.value });
+    updateThread({ id: draft.id, reply: replyInput.value, ...toValue(replyTo, !find(".to-reply").hidden) });
+    rememberTo(replyTo);
   });
   find(".thread-resolve").addEventListener("click", () => {
     const comment = historyComments.find(c => c.id === selectedThread);
@@ -971,6 +1011,7 @@
     } else triage(selectedThread);
   });
   let draftImages = [];
+  let composeTo = new Set();
   const shots = find(".shots");
   function renderShots() {
     shots.replaceChildren(...draftImages.map(shot => {
@@ -1305,6 +1346,9 @@
     try {
       const ready = await api("status");
       sessionId = ready.sessionId;
+      await loadSettings();
+      composeTo = new Set(defaultTo());
+      chipRow(find(".to-new"), composeTo);
       find(".receiver").textContent = `This conversation · ${sessionId.slice(0, 8)}`;
     } catch (error) {
       message(error.message, true);
@@ -1475,7 +1519,8 @@
       if (!sessionId) sessionId = (await api("status")).sessionId;
       const asNote = noteRequested;
       noteRequested = false;
-      await api("comments", { ...target, id: draftId, sessionId, comment: submittedText, ...(draftImages.length ? { images: draftImages.map(shot => shot.id) } : {}), ...(asNote ? { note: true } : {}) });
+      await api("comments", { ...target, id: draftId, sessionId, comment: submittedText, ...(draftImages.length ? { images: draftImages.map(shot => shot.id) } : {}), ...(asNote ? { note: true } : {}), ...toValue(composeTo, !find(".to-new").hidden) });
+      rememberTo(composeTo);
       message(asNote ? "Saved as private note" : "Saved · awaiting review");
       statusTimer = setTimeout(() => message(""), 5000);
       textarea.value = "";
@@ -1766,9 +1811,14 @@
     const notes = threadNodes(comment, redo);
     const input = document.createElement("textarea");
     input.placeholder = comment.comment ? "Reply… (Ctrl+Enter)" : "Add a comment… (Ctrl+Enter)";
+    const popTo = new Set(comment.to?.length ? comment.to : defaultTo());
+    const popRow = document.createElement("div");
+    popRow.className = "to";
+    chipRow(popRow, popTo);
     const send = async (note = false) => {
       if (!input.value.trim()) return;
-      await update(comment, { reply: input.value, ...(note ? { note: true } : {}) });
+      await update(comment, { reply: input.value, ...(note ? { note: true } : {}), ...toValue(popTo, !popRow.hidden) });
+      rememberTo(popTo);
       pop.hidden = true;
     };
     input.addEventListener("keydown", event => {
@@ -1794,7 +1844,7 @@
     if (comment.note) actions.append(button("Send to Copilot", () => redo({ promote: true })));
     actions.append(button("Region", () => regionThread(ids => redo({ addImages: ids }))),
       button("Note", () => send(true)), button("Send", () => send()));
-    pop.replaceChildren(state, colors, ...notes, input, actions);
+    pop.replaceChildren(state, colors, ...notes, popRow, input, actions);
     pop.hidden = false;
     pop.style.left = `${Math.max(12, Math.min(at.left, innerWidth - pop.offsetWidth * uiScale() - 12))}px`;
     pop.style.top = `${Math.max(12, Math.min(at.top + 14, innerHeight - pop.offsetHeight * uiScale() - 12))}px`;
@@ -1944,4 +1994,6 @@
     } catch { agentLine.hidden = true; }
   }
   setInterval(pollAgent, 2500);
+  loadSettings();
+  setInterval(loadSettings, 15000);
 })();
