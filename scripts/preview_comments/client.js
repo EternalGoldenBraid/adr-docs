@@ -99,7 +99,7 @@
       .shot{position:relative}.shot img{display:block;max-width:120px;max-height:90px;border:1px solid #59616d;border-radius:6px}
       .shot button{position:absolute;top:2px;right:2px;padding:0 6px;border-radius:50%;font-size:12px;line-height:18px}
       .thumbs{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.thumbs img{display:block;max-width:100%;max-height:200px;border:1px solid #59616d;border-radius:6px;cursor:zoom-in;background:#fff}
-      .to{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:6px 0}.to small{opacity:.7}.to button{padding:1px 9px;border:1px solid #59616d;border-radius:999px;background:transparent;color:inherit;font:inherit;font-size:12px;cursor:pointer;opacity:.7}.to button.on{opacity:1;border-color:#74c0fc;background:rgba(116,192,252,.18)}
+      .to{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px;align-items:center;margin:6px 0}.to small{opacity:.7;grid-column:1/-1}.to button{padding:1px 9px;border:1px solid #59616d;border-radius:999px;background:transparent;color:inherit;font:inherit;font-size:12px;cursor:pointer;opacity:.7}.to button.on{opacity:1;border-color:#74c0fc;background:rgba(116,192,252,.18)}
       .region{position:fixed;inset:0;cursor:crosshair;background:rgba(0,0,0,.3);touch-action:none;user-select:none}
       .region-box{position:fixed;border:2px dashed #74c0fc;background:rgba(116,192,252,.15);pointer-events:none}
       .region-tip{position:fixed;top:12px;left:50%;transform:translateX(-50%);padding:6px 12px;border-radius:999px;background:#1b1d22;border:1px solid #59616d;pointer-events:none}
@@ -520,8 +520,28 @@
   findPending();
   function openCmdline(initial = "") { cmdbar.hidden = false; cmdinput.value = initial; cmdinput.focus(); }
   function closeCmdline() { cmdbar.hidden = true; cmdinput.blur(); }
+  // Tab completes the command name; repeated Tab cycles through the matches (Shift+Tab backwards).
+  let completion = null;
+  cmdinput.addEventListener("input", () => { completion = null; });
   cmdinput.addEventListener("keydown", event => {
-    if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); closeCmdline(); }
+    if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); closeCmdline(); return; }
+    if (event.key !== "Tab") return;
+    event.preventDefault();
+    const typed = cmdinput.value.replace(/^:/, "");
+    if (!completion) {
+      if (/\s/.test(typed)) return;
+      const matches = Object.keys(commands).filter(name => name.startsWith(typed)).sort();
+      if (!matches.length) { message(`No command starts with '${typed}'`, true); return; }
+      let common = matches[0];
+      for (const name of matches) while (!name.startsWith(common)) common = common.slice(0, -1);
+      completion = { matches, at: -1 };
+      if (matches.length === 1) { cmdinput.value = matches[0] + " "; completion = null; return; }
+      message(matches.map(name => ":" + name).join("  "));
+      if (common.length > typed.length) { cmdinput.value = common; completion = null; return; }
+    }
+    const { matches } = completion;
+    completion.at = (completion.at + (event.shiftKey ? -1 : 1) + matches.length) % matches.length;
+    cmdinput.value = matches[completion.at];
   });
   cmdbar.addEventListener("submit", event => {
     event.preventDefault();
@@ -749,6 +769,22 @@
       });
       return chip;
     }));
+  }
+  // Recipients form a grid whose width follows the panel, so j/k move between visual rows.
+  function chipNeighbour(chips, at, key) {
+    if (at < 0) return chips[0];
+    if (key === "h" || key === "l") return chips[at + (key === "l" ? 1 : -1)];
+    const here = chips[at].getBoundingClientRect();
+    const down = key === "j";
+    let best = null, bestScore = Infinity;
+    for (const chip of chips) {
+      const box = chip.getBoundingClientRect();
+      const dy = box.top - here.top;
+      if (down ? dy < 4 : dy > -4) continue;
+      const score = Math.abs(dy) * 1000 + Math.abs(box.left - here.left);
+      if (score < bestScore) { best = chip; bestScore = score; }
+    }
+    return best;
   }
   const toValue = (selected, shown) => shown && recipients().length > 1 ? { to: [...selected] } : {};
   const rememberTo = selected => {
@@ -1518,12 +1554,24 @@
       return;
     }
     const width = node.offsetWidth, height = node.offsetHeight;
-    const left = Math.max(12, Math.min(rect.left, innerWidth - width - 12));
-    let top = rect.bottom + 8;
-    if (top + height > innerHeight - 12) top = rect.top - height - 8;
-    top = Math.max(viewportTop(), Math.min(top, innerHeight - height - 12));
-    node.style.left = left + "px";
-    node.style.top = top + "px";
+    const top0 = viewportTop();
+    const clampX = x => Math.max(12, Math.min(x, innerWidth - width - 12));
+    const clampY = y => Math.max(top0, Math.min(y, innerHeight - height - 12));
+    // Try below, above, right and left of the anchor; keep the spot that covers the least of it.
+    const overlap = (x, y) => Math.max(0, Math.min(x + width, rect.right) - Math.max(x, rect.left)) * Math.max(0, Math.min(y + height, rect.bottom) - Math.max(y, rect.top));
+    const spots = [
+      [clampX(rect.left), clampY(rect.bottom + 8)],
+      [clampX(rect.left), clampY(rect.top - height - 8)],
+      [clampX(rect.right + 12), clampY(rect.top)],
+      [clampX(rect.left - width - 12), clampY(rect.top)],
+    ];
+    let best = spots[0], least = overlap(...best);
+    for (const spot of spots.slice(1)) {
+      const covered = overlap(...spot);
+      if (covered < least) { best = spot; least = covered; }
+    }
+    node.style.left = best[0] + "px";
+    node.style.top = best[1] + "px";
   }
   function offer(chosen, anchor) {
     if (!panel.hidden || !history.hidden || historySaving || find("button[type=submit]").disabled) return;
@@ -1805,7 +1853,7 @@
         event.preventDefault();
         shadow.activeElement.blur();
         find(".to-new button")?.focus();
-        message(find(".to-new").hidden ? "" : "h/l pick recipients · Space toggles · i back to the comment · Esc closes");
+        message(find(".to-new").hidden ? "" : "h j k l pick recipients · Space toggles · i back to the comment · Esc closes");
         return;
       }
       if (panel.hidden && !visual && !prefix && !selecting) {
@@ -1832,9 +1880,9 @@
       const chips = [...find(".to-new").querySelectorAll("button")];
       const at = chips.indexOf(shadow.activeElement);
       if (event.key === "i") { event.preventDefault(); find("#comment-body").focus(); return; }
-      if (chips.length && (event.key === "h" || event.key === "l")) {
+      if (chips.length && "hjkl".includes(event.key) && event.key.length === 1) {
         event.preventDefault();
-        chips[Math.max(0, Math.min(chips.length - 1, at + (event.key === "l" ? 1 : -1)))].focus();
+        (chipNeighbour(chips, at, event.key) || chips[Math.max(0, at)]).focus();
         return;
       }
     }
