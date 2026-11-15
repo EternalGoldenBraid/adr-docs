@@ -246,7 +246,7 @@ Click the quote of a video comment to jump to its time. Pages with `publish: fal
 
 ## Linking threads
 
-Open a thread and use **Link to another thread…** to reference another thread. Links (`→`) and backlinks (`←`) are clickable and jump across pages. Agents pass `refs` when adding a thread or `link_comment_ids` when updating one.
+Open a thread and use **Link to another thread…** to reference another thread. Links (`→`) and backlinks (`←`) are clickable and jump across pages. To branch a discussion, select text inside a thread's messages and press **↳ New thread**: the composer opens with that text as the quote, and the new thread is saved with a `→` link back to its parent. Agents pass `refs` when adding a thread or `link_comment_ids` when updating one.
 
 ## Next awaiting thread and notes
 

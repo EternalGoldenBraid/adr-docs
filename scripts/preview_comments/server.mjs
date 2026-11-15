@@ -259,6 +259,7 @@ export async function startCommentBridge({
     }
     if (!["text", "equation", "figure", "node", "edge", "page", "session"].includes(input.kind)) throw new Error("Invalid comment target.");
     const images = imageIds(input.images);
+    const refs = Array.isArray(input.refs) ? [...new Set(input.refs.filter(ref => typeof ref === "string" && comments.has(ref)))].slice(0, 20) : [];
     return {
       id, url: url.href, source,
       section: field(input.section, "Section", 512),
@@ -270,6 +271,7 @@ export async function startCommentBridge({
       ...(input.note === true && input.highlight !== true ? { note: true } : {}),
       color: COLORS.includes(input.color) ? input.color : "yellow",
       ...(images.length ? { images } : {}),
+      ...(refs.length ? { refs } : {}),
       ...(names(input.to, "to")?.length ? { to: names(input.to, "to") } : {}),
     };
   }

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.42.0 - 2026-11-15
+
+- Child threads: select text inside a thread's messages and press **↳ New thread** to start a new thread from that quote, linked (`→`) to its parent. The server now accepts `refs` on user comments.
+
 ## 0.41.1 - 2026-11-15
 
 - `<WorkstreamNow />` rows no longer get a second status pill from the link decorator.

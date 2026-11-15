@@ -129,6 +129,7 @@
         <div class="thread-messages"></div>
         <form class="reply-form"><div class="to to-reply" hidden></div><textarea id="thread-reply" aria-label="Your reply" placeholder="Reply (i to focus · Ctrl+Enter sends · Esc leaves)" required maxlength="4000"></textarea>
         <div class="actions"><button class="thread-region" type="button" title="Attach a screenshot of a region (s)">Region</button>
+        <button class="thread-branch" type="button" title="Select text in this thread, then start a linked child thread from it">↳ New thread</button>
         <button class="primary reply-send" type="submit">Reply</button></div></form>
       </section>
     </section>
@@ -1193,6 +1194,17 @@
     const shot = await captureRegion();
     if (shot) await addTo([shot.id]);
   }
+  const branchButton = find(".thread-branch");
+  branchButton.addEventListener("mousedown", event => event.preventDefault());
+  branchButton.addEventListener("click", () => {
+    const parent = currentThread();
+    const picked = (shadow.getSelection?.() ?? getSelection());
+    const quote = picked.toString().trim();
+    const inside = picked.rangeCount && find(".thread-messages").contains(picked.getRangeAt(0).commonAncestorContainer);
+    if (!parent || !quote || !inside) { message("Select text inside this thread's messages first", true); return; }
+    open({ kind: parent.kind, url: parent.url, section: parent.section, anchor: parent.anchor, quote: quote.slice(0, 4096) }, undefined);
+    branchOf = parent.id;
+  });
   find(".attach-region").addEventListener("click", regionDraft);
   find(".thread-region").addEventListener("click", () => regionThread(ids => updateThread({ id: crypto.randomUUID(), addImages: ids })));
   document.addEventListener("keydown", event => {
@@ -1347,8 +1359,10 @@
     const picked = elementSelection(event.target);
     if (picked) offer(picked.chosen, picked.element);
   });
+  let branchOf;
   async function open(chosen, anchor) {
     if (historySaving) return;
+    branchOf = undefined;
     closeHistory();
     if (JSON.stringify(chosen) !== JSON.stringify(target)) { draftId = undefined; draftImages = []; renderShots(); }
     targetAnchor = anchor || (selection() && getSelection().getRangeAt(0).cloneRange()) ||
@@ -1576,7 +1590,8 @@
       if (!sessionId) sessionId = (await api("status")).sessionId;
       const asNote = noteRequested;
       noteRequested = false;
-      await api("comments", { ...target, id: draftId, sessionId, comment: submittedText, ...(draftImages.length ? { images: draftImages.map(shot => shot.id) } : {}), ...(asNote ? { note: true } : {}), ...toValue(composeTo, !find(".to-new").hidden) });
+      await api("comments", { ...target, id: draftId, sessionId, comment: submittedText, ...(draftImages.length ? { images: draftImages.map(shot => shot.id) } : {}), ...(asNote ? { note: true } : {}), ...(branchOf ? { refs: [branchOf] } : {}), ...toValue(composeTo, !find(".to-new").hidden) });
+      branchOf = undefined;
       rememberTo(composeTo);
       message(asNote ? "Saved as private note" : "Saved · awaiting review");
       statusTimer = setTimeout(() => message(""), 5000);
