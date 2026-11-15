@@ -9,6 +9,7 @@ const emit = defineEmits(['close'])
 const router = useRouter()
 const root = ref(null)
 const embed = ref(false)
+const stage = ref(null)
 
 const byId = computed(() => new Map(props.nodes.map(n => [n.id, n])))
 const out = (dashed) => {
@@ -87,9 +88,27 @@ const keys = {
   ArrowDown: down, j: down, ArrowUp: up, k: up,
   G: () => go(story.value[story.value.length - 1]),
   g: () => { if (lastG && Date.now() - lastG < 700) { lastG = 0; go(story.value[0]) } else lastG = Date.now() },
-  Enter: toggleEmbed, e: toggleEmbed, o: openPage,
+  Enter: toggleEmbed, e: toggleEmbed, o: openPage, c: comment,
 }
+// The overlay comments on the slide through window.previewCommentTargets, like a graph node.
+let savedTargets, picked = ''
+function slideTarget() {
+  const n = node.value
+  if (!n) return null
+  const r = (stage.value?.querySelector('.gp-card') || root.value).getBoundingClientRect()
+  const quote = picked ? `Graph node "${n.title}" — selected: "${picked}"` : `Graph node "${n.title}"${n.body ? ' — ' + n.body : ''}`
+  return { kind: 'node', quote, rect: { left: r.left, right: r.right, top: r.top, bottom: r.bottom } }
+}
+function comment() {
+  if (!node.value) return
+  const sel = window.getSelection()?.toString().replace(/\s+/g, ' ').trim() || ''
+  picked = sel.slice(0, 400)
+  document.dispatchEvent(new CustomEvent('preview-comment-open', { detail: { id: node.value.id } }))
+}
+function onMouseUp() { setTimeout(() => { if (window.getSelection()?.toString().trim()) comment() }, 0) }
+
 function onKey(e) {
+  if ((e.composedPath?.()[0] || e.target).matches?.('input,textarea,select')) return
   if (e.ctrlKey || e.metaKey || e.altKey) return
   if (e.key === 'Escape') {
     if (embed.value) embed.value = false
@@ -106,12 +125,15 @@ const onFullscreen = () => { if (!document.fullscreenElement) emit('close') }
 onMounted(() => {
   window.addEventListener('keydown', onKey, true)
   document.addEventListener('fullscreenchange', onFullscreen)
-  root.value?.requestFullscreen?.().catch(() => {})
+  savedTargets = window.previewCommentTargets
+  window.previewCommentTargets = { get: id => (id === current.value ? slideTarget() : savedTargets?.get?.(id) || null) }
+  document.documentElement.requestFullscreen?.().catch(() => {})
 })
 onUnmounted(() => {
   window.removeEventListener('keydown', onKey, true)
   document.removeEventListener('fullscreenchange', onFullscreen)
   clearTimeout(noticeTimer)
+  window.previewCommentTargets = savedTargets
 })
 </script>
 
@@ -121,9 +143,10 @@ onUnmounted(() => {
     <div class="gp-top">
       <span>{{ storyIndex + 1 }} / {{ story.length }}<template v-if="depth"> · deeper {{ depth }}</template></span>
       <span class="gp-notice">{{ notice }}</span>
+      <button type="button" @click="comment">💬 c comment</button>
       <button type="button" aria-label="Exit presentation" @click="close">✕ Esc</button>
     </div>
-    <div v-if="node" class="gp-stage" :class="{ split: embed }">
+    <div v-if="node" ref="stage" class="gp-stage" :class="{ split: embed }" @mouseup="onMouseUp">
       <article class="gp-card" :class="{ deep: depth > 0, image: node.image }">
         <div class="gp-text">
           <h1>{{ node.title }}</h1>
@@ -141,13 +164,13 @@ onUnmounted(() => {
         :class="{ now: d.id === current, deep: d.row > 0 }"
         :style="{ gridColumn: d.col + 1, gridRow: d.row + 1 }" :title="byId.get(d.id)?.title" @click="go(d.id)" />
     </nav>
-    <div class="gp-hint">← → story · ↓ deeper · ↑ back · Enter preview link · o open page · gg/G first/last · Esc exit</div>
+    <div class="gp-hint">← → story · ↓ deeper · ↑ back · c comment · Enter preview link · o open page · gg/G first/last · Esc exit</div>
   </div>
 </Teleport>
 </template>
 
 <style>
-.gp { position: fixed; inset: 0; z-index: 2147483000; display: flex; flex-direction: column; background: #0b1220; color: #e2e8f0; font-family: system-ui, sans-serif; }
+.gp { position: fixed; inset: 0; z-index: 9000; display: flex; flex-direction: column; background: #0b1220; color: #e2e8f0; font-family: system-ui, sans-serif; }
 .gp-top { display: flex; align-items: center; gap: 16px; padding: 14px 24px; color: #94a3b8; font-size: 16px; }
 .gp-notice { flex: 1; color: #facc15; }
 .gp button { font: inherit; cursor: pointer; }

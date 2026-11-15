@@ -108,7 +108,7 @@ Agents read with `read_doc_review_comments` (`as`: its own name; `store`: the ow
 
 ## DocGraph presentation mode
 
-**▶ Present** (or `:present`) shows the graph full screen, one node at a time: title, body, image and link. Solid edges are the story and dashed edges lead deeper, so any graph can be presented. `→`/`←` (or `l`/`h`) move along the story, `↓`/`↑` (or `j`/`k`) go into and out of the dashed chain under the current node, `Enter` previews the node's link beside it, `o` opens the linked page, `gg`/`G` jump to the first and last step, and `Esc` exits. `:present` also works from the page command line, and `:help` has a Graph tab. A minimap shows your place; click a dot to jump.
+**▶ Present** (or `:present`) shows the graph full screen, one node at a time: title, body, image and link. Solid edges are the story and dashed edges lead deeper, so any graph can be presented. `→`/`←` (or `l`/`h`) move along the story, `↓`/`↑` (or `j`/`k`) go into and out of the dashed chain under the current node, `Enter` previews the node's link beside it, `o` opens the linked page, `c` (or selecting text) comments on the slide in view, anchored to its graph node, `gg`/`G` jump to the first and last step, and `Esc` exits. `:present` also works from the page command line, and `:help` has a Graph tab. A minimap shows your place; click a dot to jump.
 
 ## DocGraph node images and shapes
 
