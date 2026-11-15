@@ -99,7 +99,7 @@ function nodeEl(n) {
 }
 
 function edgeEl(e) {
-  return { group: 'edges', data: { id: e.id, source: e.source, target: e.target, color: e.color, dashed: e.dashed, label: e.label || '' } }
+  return { group: 'edges', data: { id: e.id, source: e.source, target: e.target, color: e.color, dashed: e.dashed, label: e.label || '', ...(e.loop != null ? { loop: e.loop } : {}) } }
 }
 
 // Edges meeting the same side of a node get their own attachment slot, ordered by where the other end
@@ -160,7 +160,7 @@ function serialise() {
         fill: d.fill, stroke: d.stroke, font: d.font, topics: d.topics, ...(d.link ? { link: d.link } : {}), ...(d.image ? { image: d.image } : {}), ...(d.shape ? { shape: d.shape } : {}) }
     }),
     edges: cy.edges().map(e => ({ id: e.id(), source: e.data('source'), target: e.data('target'),
-      color: e.data('color'), dashed: !!e.data('dashed'), label: e.data('label') || '' })),
+      color: e.data('color'), dashed: !!e.data('dashed'), label: e.data('label') || '', ...(e.data('loop') != null ? { loop: e.data('loop') } : {}) })),
   }
 }
 
@@ -366,6 +366,8 @@ onMounted(async () => {
       { selector: 'edge', style: {
         width: 2, 'line-color': 'data(color)', 'target-arrow-color': 'data(color)', 'target-arrow-shape': 'triangle',
         'curve-style': 'taxi', 'taxi-direction': 'vertical', 'taxi-turn': '50%', 'taxi-radius': 8, opacity: 0.85 } },
+      { selector: 'edge:loop', style: { 'curve-style': 'bezier', 'loop-direction': '-90deg', 'loop-sweep': '-60deg', 'control-point-step-size': 90 } },
+      ...['top', 'right', 'bottom'].map((side, i) => ({ selector: `edge:loop[loop = "${side}"]`, style: { 'loop-direction': `${i * 90}deg` } })),
       { selector: 'edge[sep]', style: { 'source-endpoint': 'data(sep)', 'target-endpoint': 'data(tep)' } },
       { selector: 'edge[sep][!route]', style: { 'curve-style': 'straight' } },
       { selector: 'edge[route]', style: { 'curve-style': 'segments', 'segment-weights': e => e.data('route').weights, 'segment-distances': e => e.data('route').distances, 'edge-distances': 'node-position' } },
@@ -484,6 +486,9 @@ onMounted(async () => {
     save()
   })
   cy.on('render', scheduleLabels)
+  // Compact nodes (any kind but 'node') show only the title, so the body is the hover text.
+  cy.on('mouseover', 'node', e => { if (e.target.data('kind') !== 'node' && e.target.data('kind') !== 'lane') host.value.title = e.target.data('body') || '' })
+  cy.on('mouseout', 'node', () => { host.value.title = '' })
   cy.on('viewport', () => { moved = true })
 })
 
