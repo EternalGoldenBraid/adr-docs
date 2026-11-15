@@ -10,6 +10,8 @@ Front matter (the schema; unknown statuses sort last):
 title: Short name
 status: proposed          # proposed | queued | active | blocked | done | declined
 owner: agent-doc-review   # who is doing it (optional)
+machine: gpu              # optional; adds an @machine filter chip on the board
+priority: 1               # optional number, lower first; orders tickets within a status (the queue)
 requester: Nicklas
 date: 2026-11-14          # optional; defaults to the filename date
 summary: One line saying what is asked.

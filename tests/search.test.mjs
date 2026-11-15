@@ -56,3 +56,15 @@ test("the team page table is the roster", async () => {
   assert.deepEqual(roster[1], { name: "GPU agent", slug: "gpu-agent", role: "Builder", machine: "gpu-box", harness: "copilot", work: "Run 7", topic: "", reportsTo: "", session: "28588d53-1116-45c0-947d-69fc9bc1c727" });
   assert.equal(roster[0].session, "");
 });
+
+test("tickets order by priority within a status", async () => {
+  const { readBoard } = await import("../src/workstreams.mjs");
+  const dir = mkdtempSync(join(tmpdir(), "board-"));
+  const ticket = (name, extra) => writeFileSync(join(dir, name + ".md"), `---\ntitle: ${name}\nstatus: queued\n${extra}---\n`);
+  ticket("a-none", "");
+  ticket("b-second", "priority: 2\n");
+  ticket("c-first", "priority: 1\nmachine: gpu\n");
+  const { items } = readBoard(dir);
+  assert.deepEqual(items.map(i => i.id), ["c-first", "b-second", "a-none"]);
+  assert.equal(items[0].machine, "gpu");
+});

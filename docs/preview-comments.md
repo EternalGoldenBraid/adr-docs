@@ -29,7 +29,7 @@ Keyboard triage: in the list `j`/`k` move, `l` or Enter opens, `r` resolves the
 row and moves to the next, `[`/`]` (or `k` from the first row, then `h`/`l`) switch tabs, `g`/`G` jump to the ends. In a
 thread `j`/`k` step through the messages (and scroll), `J`/`K` go to the next or previous thread, `r` resolves (back to the list
 on the next thread), `i` focuses the reply box, `o` opens the page (also on a focused thread in the list), `s` attaches
-a region, `h` goes back. `Esc` leaves a text field, then the thread, then closes
+a region, `h` goes back. `Esc` (or `jk` typed quickly) leaves a text field, then the thread, then closes
 the panel. `:help` lists these too.
 
 **Resolve** and **Reopen** explicitly change the status. A reply keeps the
@@ -266,5 +266,7 @@ A link to `#anchor` scrolls the heading or passage clear of the nav bar and flas
 ## Workstreams
 
 Tickets in `workstreams/*.md` follow the schema in `workstreams/README.md`. The index page (`<WorkstreamBoard />`, built live from the front matter) groups them by status; `list_workstreams` (agent tool) or `npm run workstreams -- --json` returns them as JSON.
+
+Within a status, tickets sort by `priority:` (lower first, unnumbered last); the queued group shows its rank. Owner chips (and `machine:` chips) on the board filter it. `<WorkstreamNow queued="3" />` puts a compact strip (all active tickets plus the next queued ones) on any page. To show the board in the top bar, give its index `parent: none` (an explicit top-level page) and a `nav:` label.
 
 Links to `/workstreams/<id>` pages show a status chip (status, owner, progress) automatically.

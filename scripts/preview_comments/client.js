@@ -1398,6 +1398,19 @@
     if (selecting) open(chosen, anchor);
     else offer(chosen, anchor);
   });
+  // jk typed quickly in a text field acts as Esc (like the common vim mapping); the typed j is removed.
+  let lastJ = 0;
+  shadow.addEventListener("keydown", event => {
+    const field = event.target;
+    if (!vimEnabled || !field.matches?.("textarea") || event.ctrlKey || event.metaKey || event.altKey || event.isComposing) return;
+    if (event.key === "j") { lastJ = Date.now(); return; }
+    if (event.key === "k" && Date.now() - lastJ < 400 && field.value[field.selectionStart - 1] === "j" && field.selectionStart === field.selectionEnd) {
+      event.preventDefault();
+      lastJ = 0;
+      field.setRangeText("", field.selectionStart - 1, field.selectionStart, "end");
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }));
+    } else lastJ = 0;
+  }, true);
   document.addEventListener("keydown", event => {
     if (event.isComposing) return;
     if (vimEnabled && event.altKey && resizeKey(event)) { event.preventDefault(); return; }
