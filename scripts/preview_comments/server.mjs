@@ -48,7 +48,7 @@ const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 class CommentConflict extends Error {}
 
 export async function startCommentBridge({
-  sessionId, documentRoot, previewOrigin, storageRoot, notify, onError, mesh,
+  sessionId, documentRoot, previewOrigin, storageRoot, notify, onError, mesh, ownerViaMesh = false,
 }) {
   const root = realpathSync(documentRoot);
   const directory = join(storageRoot, sessionId);
@@ -132,11 +132,13 @@ export async function startCommentBridge({
     });
   }
   // Quiet mesh note to each addressed agent other than the owner; they pull the thread when they choose.
+  // Without a hosting agent session (ownerViaMesh), the owner is also told this way, including of unaddressed comments.
   function announce(comment, text) {
-    if (!mesh || !comment.to?.length) return;
-    for (const name of comment.to) {
+    const names = comment.to?.length ? comment.to : ownerViaMesh ? [ownerName()] : [];
+    if (!mesh) return;
+    for (const name of names) {
       const target = agents().find(row => row.slug === name);
-      if (!target || name === ownerName()) continue;
+      if (!target || (name === ownerName() && !ownerViaMesh)) continue;
       const page = new URL(comment.url).pathname;
       const preview = text.replace(/\s+/g, " ").slice(0, 100);
       Promise.resolve(mesh.send(target.session, `ADR comment for you on ${page} (thread ${comment.id.slice(0, 8)}): "${preview}". ` +

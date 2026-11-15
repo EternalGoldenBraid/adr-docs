@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.46.0 - 2026-11-15
+
+- `adr <folder> --port N` serves a whole folder of pages from its `index.md`, so a site can be opened without an agent session. The port can also be given as before, as a second argument.
+- The comment store of a folder can be pinned with a UUID in `<folder>/.adr-store`, or chosen with `--store UUID`, so the same threads open whether a person or an agent launches the site. The store is printed at startup.
+- Launched this way, with no agent session hosting the preview, the store's owner agent is also told of comments over the agent mesh, including unaddressed ones. Agents that are offline find the comments on disk later.
+
 ## 0.45.0 - 2026-11-15
 
 - New **Page history** tab in the thread list: every thread on the current page, resolved ones included, so an accidentally resolved thread can be found and reopened.
