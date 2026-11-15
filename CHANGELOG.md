@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.37.1 - 2026-11-15
+
+- Team panel: a **Team** button in the comment history (and `:mesh`) opens a live table of roster members with status, machine, harness and session.
+
 ## 0.37.0 - 2026-11-15
 
 - The team page is the roster: a Markdown table with `Who`, `Session` and optional `Role`, `Machine`, `Harness` columns (page named by `team-page:` in the root `index.md`, default `team.md`). Rows with a session id become the **To:** recipients and the owner is the row matching this preview's session; `:team`/`:owner` remain the fallback.
