@@ -6,6 +6,7 @@ import {
 } from "node:fs";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { homedir } from "node:os";
+import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import { readRoster } from "../../src/roster.mjs";
 
@@ -90,7 +91,29 @@ export async function startCommentBridge({
   const addressed = (comment, name) => comment.to?.length ? comment.to.includes(name) : name === ownerName();
   const readBy = (comment, name) => name === ownerName() ? comment.seen : Boolean(comment.readBy?.[name]);
 
-  function meshStatus() {
+  // Agents on enrolled peer machines are asked over the mesh's own SSH route (machines.json); cached so polling stays cheap.
+  const remote = new Map();
+  let remoteAt = 0, remoteLoading;
+  function refreshRemote() {
+    if (remoteLoading) return remoteLoading;
+    remoteAt = Date.now();
+    remoteLoading = (async () => {
+      const dir = join(homedir(), ".copilot", "extensions", "agent-mesh");
+      const { loadMachines, requestPeer } = await import(pathToFileURL(join(dir, "network.mjs")).href);
+      const config = loadMachines(join(dir, "machines.json"));
+      const wanted = new Set(roster().filter(row => row.session && row.machine && config?.peers && Object.hasOwn(config.peers, row.machine)).map(row => row.machine));
+      await Promise.all([...wanted].map(async machine => {
+        try {
+          const result = await requestPeer(config, machine, "list", { status: "all" });
+          for (const agent of result.agents) remote.set(agent.session_id, agent);
+        } catch { /* unreachable peer stays unknown */ }
+      }));
+    })().catch(() => {}).finally(() => { remoteLoading = undefined; });
+    return remoteLoading;
+  }
+
+  async function meshStatus() {
+    if (!remoteAt) await refreshRemote(); else if (Date.now() - remoteAt > 15000) refreshRemote();
     const known = agents();
     let live = new Map();
     try {
@@ -102,7 +125,7 @@ export async function startCommentBridge({
       } finally { db.close(); }
     } catch { /* no local mesh database */ }
     return roster().map(row => {
-      const seen = live.get(row.session);
+      const seen = live.get(row.session) ?? remote.get(row.session);
       return { ...row, status: !row.session ? "human" : seen ? seen.status : "unknown", lastSeen: seen?.last_heartbeat ?? null, kind: seen?.kind ?? (row.session ? "agent" : "human") };
     });
   }
@@ -339,7 +362,7 @@ export async function startCommentBridge({
         return reply(response, 200, { sessionId, revision, seenInit, comments: [...comments.values()] });
       }
       if (request.method === "GET" && request.url === "/settings") return reply(response, 200, effective());
-      if (request.method === "GET" && request.url === "/mesh") return reply(response, 200, { members: meshStatus() });
+      if (request.method === "GET" && request.url === "/mesh") return reply(response, 200, { members: await meshStatus() });
       const readRoute = request.method === "GET" && /^\/read\?(.*)$/.exec(request.url);
       if (readRoute) {
         const query = new URLSearchParams(readRoute[1]);
