@@ -4,7 +4,7 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { isBlockedPort } from "./servers.mjs";
 
-export const USAGE = "usage: adr <dir | file.md> [port] [--port N] [--store UUID]\n       adr list    show running ADR servers";
+export const USAGE = "usage: adr <dir | file.md> [port] [--port N] [--store UUID] [-d]\n       adr list    show running ADR servers\n       adr tui     browse and stop them (-d runs a server in the background)";
 const UUID = /^[\da-f]{8}(-[\da-f]{4}){3}-[\da-f]{12}$/i;
 
 // A directory is served from its index.md. Its comment store is, in order: --store, the UUID in
@@ -13,9 +13,12 @@ export function resolveLaunch(argv, cwd = process.cwd()) {
   const positional = [];
   let port;
   let store;
+  let detach = false;
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
-    if (arg === "--port" || arg === "--store") {
+    if (arg === "--detach" || arg === "-d") {
+      detach = true;
+    } else if (arg === "--port" || arg === "--store") {
       if (i + 1 >= argv.length) throw new Error(`${arg} needs a value`);
       if (arg === "--port") port = argv[++i];
       else store = argv[++i];
@@ -45,5 +48,5 @@ export function resolveLaunch(argv, cwd = process.cwd()) {
     const hex = createHash("sha256").update(document).digest("hex");
     store = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
   }
-  return { document, port: port === undefined ? 0 : Number(port), store };
+  return { document, port: port === undefined ? 0 : Number(port), store, detach };
 }
