@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.52.0 - 2026-11-15
+
+- History tab shortcuts (capitals, list view): `A` All, `P` This page, `O` Open, `C` Chat, `R` Resolved, `N` Notes; `P` then `A` (either order, within 0.8 s) opens Page history.
+
 ## 0.51.2 - 2026-11-15
 
 - `add_doc_review_comment` and `set_doc_review_status` now work against a standalone `adr` server (they failed with "Tool execution failed"); both take an optional `store`, defaulting to your own session's server.
