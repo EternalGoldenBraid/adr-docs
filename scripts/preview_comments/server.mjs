@@ -147,6 +147,7 @@ export async function startCommentBridge({
         .catch(error => onError?.(error));
     }
   }
+  let api;
   let revision = 0;
   let latestFeedbackId;
   let seenInit = false;
@@ -399,7 +400,7 @@ export async function startCommentBridge({
         response.writeHead(200, { "Content-Type": "image/png", "Cache-Control": "private, max-age=31536000, immutable" });
         return response.end(readFileSync(imageFile(download[1])));
       }
-      if (request.method !== "POST" || !["/comments", "/updates", "/attachments", "/userseen", "/settings", "/agent-update", "/restart"].includes(request.url)) {
+      if (request.method !== "POST" || !["/comments", "/updates", "/attachments", "/userseen", "/settings", "/agent-update", "/agent-add", "/agent-status", "/restart"].includes(request.url)) {
         return reply(response, 404, { error: "Unknown comment endpoint." });
       }
       if (request.url === "/restart") {
@@ -424,10 +425,12 @@ export async function startCommentBridge({
           return reply(response, 400, { error: error.message });
         }
       }
-      if (request.url === "/settings" || request.url === "/agent-update") {
+      if (["/settings", "/agent-update", "/agent-add", "/agent-status"].includes(request.url)) {
         try {
           const body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
           if (request.url === "/agent-update") return reply(response, 200, saveUpdate(normalizeUpdate(body, "copilot")));
+          if (request.url === "/agent-add") return reply(response, 200, api.add(body));
+          if (request.url === "/agent-status") return reply(response, 200, api.setStatus(body));
           const next = { ...settings };
           if (body.owner !== undefined) {
             if (typeof body.owner !== "string" || !NAME.test(body.owner)) throw new Error("Owner must be a short name.");
@@ -505,7 +508,7 @@ export async function startCommentBridge({
   writeFileSync(connectionFile, JSON.stringify({
     port: server.address().port, token, sessionId, previewOrigin, ...(name ? { name } : {}), standalone: Boolean(onRestart), pid: process.pid, documentRoot, startedAt: new Date().toISOString(),
   }), { mode: 0o600 });
-  return {
+  return (api = {
     connectionFile,
     list: () => [...comments.values()].map(withFiles),
     // Agent-authored thread: quiet (the agent already knows), red by default, shown in the browser.
@@ -540,5 +543,5 @@ export async function startCommentBridge({
       unlinkSync(connectionFile);
       await new Promise((accept, reject) => server.close(error => error ? reject(error) : accept()));
     },
-  };
+  });
 }

@@ -137,14 +137,25 @@ export async function connectDocumentReview({
           refs: { type: "array", items: { type: "string" }, description: "Ids of existing threads this one relates to; shown as links with backlinks." },
           color: { type: "string", enum: ["red", "yellow", "green", "blue", "pink"], description: "Defaults to red (the agent colour)." },
           to: { type: "array", items: { type: "string" }, description: "Agent names that should see this thread; omit for the preview's owner only." },
+          store: { type: "string", description: "Session id of the agent whose preview holds the page; defaults to your own standalone server." },
         },
       },
-      handler: args => JSON.stringify(requirePreview().bridge.add(args)),
+      handler: args => {
+        const { store: given, ...input } = args;
+        const store = remoteStore({ store: given });
+        if (store) return remoteBridge(stateRoot(), store, "/agent-add", { method: "POST", body: JSON.stringify(input) }).then(JSON.stringify, remoteFailure);
+        return JSON.stringify(requirePreview().bridge.add(input));
+      },
     }, {
       name: "set_doc_review_status",
       description: "Show a short status line in the user's browser (e.g. state 'reading', text 'Reading the methods section'). Use state 'idle' with empty text to clear it.",
-      parameters: { type: "object", required: ["state"], properties: { state: { type: "string", description: "idle, reading, thinking, editing, waiting (needs attention) or blocked (stuck, needs help; requires text, stays loud until you set another state)." }, text: { type: "string", description: "Up to 120 characters." } } },
-      handler: args => JSON.stringify(requirePreview().bridge.setStatus(args)),
+      parameters: { type: "object", required: ["state"], properties: { state: { type: "string", description: "idle, reading, thinking, editing, waiting (needs attention) or blocked (stuck, needs help; requires text, stays loud until you set another state)." }, text: { type: "string", description: "Up to 120 characters." }, store: { type: "string", description: "Session id of the preview's owner, if not yours." } } },
+      handler: args => {
+        const { store: given, ...input } = args;
+        const store = remoteStore({ store: given });
+        if (store) return remoteBridge(stateRoot(), store, "/agent-status", { method: "POST", body: JSON.stringify(input) }).then(JSON.stringify, remoteFailure);
+        return JSON.stringify(requirePreview().bridge.setStatus(input));
+      },
     }, {
       name: "stop_doc_review",
       description: "Stop this session's document preview. Saved feedback remains on disk.",
