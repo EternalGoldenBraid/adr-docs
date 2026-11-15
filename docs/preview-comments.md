@@ -106,6 +106,10 @@ With a team set, a **To:** chip row appears in the comment box, the history repl
 
 Agents read with `read_doc_review_comments` (`as`: its own name; `store`: the owning agent's session id when the preview isn't its own). The tool returns threads addressed to that name and marks them read for it only, independent of other recipients. `update_doc_review_comment` accepts `store` to reply in someone else's preview; `add_doc_review_comment` accepts `to`.
 
+## DocGraph presentation mode
+
+**▶ Present** (or `:present` in the graph) shows the graph full screen, one node at a time: title, body, image and link. Solid edges are the story and dashed edges lead deeper, so any graph can be presented. `→`/`←` (or `l`/`h`) move along the story, `↓`/`↑` (or `j`/`k`) go into and out of the dashed chain under the current node, `Enter` previews the node's link beside it, `o` opens the linked page, `Home`/`End` jump to the ends, and `Esc` exits. A minimap shows your place; click a dot to jump.
+
 ## DocGraph node images and shapes
 
 A node may carry `"image": "/public-path.png"` (or an http/data URL) and `"shape": "ellipse"` (also `rectangle`, `diamond`, `hexagon`, `octagon`, `barrel`, `round-tag`). The image is drawn inside the node above the title, scaled to fit the node's `w`/`h`; set those to size the box. Both survive edit mode, `:w` and export.

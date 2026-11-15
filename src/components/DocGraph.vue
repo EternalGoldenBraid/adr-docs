@@ -2,6 +2,7 @@
 import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import cytoscape from 'cytoscape'
 import { withBase, useRouter } from 'vitepress'
+import GraphPresenter from './GraphPresenter.vue'
 
 // src: URL of the graph JSON (served from the document's public/ folder).
 // Local edits are autosaved in the browser under storageKey.
@@ -29,8 +30,9 @@ const vimOn = ref(typeof localStorage === 'undefined' || localStorage.getItem('p
 const cmd = ref(null)
 const cmdInput = ref(null)
 const flash = ref('')
+const presenting = ref(null)
 const selTitle = computed(() => (selected.value && cy ? cy.getElementById(selected.value).data('title') || '' : ''))
-const HELP = "DOC-GRAPH(1)\n\nLAYERS\n  The page owns the keys. Click the graph to enter it\n  (mode line: GRAPH); Esc in NORMAL returns to the page.\nMODES\n  NORMAL  fly the view         VISUAL  walk node to node\n  INSERT  edit the graph       Esc     back to NORMAL\nNORMAL\n  h j k l   pan (H J K L: faster)\n  + - 0     zoom in / out / fit\n  v  visual     i  insert     u  up one layer\n  Enter     open the selected \u25b8 layer or \u2197 page\nVISUAL\n  h j k l   nearest node in that direction\n  Enter     open \u25b8 layer or \u2197 page, else zoom to node\n  c         comment on the node\n  s         attach a region screenshot\nINSERT\n  h j k l   select neighbour\n  arrows    nudge node (shift: x5)\n  Enter     edit text    o  new node    x  delete\nCOMMANDS\n  :help :man   this page     :w  export JSON\n  :fit         fit all       :q  close\nMOUSE / TRACKPAD\n  swipe pans \u00b7 pinch or shift+swipe zooms\n  dbl-click: \u2197 opens page, \u25b8 opens layer,\n    node/lane zooms, empty fits\nLINKS\n  a node with a \"link\" (e.g. \"/autonomy\") shows \u2197;\n  external URLs open as normal links"
+const HELP = "DOC-GRAPH(1)\n\nLAYERS\n  The page owns the keys. Click the graph to enter it\n  (mode line: GRAPH); Esc in NORMAL returns to the page.\nMODES\n  NORMAL  fly the view         VISUAL  walk node to node\n  INSERT  edit the graph       Esc     back to NORMAL\nNORMAL\n  h j k l   pan (H J K L: faster)\n  + - 0     zoom in / out / fit\n  v  visual     i  insert     u  up one layer\n  Enter     open the selected \u25b8 layer or \u2197 page\nVISUAL\n  h j k l   nearest node in that direction\n  Enter     open \u25b8 layer or \u2197 page, else zoom to node\n  c         comment on the node\n  s         attach a region screenshot\nINSERT\n  h j k l   select neighbour\n  arrows    nudge node (shift: x5)\n  Enter     edit text    o  new node    x  delete\nCOMMANDS\n  :help :man   this page     :w  export JSON\n  :fit         fit all       :q  close\n  :present     full-screen presentation (→ ← story, ↓ ↑ deeper, Esc exits)\nMOUSE / TRACKPAD\n  swipe pans \u00b7 pinch or shift+swipe zooms\n  dbl-click: \u2197 opens page, \u25b8 opens layer,\n    node/lane zooms, empty fits\nLINKS\n  a node with a \"link\" (e.g. \"/autonomy\") shows \u2197;\n  external URLs open as normal links"
 const topic = ref('')
 const activeTab = ref('')
 const TOPICS = ref([])
@@ -566,6 +568,15 @@ function say(text) {
   setTimeout(() => { if (flash.value === text) flash.value = '' }, 3000)
 }
 
+function present() {
+  const nodes = cy.nodes().filter(n => !n.isParent() && !['text', 'dot'].includes(n.data('kind')))
+    .map(n => ({ id: n.id(), title: n.data('title') || '', body: n.data('body') || '', link: n.data('link') || '', image: n.data('image') || '' }))
+  if (!nodes.length) return say('Nothing to present')
+  const ids = new Set(nodes.map(n => n.id))
+  const edges = cy.edges().map(e => ({ source: e.data('source'), target: e.data('target'), dashed: !!e.data('dashed') })).filter(e => ids.has(e.source) && ids.has(e.target))
+  presenting.value = { nodes, edges }
+}
+
 function runCmd() {
   const c = (cmd.value || '').trim()
   cmd.value = null
@@ -573,6 +584,7 @@ function runCmd() {
   else if (['q', 'close'].includes(c)) help.value = false
   else if (c === 'w') exportJson()
   else if (c === 'fit') fitAll()
+  else if (['present', 'pres'].includes(c)) present()
   else if (c) say('E492: Not an editor command: ' + c)
 }
 
@@ -655,6 +667,7 @@ onUnmounted(() => { removeEventListener('hashchange', landOnNode); document.remo
 
 <template>
 <div class="xp">
+  <GraphPresenter v-if="presenting" :nodes="presenting.nodes" :edges="presenting.edges" @close="presenting = null" />
   <div class="xp-bar">
     <strong>{{ title }}</strong>
     <a v-if="backTo" class="xp-back" :href="withBase(backTo)">← {{ backLabel }}</a>
@@ -664,6 +677,7 @@ onUnmounted(() => { removeEventListener('hashchange', landOnNode); document.remo
       <button :class="{ on: !activeTab }" @click="pickTab(null)">All</button>
       <button v-for="t in tabList" :key="t.label" :class="{ on: activeTab === t.label }" @click="pickTab(t)">{{ t.label }}</button>
     </span>
+    <button title="Present full screen (:present)" @click="present">▶ Present</button>
     <button :class="{ on: help }" title="Controls (?)" @click="help = !help">?</button>
     <button :class="{ on: editMode }" @click="setMode(editMode ? 'normal' : 'insert')">{{ editMode ? '✎ Editing' : '✎ Edit mode' }}</button>
     <template v-if="editMode && selected">
