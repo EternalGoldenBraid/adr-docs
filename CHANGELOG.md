@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.49.1 - 2026-11-15
+
+- Fix: `i` (caret mode) no longer makes the page jump. The caret starts at the visible text nearest the middle of the screen, and an old selection that is off-screen is ignored.
+
 ## 0.49.0 - 2026-11-15
 
 - `V` in the page vim modes selects the whole paragraph (or list item, heading, table cell) under the caret and enters visual mode, so `c` comments on it.

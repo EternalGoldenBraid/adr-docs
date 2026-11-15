@@ -528,6 +528,42 @@
     }
     return edgeRange(last);
   }
+  // Where the reader is most likely looking: the visible text line closest to the viewport's vertical centre.
+  function centerRange() {
+    const top = viewportTop();
+    const middle = (top + innerHeight) / 2;
+    let best;
+    for (const node of textNodes()) {
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      for (const rect of range.getClientRects()) {
+        if (rect.bottom <= top || rect.top >= innerHeight - 24 || !rect.width) continue;
+        const distance = Math.abs((rect.top + rect.bottom) / 2 - middle);
+        if (!best || distance < best.distance) best = { distance, rect };
+      }
+    }
+    if (!best) return viewRange();
+    const { rect } = best;
+    const x = rect.left + Math.min(rect.width / 2, 200);
+    const y = (rect.top + rect.bottom) / 2;
+    const point = document.caretPositionFromPoint?.(x, y);
+    const fallback = point ? null : document.caretRangeFromPoint?.(x, y);
+    const node = point?.offsetNode ?? fallback?.startContainer;
+    if (!node || !document.querySelector(".vp-doc").contains(node)) return viewRange();
+    const chosen = document.createRange();
+    chosen.setStart(node, point?.offset ?? fallback.startOffset);
+    chosen.collapse(true);
+    return chosen;
+  }
+  function cursorInView() {
+    const selected = getSelection();
+    if (!document.querySelector(".vp-doc").contains(selected.focusNode)) return false;
+    const range = document.createRange();
+    range.setStart(selected.focusNode, selected.focusOffset);
+    range.collapse(true);
+    const rect = range.getBoundingClientRect();
+    return rect.height > 0 && rect.bottom > viewportTop() && rect.top < innerHeight - 24;
+  }
   function showCaret(reveal = false) {
     modeLabel();
     const selected = getSelection();
@@ -1761,7 +1797,7 @@
     if (event.key === "i" && !caretMode) {
       event.preventDefault();
       caretMode = true;
-      if (ensureCursor()) showCaret(true);
+      if (cursorInView()) showCaret(); else useRange(centerRange());
       return;
     }
     if (event.key === "V" && !event.ctrlKey && !event.metaKey && !event.altKey) {
