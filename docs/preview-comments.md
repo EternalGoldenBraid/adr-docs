@@ -29,8 +29,10 @@ Keyboard triage: in the list `j`/`k` move, `l` or Enter opens, `r` resolves the
 row and moves to the next, `[`/`]` (or `k` from the first row, then `h`/`l`) switch tabs, `g`/`G` jump to the ends. In a
 thread `j`/`k` step through the messages (and scroll), `J`/`K` go to the next or previous thread, `r` resolves (back to the list
 on the next thread), `i` focuses the reply box, `o` opens the page (also on a focused thread in the list), `s` attaches
-a region, `h` goes back. `Esc` (or `jk` typed quickly) leaves a text field, then the thread, then closes
+a region, `n` starts a linked child thread from the selected text (or the focused message), `h` goes back. `Esc` leaves a text field, then the thread, then closes
 the panel. `:help` lists these too.
+
+**Vim in text fields** (with vim keys on): a field starts in insert mode; `Esc` or `jk` (typed quickly) enters normal mode (orange border, the cursor is a highlighted character), and `Esc` or `jk` again leaves the field so `h`/`l` pick the To: recipients (`i` returns). Normal mode: `h j k l`, `w b e`, `0 ^ $`, `gg G`; `i a I A o O` insert; `x dd D cc C`, `d`/`c`/`y` plus `w e b $ 0 ^ h l`, `yy`, `p P`, `u`, `Ctrl-r`. `v` / `V` start a visual selection (purple border; `o` swaps ends); `y`, `d`/`x`, `c` act on it, `Esc` returns to normal. No counts or `.` repeat.
 
 **Resolve** and **Reopen** explicitly change the status. A reply keeps the
 current status. Reading is separate: opening browser history does not mark

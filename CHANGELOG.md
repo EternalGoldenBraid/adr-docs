@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.44.0 - 2026-11-15
+
+- Vim modes in comment and reply text fields: insert, normal (motions, `x dd D cc C`, `d/c/y` + motion, `yy p P`, `u`, `Ctrl-r`, `i a I A o O`) and visual (`v`, `V`). `Esc`/`jk` goes insert → normal → leaves the field.
+- `n` in a thread starts a linked child thread from the selected text, or from the focused message when nothing is selected.
+
 ## 0.43.0 - 2026-11-15
 
 - `:figure` / **Figure** button saves a graph (4× PNG with node labels), inline SVG, image or canvas as a large figure file, for papers and slides instead of small screenshots. Equations and arbitrary page blocks are not covered yet.
