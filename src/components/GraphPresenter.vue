@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import { withBase, useRouter } from 'vitepress'
 
 // Full-screen, one-node-at-a-time view of a graph. Solid edges are the story (next),
@@ -9,6 +9,8 @@ const emit = defineEmits(['close'])
 const router = useRouter()
 const root = ref(null)
 const embed = ref(false)
+const frame = ref(null)
+const inPreview = ref(false)
 const stage = ref(null)
 
 const byId = computed(() => new Map(props.nodes.map(n => [n.id, n])))
@@ -51,7 +53,7 @@ const notice = ref('')
 let noticeTimer
 const say = text => { notice.value = text; clearTimeout(noticeTimer); noticeTimer = setTimeout(() => { notice.value = '' }, 1500) }
 
-const go = id => { if (id && byId.value.has(id)) { current.value = id; embed.value = false } }
+const go = id => { if (id && byId.value.has(id)) { current.value = id; embed.value = false; inPreview.value = false } }
 const step = d => { const id = story.value[storyIndex.value + d]; id ? go(id) : say(d > 0 ? 'End of the story' : 'Start of the story') }
 const down = () => { const id = dashed.value.next.get(current.value); id ? go(id) : say(dashed.value.prev.has(current.value) ? 'End of this branch' : 'Nothing deeper here') }
 const up = () => { const id = dashed.value.prev.get(current.value); id ? go(id) : say('Already on the story line') }
@@ -62,8 +64,45 @@ const linkUrl = computed(() => { const l = node.value?.link; return !l ? '' : is
 function toggleEmbed() {
   if (!node.value?.link) return say('No link on this node')
   if (isExternal(node.value.link)) window.open(node.value.link, '_blank', 'noopener')
-  else embed.value = !embed.value
+  else {
+    embed.value = !embed.value
+    inPreview.value = embed.value
+    if (embed.value) nextTick(focusFrame)
+  }
 }
+
+// Enter dives into the previewed page (its own Vim keys apply); Esc or jk climbs back to the slide.
+function focusFrame() {
+  frame.value?.focus()
+  try { frame.value?.contentWindow?.focus() } catch (_) { /* cross-origin: the user can click in */ }
+}
+function backToSlide() {
+  inPreview.value = false
+  try { frame.value?.contentWindow?.getSelection()?.removeAllRanges() } catch (_) { /* cross-origin */ }
+  frame.value?.blur()
+  window.focus()
+}
+let lastJ = 0
+function frameKey(e) {
+  if (e.ctrlKey || e.metaKey || e.altKey) return
+  const typing = e.target?.matches?.('input,textarea,select,[contenteditable]:not([contenteditable="false"])')
+  let leave = e.key === 'Escape' && !typing
+  if (e.key === 'j' && !typing) lastJ = Date.now()
+  else if (e.key === 'k' && !typing && Date.now() - lastJ < 300) leave = true
+  if (!leave) return
+  e.preventDefault(); e.stopImmediatePropagation()
+  backToSlide()
+}
+function frameLoaded() {
+  try {
+    const w = frame.value.contentWindow
+    w.addEventListener('keydown', frameKey, true)
+    w.addEventListener('focus', () => { inPreview.value = true })
+    if (inPreview.value) focusFrame()
+  } catch (_) { /* cross-origin page: no key hand-off */ }
+}
+const onBlur = () => setTimeout(() => { if (document.activeElement === frame.value) inPreview.value = true }, 0)
+const onFocus = () => { inPreview.value = false }
 function openPage() {
   const l = node.value?.link
   if (!l) return say('No link on this node')
@@ -111,7 +150,7 @@ function onKey(e) {
   if ((e.composedPath?.()[0] || e.target).matches?.('input,textarea,select')) return
   if (e.ctrlKey || e.metaKey || e.altKey) return
   if (e.key === 'Escape') {
-    if (embed.value) embed.value = false
+    if (embed.value) { embed.value = false; inPreview.value = false }
     else close()
   } else if (keys[e.key]) keys[e.key]()
   e.preventDefault(); e.stopImmediatePropagation()
@@ -124,6 +163,8 @@ const onFullscreen = () => { if (!document.fullscreenElement) emit('close') }
 
 onMounted(() => {
   window.addEventListener('keydown', onKey, true)
+  window.addEventListener('blur', onBlur)
+  window.addEventListener('focus', onFocus)
   document.addEventListener('fullscreenchange', onFullscreen)
   savedTargets = window.previewCommentTargets
   window.previewCommentTargets = { get: id => (id === current.value ? slideTarget() : savedTargets?.get?.(id) || null) }
@@ -131,6 +172,8 @@ onMounted(() => {
 })
 onUnmounted(() => {
   window.removeEventListener('keydown', onKey, true)
+  window.removeEventListener('blur', onBlur)
+  window.removeEventListener('focus', onFocus)
   document.removeEventListener('fullscreenchange', onFullscreen)
   clearTimeout(noticeTimer)
   window.previewCommentTargets = savedTargets
@@ -152,21 +195,21 @@ onUnmounted(() => {
           <h1>{{ node.title }}</h1>
           <p v-if="node.body" class="gp-body">{{ node.body }}</p>
           <button v-if="node.link" type="button" class="gp-link" @click="toggleEmbed">
-            ↗ {{ node.link }} <small>{{ embed ? 'Enter: hide preview' : 'Enter: preview' }} · o: open page</small>
+            ↗ {{ node.link }} <small>{{ embed ? (inPreview ? 'Esc / jk: back to slide' : 'Enter: hide preview') : 'Enter: preview' }} · o: open page</small>
           </button>
         </div>
         <video v-if="node.video" :key="node.id" class="gp-video" :src="imageSrc(node.video)" :poster="node.image ? imageSrc(node.image) : undefined"
           autoplay muted loop playsinline preload="auto" @mouseenter="e => e.target.controls = true" @mouseleave="e => e.target.controls = false" />
         <img v-else-if="node.image" :src="imageSrc(node.image)" alt="" />
       </article>
-      <iframe v-if="embed && linkUrl" class="gp-frame" :src="linkUrl" title="Linked page" />
+      <iframe v-if="embed && linkUrl" ref="frame" class="gp-frame" :class="{ focused: inPreview }" :src="linkUrl" title="Linked page" @load="frameLoaded" />
     </div>
     <nav class="gp-map" :style="{ '--cols': map.cols, '--rows': map.rows }" aria-label="Position">
       <button v-for="d in map.dots" :key="d.id" type="button" class="gp-dot"
         :class="{ now: d.id === current, deep: d.row > 0 }"
         :style="{ gridColumn: d.col + 1, gridRow: d.row + 1 }" :title="byId.get(d.id)?.title" @click="go(d.id)" />
     </nav>
-    <div class="gp-hint">← → story · ↓ deeper · ↑ back · c comment · Enter preview link · o open page · gg/G first/last · Esc exit</div>
+    <div class="gp-hint">← → story · ↓ deeper · ↑ back · c comment · Enter preview link (Esc / jk back) · o open page · gg/G first/last · Esc exit</div>
   </div>
 </Teleport>
 </template>
@@ -190,8 +233,9 @@ onUnmounted(() => {
 .gp-stage.split .gp-card { flex-direction: column; gap: 20px; }
 .gp-link { margin-top: 32px; display: inline-flex; flex-direction: column; align-items: flex-start; gap: 2px; background: #1e293b; color: #7dd3fc; border: 1px solid #334155; border-radius: 10px; padding: 10px 18px; font-size: 22px; }
 .gp-link small { color: #64748b; font-size: 14px; }
-.gp-frame { flex: 1; min-width: 0; border: 1px solid #334155; border-radius: 10px; background: #fff; margin-bottom: 8px; }
+.gp-frame { flex: 1; min-width: 0; border: 3px solid #334155; border-radius: 10px; outline: 0; background: #fff; margin-bottom: 8px; }
 .gp-map { display: grid; grid-template-columns: repeat(var(--cols), 28px); grid-template-rows: repeat(var(--rows), 22px); gap: 4px 10px; justify-content: center; padding: 12px 24px 4px; }
+.gp-frame.focused { border-color: #facc15; }
 .gp-dot { width: 14px; height: 14px; margin: auto; padding: 0; border-radius: 50%; background: #475569; border: 0; }
 .gp-dot.deep { background: #1e3a5f; }
 .gp-dot.now { background: #facc15; box-shadow: 0 0 0 4px #facc1544; }
