@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { commentAttention } from "../scripts/preview_comments/extension.mjs";
@@ -16,6 +17,14 @@ export async function connectDocumentReview({
   let active;
   let starting;
   let attention;
+  // Which standalone `adr` server to talk to: the given store, else this session's own when it has no in-process preview.
+  const remoteStore = args => {
+    if (args.store && (args.store !== session.sessionId || !active)) return args.store;
+    if (!args.store && !active && existsSync(join(stateRoot(), session.sessionId, "connection.json"))) return session.sessionId;
+    return undefined;
+  };
+  // The host reports a thrown handler error only as "Tool execution failed"; hand the cause back as text instead.
+  const remoteFailure = error => `Error: ${error.message}`;
   const requirePreview = () => {
     if (!active) throw new Error("Start a document preview with start_doc_review first.");
     return active;
@@ -79,10 +88,11 @@ export async function connectDocumentReview({
         },
       },
       handler: args => {
-        if (args.store && (args.store !== session.sessionId || !active)) {
-          if (!args.as && args.store !== session.sessionId) throw new Error("`as` (your agent name) is required with `store`.");
+        const store = remoteStore(args);
+        if (store) {
+          if (!args.as && store !== session.sessionId) throw new Error("`as` (your agent name) is required with `store`.");
           const query = new URLSearchParams({ includeSeen: args.include_seen === true ? "1" : "0", ...(args.as ? { as: args.as } : {}) });
-          return remoteBridge(stateRoot(), args.store, `/read?${query}`).then(JSON.stringify);
+          return remoteBridge(stateRoot(), store, `/read?${query}`).then(JSON.stringify, remoteFailure);
         }
         return JSON.stringify(requirePreview().bridge.read({ includeSeen: args.include_seen === true, ...(args.as ? { as: args.as } : {}) }));
       },
@@ -106,8 +116,9 @@ export async function connectDocumentReview({
         if (args.resolved !== undefined) input.resolved = args.resolved;
         if (args.proposal !== undefined) input.proposal = args.proposal;
         if (args.link_comment_ids !== undefined) input.addRefs = args.link_comment_ids;
-        if (args.store && (args.store !== session.sessionId || !active)) {
-          return remoteBridge(stateRoot(), args.store, "/agent-update", { method: "POST", body: JSON.stringify(input) }).then(JSON.stringify);
+        const store = remoteStore(args);
+        if (store) {
+          return remoteBridge(stateRoot(), store, "/agent-update", { method: "POST", body: JSON.stringify(input) }).then(JSON.stringify, remoteFailure);
         }
         return JSON.stringify(requirePreview().bridge.update(input));
       },

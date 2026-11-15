@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.51.1 - 2026-11-15
+
+- Fix: `read_doc_review_comments` and `update_doc_review_comment` called with no `store` from a session whose `adr` server runs standalone now use that session's own store (they failed with "Start a document preview first").
+- Failures from a standalone server are returned as `Error: <cause>` text instead of the host's bare "Tool execution failed".
+- A server started before 0.51 keeps its old code until restarted (`:restart` in the page, or `r` in `adr tui`).
+
 ## 0.51.0 - 2026-11-15
 
 - New agent state `blocked` for `set_doc_review_status` ("stuck, need help"). It requires a reason (up to 120 characters) and stays until the agent sets another state. In the page it shows as a red "Copilot needs help" bar (even with vim off), a blinking red Comments dot, a ⛔ tab title and a desktop notification.
