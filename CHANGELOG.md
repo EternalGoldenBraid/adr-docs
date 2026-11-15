@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.41.1 - 2026-11-15
+
+- `<WorkstreamNow />` rows no longer get a second status pill from the link decorator.
+
 ## 0.41.0 - 2026-11-15
 
 - `jk` typed quickly in a comment text field (with vim keys on) acts as `Esc`, matching nvim configs that map it.
