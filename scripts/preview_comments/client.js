@@ -583,6 +583,7 @@
         if (!selected.size) selected.add(settings.owner);
         onChange?.();
         chipRow(holder, selected, onChange);
+        [...holder.querySelectorAll("button")].find(button => button.textContent === name)?.focus();
       });
       return chip;
     }));
@@ -1411,6 +1412,15 @@
         else closeHistory();
         return;
       }
+      // In the composer, Esc leaves the field first (keeping the draft) so h/l can pick recipients; Esc again closes.
+      const composing = !panel.hidden && shadow.activeElement?.matches("textarea");
+      if (composing) {
+        event.preventDefault();
+        shadow.activeElement.blur();
+        find(".to-new button")?.focus();
+        message(find(".to-new").hidden ? "" : "h/l pick recipients · Space toggles · i back to the comment · Esc closes");
+        return;
+      }
       if (panel.hidden && !visual && !prefix && !selecting) {
         if (caretMode) { caretMode = false; showCaret(); }
         message("");
@@ -1430,6 +1440,16 @@
       message("");
       showCaret();
       return;
+    }
+    if (vimEnabled && !panel.hidden && history.hidden && panel.contains(shadow.activeElement) && !shadow.activeElement.matches("textarea, input, select") && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      const chips = [...find(".to-new").querySelectorAll("button")];
+      const at = chips.indexOf(shadow.activeElement);
+      if (event.key === "i") { event.preventDefault(); find("#comment-body").focus(); return; }
+      if (chips.length && (event.key === "h" || event.key === "l")) {
+        event.preventDefault();
+        chips[Math.max(0, Math.min(chips.length - 1, at + (event.key === "l" ? 1 : -1)))].focus();
+        return;
+      }
     }
     if (!vimEnabled || externalMode || !panel.hidden || !history.hidden || event.ctrlKey || event.metaKey || event.altKey ||
         event.composedPath().some(node => node.matches?.("input, textarea, select, button, [contenteditable]:not([contenteditable='false']), [role='textbox']"))) return;
