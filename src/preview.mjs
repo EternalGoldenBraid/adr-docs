@@ -8,7 +8,7 @@ import { startCommentBridge } from "../scripts/preview_comments/server.mjs";
 const packageRoot = fileURLToPath(new URL("../", import.meta.url));
 
 export async function startDocumentPreview({
-  documentPath, sessionId, storageRoot, notify, onError, port = 0, ownerViaMesh = false,
+  documentPath, sessionId, storageRoot, notify, onError, port = 0, ownerViaMesh = false, name, onRestart,
 }) {
   if (!Number.isInteger(port) || port < 0 || port > 65535) {
     throw new Error("Preview port must be an integer from 0 to 65535.");
@@ -81,7 +81,7 @@ export async function startDocumentPreview({
     const address = server.httpServer.address();
     listenPort = address.port;
     const origin = `http://127.0.0.1:${address.port}`;
-    bridge = await startCommentBridge({ sessionId, documentRoot, storageRoot, previewOrigin: origin, notify, onError, mesh, ownerViaMesh });
+    bridge = await startCommentBridge({ sessionId, documentRoot, storageRoot, previewOrigin: origin, notify, onError, mesh, ownerViaMesh, name, onRestart });
     const stem = basename(document, ".md");
     const url = origin + (stem === "index" ? "/" : "/" + encodeURIComponent(stem));
     return { url, origin, document, documentRoot, workspace, bridge, close };

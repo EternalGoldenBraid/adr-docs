@@ -253,7 +253,7 @@
     `${KM.page.region} region screenshot · ${KM.leader}${KM.leaderKeys.history} history · ${KM.leader}${KM.leaderKeys.chat} session chat`,
     `${KM.resize.narrower}/${KM.resize.wider}/${KM.resize.shorter}/${KM.resize.taller} resize panel · t page tree`,
     "In history: j/k move · l open · r resolve · h back · [ ] tabs · i reply · n new child thread · o page · J/K thread\nIn a text field: Esc or jk → normal mode (h j k l w b e 0 ^ $ gg G · x dd D cc cw yy p P u Ctrl-r · i a I A o O · v V then y d c); Esc or jk again leaves the field",
-    "Search: / or :grep [-d N] [-u N] [-s] [-p|-c] <regex> pages and threads (no flag: all pages; -d 0: this page; -d N: N levels below; -u N: N ancestors; -1 = all)\nCommands: :help :history :chat :comment :tree :export :figure :grep :vim off|on :keys",
+    "Search: / or :grep [-d N] [-u N] [-s] [-p|-c] <regex> pages and threads (no flag: all pages; -d 0: this page; -d N: N levels below; -u N: N ancestors; -1 = all)\nCommands: :help :history :chat :comment :tree :export :figure :restart :grep :vim off|on :keys",
     "Keys are configured in ~/.config/agent-doc-review/keymap.json",
   ].join("\n");
   const commands = {
@@ -363,6 +363,20 @@
   document.addEventListener("click", event => { if (picking) pickFigure(event); }, true);
   document.addEventListener("keydown", event => { if (picking && event.key === "Escape") { stopPicking(); message(""); } }, true);
   commands.figure = startFigure;
+  // :restart — a server started with `adr` restarts itself; the page reloads once it answers again.
+  commands.restart = async () => {
+    try { await api("restart", {}); } catch (error) { message(error.message, true); return; }
+    message("Restarting server…");
+    const began = Date.now();
+    let down = false;
+    const timer = setInterval(async () => {
+      try {
+        const alive = (await fetch(location.href, { cache: "no-store" })).ok;
+        if (alive && (down || Date.now() - began > 8000)) { clearInterval(timer); location.reload(); }
+      } catch { down = true; }
+      if (Date.now() - began > 40000) { clearInterval(timer); message("The server did not come back; check adr tui.", true); }
+    }, 700);
+  };
   find(".figure-save").addEventListener("click", startFigure);
   const grepPanel = find(".grep"), grepList = find(".grep-list");
   const closeGrep = () => { grepPanel.hidden = true; };
@@ -884,7 +898,7 @@
     modeLabel();
     if (!comment) return;
     find(".thread-title").textContent = comment.section;
-    find(".thread-source").href = comment.url;
+    find(".thread-source").href = here(comment.url);
     if (find(".thread-quote").textContent !== comment.quote) find(".thread-quote").textContent = comment.quote;
     const state = find(".thread-state");
     state.textContent = `${isNote(comment) ? "Note" : comment.resolved ? "Resolved" : "Unresolved"} · ${comment.note ? "Private note" : comment.seen ? "Read by Copilot" : "Unread by Copilot"}`;
@@ -937,10 +951,16 @@
     (comment.replies.at(-1)?.author ?? "copilot") === "copilot";
     const banners = find(".banners");
   const linkLabel = c => `${c.section} · ${(c.comment || c.quote || "").slice(0, 40)}`;
+  // Comments store the canonical 127.0.0.1 origin; keep navigation on the address you opened (e.g. NAME.localhost).
+  function here(url) {
+    const u = new URL(url);
+    if (u.port === location.port && /^(127\.0\.0\.1|localhost|[a-z0-9-]+\.localhost)$/.test(u.hostname)) u.host = location.host;
+    return u.href;
+  }
   function goToThread(other) {
     if (other.kind === "session" || pagePath(other.url) === pagePath(location.href)) { openThreadById(other.id); return; }
     sessionStorage.setItem("adr-open-thread", other.id);
-    location.assign(other.url);
+    location.assign(here(other.url));
   }
   function renderLinks(comment) {
     const box = find(".thread-links");

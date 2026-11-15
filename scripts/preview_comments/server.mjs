@@ -48,7 +48,7 @@ const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 class CommentConflict extends Error {}
 
 export async function startCommentBridge({
-  sessionId, documentRoot, previewOrigin, storageRoot, notify, onError, mesh, ownerViaMesh = false,
+  sessionId, documentRoot, previewOrigin, storageRoot, notify, onError, mesh, ownerViaMesh = false, name, onRestart,
 }) {
   const root = realpathSync(documentRoot);
   const directory = join(storageRoot, sessionId);
@@ -251,6 +251,9 @@ export async function startCommentBridge({
     const id = identifier(input.id, "Comment ID");
     if (updates.has(id)) throw new CommentConflict("This ID already identifies a thread update.");
     const url = new URL(field(input.url, "Page URL", 2048));
+    const preview = new URL(previewOrigin);
+    // The same server may be opened as NAME.localhost:port or localhost:port; comments keep one canonical origin.
+    if (url.port === preview.port && url.protocol === preview.protocol && /^(127\.0\.0\.1|localhost|[a-z0-9-]+\.localhost)$/.test(url.hostname)) url.host = preview.host;
     if (url.origin !== previewOrigin) throw new Error("The page is not the configured preview.");
     const pathname = decodeURIComponent(url.pathname).replace(/\.html$/, "");
     const stem = resolve(root, "." + pathname);
@@ -384,8 +387,14 @@ export async function startCommentBridge({
         response.writeHead(200, { "Content-Type": "image/png", "Cache-Control": "private, max-age=31536000, immutable" });
         return response.end(readFileSync(imageFile(download[1])));
       }
-      if (request.method !== "POST" || !["/comments", "/updates", "/attachments", "/userseen", "/settings", "/agent-update"].includes(request.url)) {
+      if (request.method !== "POST" || !["/comments", "/updates", "/attachments", "/userseen", "/settings", "/agent-update", "/restart"].includes(request.url)) {
         return reply(response, 404, { error: "Unknown comment endpoint." });
+      }
+      if (request.url === "/restart") {
+        if (!onRestart) return reply(response, 501, { error: "This server was not started with `adr`, so it cannot restart itself. Restart it from its agent session." });
+        reply(response, 200, { restarting: true });
+        setTimeout(onRestart, 200);
+        return;
       }
       const chunks = [];
       let size = 0;
@@ -482,7 +491,7 @@ export async function startCommentBridge({
     server.listen(0, "127.0.0.1", accept);
   });
   writeFileSync(connectionFile, JSON.stringify({
-    port: server.address().port, token, sessionId, previewOrigin, pid: process.pid, documentRoot, startedAt: new Date().toISOString(),
+    port: server.address().port, token, sessionId, previewOrigin, ...(name ? { name } : {}), standalone: Boolean(onRestart), pid: process.pid, documentRoot, startedAt: new Date().toISOString(),
   }), { mode: 0o600 });
   return {
     connectionFile,

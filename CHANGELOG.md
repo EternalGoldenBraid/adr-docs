@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.50.0 - 2026-11-15
+
+- `adr <folder> --name mokki` names a server; open it as `http://mokki.localhost:PORT` (any `NAME.localhost` reaches the same server, comments included). The port is still needed.
+- `:restart` in the page restarts a server started with `adr` and reloads the page when it is back.
+- `adr tui` lists recent servers (kept in `history.json`) as well as running ones; `r` restarts the selected server or starts a recent one again. `x` and `r` refuse servers hosted by an agent session, which must be stopped with `stop_doc_review`.
+
 ## 0.49.1 - 2026-11-15
 
 - Fix: `i` (caret mode) no longer makes the page jump. The caret starts at the visible text nearest the middle of the screen, and an old selection that is off-screen is ignored.

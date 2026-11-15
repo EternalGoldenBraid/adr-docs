@@ -36,13 +36,16 @@ export function previewComments({ connectionFile }) {
           return fail(503, "Comment bridge is offline. Your draft is kept.");
         }
         const origin = connection.previewOrigin;
-        if (request.headers.host !== new URL(origin).host ||
-            (request.headers.origin && request.headers.origin !== origin) ||
+        // The same server answers as 127.0.0.1, localhost and NAME.localhost on its own port.
+        const preview = new URL(origin);
+        const ownHost = value => { try { const u = new URL(`http://${value}`); return u.port === preview.port && /^(127\.0\.0\.1|localhost|[a-z0-9-]+\.localhost)$/.test(u.hostname); } catch { return false; } };
+        if (!ownHost(request.headers.host ?? "") ||
+            (request.headers.origin && request.headers.origin !== `http://${request.headers.host}`) ||
             request.headers["x-preview-comment"] !== "1") {
           return fail(403, "Only the configured preview may access comments.");
         }
         const path = request.url.slice(base.length);
-        const known = ["/status", "/comments", "/history", "/updates", "/attachments", "/userseen", "/settings", "/mesh"].includes(path) ||
+        const known = ["/status", "/comments", "/history", "/updates", "/attachments", "/userseen", "/settings", "/mesh", "/restart"].includes(path) ||
           request.method === "GET" && /^\/attachments\/[\da-f]{64}$/.test(path);
         if (!known) return fail(404, "Unknown comment endpoint.");
         const upstream = httpRequest({
