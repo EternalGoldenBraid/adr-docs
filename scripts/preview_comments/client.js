@@ -177,6 +177,7 @@
   let serverSeenInit = false;
   let selectedThread;
   let historyFilter = "unresolved";
+  let tabChord;
   let pendingFocus;
   const FILTERS = [["page", "This page"], ["pagehist", "Page history"], ["chat", "Chat"], ["unresolved", "Open"], ["all", "All"], ["resolved", "Resolved"], ["notes", "Notes"]];
   // Highlights and notes carry no resolve state and stay out of triage.
@@ -242,7 +243,7 @@
     bar.hidden = !vimEnabled && !find(".agent-status")?.classList.contains("blocked");
     find(".sb-hint").textContent = !history.hidden ? (selectedThread
       ? "j/k scroll messages · J/K next/prev thread · r resolve · i reply · o page · h back · Esc"
-      : "j/k move (k at top → tabs) · l open · o go to page · r resolve · [ ] tabs · Esc close") : visual ? "c comment · Esc cancel · hjkl extend" : caretMode ? `hjklwb move caret · ${KM.page.visual} select · V paragraph · ${KM.page.comment} comment · Esc scroll mode` : `j/k scroll · i caret · ${KM.page.visual} select text · ${KM.page.comment} comment · ${KM.leader}${KM.leaderKeys.history} threads · ] next awaiting · : commands · :help`;
+      : "j/k move · l open · o go to page · r resolve · [ ] tabs · A all P page O open · PA page history · Esc") : visual ? "c comment · Esc cancel · hjkl extend" : caretMode ? `hjklwb move caret · ${KM.page.visual} select · V paragraph · ${KM.page.comment} comment · Esc scroll mode` : `j/k scroll · i caret · ${KM.page.visual} select text · ${KM.page.comment} comment · ${KM.leader}${KM.leaderKeys.history} threads · ] next awaiting · : commands · :help`;
     find(".sb-mode").textContent = `-- ${mode}${prefix ? " " + prefix : ""} --`;
     vimButton.setAttribute("aria-pressed", String(vimEnabled));
   }
@@ -252,7 +253,7 @@
     `] / [ next / previous thread awaiting you (across pages)`,
     `${KM.page.region} region screenshot · ${KM.leader}${KM.leaderKeys.history} history · ${KM.leader}${KM.leaderKeys.chat} session chat`,
     `${KM.resize.narrower}/${KM.resize.wider}/${KM.resize.shorter}/${KM.resize.taller} resize panel · t page tree`,
-    "In history: j/k move · l open · r resolve · h back · [ ] tabs · i reply · n new child thread · o page · J/K thread\nIn a text field: Esc or jk → normal mode (h j k l w b e 0 ^ $ gg G · x dd D cc cw yy p P u Ctrl-r · i a I A o O · v V then y d c); Esc or jk again leaves the field",
+    "In history: j/k move · l open · r resolve · h back · [ ] tabs · A all · P page · O open · C chat · R resolved · N notes · P+A page history · i reply · n new child thread · o page · J/K thread\nIn a text field: Esc or jk → normal mode (h j k l w b e 0 ^ $ gg G · x dd D cc cw yy p P u Ctrl-r · i a I A o O · v V then y d c); Esc or jk again leaves the field",
     "Search: / or :grep [-d N] [-u N] [-s] [-p|-c] <regex> pages and threads (no flag: all pages; -d 0: this page; -d N: N levels below; -u N: N ancestors; -1 = all)\nCommands: :help :history :chat :comment :tree :export :figure :restart :grep :vim off|on :keys",
     "Keys are configured in ~/.config/agent-doc-review/keymap.json",
   ].join("\n");
@@ -1348,7 +1349,14 @@
     const key = event.key;
     let handled = true;
     const values = FILTERS.map(([value]) => value);
-    if (!selectedThread && field?.classList.contains("tab")) {
+    const tabKey = { A: "all", P: "page", O: "unresolved", C: "chat", R: "resolved", N: "notes" }[key];
+    if (!selectedThread && tabKey && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      // Capitals pick a tab; P with A (either order, within a moment) is the page's whole history.
+      const live = tabChord && Date.now() - tabChord.at < 800 ? tabChord.key : undefined;
+      const pair = tabKey === "page" && live === "all" || tabKey === "all" && live === "page";
+      setFilter(pair ? "pagehist" : tabKey);
+      tabChord = pair ? undefined : { key: tabKey, at: Date.now() };
+    } else if (!selectedThread && field?.classList.contains("tab")) {
       const i = values.indexOf(field.dataset.filter);
       if ((key === "l" || key === "ArrowRight") && i < values.length - 1) setFilter(values[i + 1]);
       else if ((key === "h" || key === "ArrowLeft") && i > 0) setFilter(values[i - 1]);
