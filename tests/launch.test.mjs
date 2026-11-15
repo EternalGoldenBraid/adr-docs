@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { resolveLaunch } from "../src/launch.mjs";
+import { displayUrl, launchArgs, readHistory, recordLaunch } from "../src/servers.mjs";
 
 const PIN = "ddd31c98-538d-4d82-8084-01e59933955e";
 
@@ -74,6 +75,23 @@ test("-d and --detach request a background server", () => {
     assert.equal(resolveLaunch(["docs", "-d"], root).detach, true);
     assert.equal(resolveLaunch(["docs", "5174", "--detach"], root).port, 5174);
     assert.equal(resolveLaunch(["docs"], root).detach, false);
+  } finally {
+    rmSync(root, { recursive: true });
+  }
+});
+
+test("--name is validated, and named servers get a NAME.localhost address and a restartable history entry", () => {
+  const root = site();
+  try {
+    assert.equal(resolveLaunch(["docs", "--name", "demo"], root).name, "demo");
+    assert.throws(() => resolveLaunch(["docs", "--name", "Bad Name"], root));
+    assert.equal(displayUrl({ name: "demo", port: 5173, url: "http://127.0.0.1:5173" }), "http://demo.localhost:5173");
+    recordLaunch(root, { store: "a", name: "demo", document: "/x/index.md", port: 5173 });
+    recordLaunch(root, { store: "b", document: "/y/index.md", port: 5174 });
+    recordLaunch(root, { store: "a", name: "demo", document: "/x/index.md", port: 5175 });
+    const rows = readHistory(root);
+    assert.deepEqual(rows.map(row => row.store), ["a", "b"]);
+    assert.deepEqual(launchArgs(rows[0]), ["/x/index.md", "--port", "5175", "--store", "a", "--name", "demo"]);
   } finally {
     rmSync(root, { recursive: true });
   }

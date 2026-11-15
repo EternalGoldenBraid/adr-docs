@@ -1,6 +1,10 @@
 // Running ADR servers, found through the connection.json each comment bridge writes into its store.
-import { readdirSync, readFileSync, unlinkSync } from "node:fs";
+import { spawn } from "node:child_process";
+import { mkdirSync, openSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const LAUNCHER = fileURLToPath(new URL("../bin/preview.mjs", import.meta.url));
 
 // Ports Chrome and Firefox refuse to open (ERR_UNSAFE_PORT), so a server there looks dead.
 const BLOCKED = new Set([
@@ -29,7 +33,47 @@ export function listServers(storageRoot, { prune = false } = {}) {
       if (prune) try { unlinkSync(file); } catch { /* already gone */ }
       continue;
     }
-    rows.push({ store, url: info.previewOrigin, pid: info.pid, root: info.documentRoot, startedAt: info.startedAt });
+    rows.push({ store, url: info.previewOrigin, pid: info.pid, root: info.documentRoot, startedAt: info.startedAt, name: info.name, standalone: isStandalone(info.pid) });
   }
   return rows.sort((a, b) => String(a.url).localeCompare(String(b.url)));
+}
+
+// Only servers started with `adr` may be stopped or restarted from here; an agent session's server shares its process.
+export function isStandalone(pid) {
+  try { return readFileSync(`/proc/${pid}/cmdline`, "utf8").includes("preview.mjs"); } catch { return false; }
+}
+
+// A server's address: NAME.localhost resolves to this machine in browsers, so the name replaces 127.0.0.1.
+export const displayUrl = row => row.name ? row.url.replace("127.0.0.1", `${row.name}.localhost`) : row.url;
+
+const historyFile = storageRoot => join(storageRoot, "history.json");
+export function readHistory(storageRoot) {
+  try { return JSON.parse(readFileSync(historyFile(storageRoot), "utf8")); } catch { return []; }
+}
+// What `adr` was asked to serve, newest first, so a stopped server can be started again.
+export function recordLaunch(storageRoot, entry) {
+  const rows = [{ ...entry, at: new Date().toISOString() }, ...readHistory(storageRoot).filter(row => row.store !== entry.store)].slice(0, 30);
+  mkdirSync(storageRoot, { recursive: true });
+  writeFileSync(historyFile(storageRoot), JSON.stringify(rows, null, 1));
+}
+
+export function launchArgs(entry) {
+  return [entry.document, "--port", String(entry.port), "--store", entry.store, ...(entry.name ? ["--name", entry.name] : [])];
+}
+
+export function startDetached(storageRoot, argv, env = {}) {
+  mkdirSync(storageRoot, { recursive: true });
+  const store = argv[argv.indexOf("--store") + 1] ?? "adr";
+  const log = openSync(join(storageRoot, `${store}.log`), "a");
+  const child = spawn(process.execPath, [LAUNCHER, ...argv.filter(arg => arg !== "-d" && arg !== "--detach")], {
+    detached: true, stdio: ["ignore", log, log], env: { ...process.env, ...env },
+  });
+  child.unref();
+  return child;
+}
+
+export async function waitForExit(pid, ms = 10000) {
+  const end = Date.now() + ms;
+  while (Date.now() < end && alive(pid)) await new Promise(done => setTimeout(done, 100));
+  return !alive(pid);
 }
