@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.48.0 - 2026-11-15
+
+- `adr <folder> -d` (`--detach`) starts the server in the background and prints its URL.
+- `adr tui`: a dark terminal list of running servers; `j/k` move, `x` stops (with confirmation), `o` opens, `r` refreshes, `q` quits.
+- New agent tool `list_doc_review_servers` returns the running servers and their comment stores.
+
 ## 0.47.0 - 2026-11-15
 
 - `adr list` shows the running ADR servers (url, pid, store, folder) and removes stale entries. `connection.json` now records `pid`, `documentRoot` and `startedAt`.

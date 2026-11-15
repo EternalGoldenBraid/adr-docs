@@ -67,3 +67,14 @@ test("browser-blocked ports are refused, and stale servers are not listed", asyn
     rmSync(root, { recursive: true });
   }
 });
+
+test("-d and --detach request a background server", () => {
+  const root = site();
+  try {
+    assert.equal(resolveLaunch(["docs", "-d"], root).detach, true);
+    assert.equal(resolveLaunch(["docs", "5174", "--detach"], root).port, 5174);
+    assert.equal(resolveLaunch(["docs"], root).detach, false);
+  } finally {
+    rmSync(root, { recursive: true });
+  }
+});

@@ -17,7 +17,9 @@ npm run preview -- path/to/doc.md    # any Markdown file
 npm run export -- doc.md --page /x   # offline copy of one page; repeat --page for several (or the Export button / :export)
 adr path/to/doc.md 5190              # same, from anywhere (ln -s $PWD/bin/preview.mjs ~/.local/bin/adr)
 adr path/to/site --port 5174         # a whole folder of pages, from its index.md
+adr path/to/site -d                  # run in the background (log in the state dir)
 adr list                             # running ADR servers: url, pid, store, folder
+adr tui                              # dark terminal list: j/k, x stop, o open, q quit
 npm run example:paper                # fetch an arXiv paper for the example
 ```
 
@@ -31,6 +33,7 @@ or pass `--store UUID`. Agents read it with `read_doc_review_comments(store=...)
 
 `adr list` shows every running server and its store, and clears stale entries. Browsers
 refuse some ports (for example 6666, the IRC range); `adr` rejects those with a message.
+Agents can call `list_doc_review_servers` for the same list.
 
 ## With Copilot CLI
 
