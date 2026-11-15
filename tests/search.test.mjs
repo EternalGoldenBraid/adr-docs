@@ -45,3 +45,14 @@ test("group-by: status nests tickets under virtual status groups", async () => {
   assert.equal(by["workstreams/index#active"].link, "/workstreams/#active");
   assert.equal(readPageTree(root, { grouped: false }).length, 4);
 });
+
+test("the team page table is the roster", async () => {
+  const { readRoster } = await import("../src/roster.mjs");
+  const root = mkdtempSync(join(tmpdir(), "roster-"));
+  writeFileSync(join(root, "index.md"), "# Home\n");
+  writeFileSync(join(root, "team.md"), "# Team\n\n| Who | Role | Machine | Session | Harness |\n|---|---|---|---|---|\n| Alice | Lead | | | |\n| GPU agent | Builder | gpu-box | `28588d53-1116-45c0-947d-69fc9bc1c727` | copilot |\n");
+  const roster = readRoster(root);
+  assert.equal(roster.length, 2);
+  assert.deepEqual(roster[1], { name: "GPU agent", slug: "gpu-agent", role: "Builder", machine: "gpu-box", harness: "copilot", session: "28588d53-1116-45c0-947d-69fc9bc1c727" });
+  assert.equal(roster[0].session, "");
+});

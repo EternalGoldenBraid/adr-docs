@@ -1,4 +1,5 @@
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { basename, dirname, extname, isAbsolute, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createServer } from "vitepress";
@@ -34,6 +35,16 @@ export async function startDocumentPreview({
 
   let server;
   let bridge;
+  let node;
+  // Quiet notes to addressed agents go out as a non-agent mesh node, joined on first use; absent mesh means no notes.
+  const mesh = { async send(session, content) {
+    if (!node) {
+      const module = await import(pathToFileURL(join(homedir(), ".copilot", "extensions", "agent-mesh", "node.mjs")).href);
+      node = module.joinMesh({ name: "agent-doc-review-site", kind: "site", cwd: documentRoot });
+    }
+    const result = node.send({ recipient_session_id: session, content, priority: "normal" });
+    if (result?.error) throw new Error(result.error);
+  } };
   let closed = false;
   async function close() {
     if (closed) return;
@@ -42,6 +53,7 @@ export async function startDocumentPreview({
       ...(server ? [server.close()] : []),
       ...(bridge ? [bridge.close()] : []),
     ]);
+    try { node?.close(); } catch { /* ignore */ }
     rmSync(workspace, { recursive: true });
     const errors = results.filter(result => result.status === "rejected").map(result => result.reason);
     if (errors.length) throw new AggregateError(errors, "Preview cleanup failed.");
@@ -69,7 +81,7 @@ export async function startDocumentPreview({
     const address = server.httpServer.address();
     listenPort = address.port;
     const origin = `http://127.0.0.1:${address.port}`;
-    bridge = await startCommentBridge({ sessionId, documentRoot, storageRoot, previewOrigin: origin, notify, onError });
+    bridge = await startCommentBridge({ sessionId, documentRoot, storageRoot, previewOrigin: origin, notify, onError, mesh });
     const stem = basename(document, ".md");
     const url = origin + (stem === "index" ? "/" : "/" + encodeURIComponent(stem));
     return { url, origin, document, documentRoot, workspace, bridge, close };
