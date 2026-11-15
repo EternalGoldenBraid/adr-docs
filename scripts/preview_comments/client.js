@@ -42,6 +42,8 @@
       .thread{margin:0!important}.thread>*{margin-left:20px;margin-right:20px}
       .history-head h2{margin:0}.history-head .history-counts{margin-left:auto;margin-right:12px}
       .icon{padding:2px 9px;border-radius:6px;line-height:1.4}
+      .mesh-panel{width:min(640px,94vw)}.mesh-table{width:100%;border-collapse:collapse;font-size:13px}.mesh-table th,.mesh-table td{text-align:left;padding:4px 8px;border-bottom:1px solid #3a404a}
+      .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:#59616d}.dot.active{background:#51cf66}.dot.idle{background:#fcc419}
       .tabs{display:flex;gap:2px;margin-top:4px!important;margin-bottom:6px!important;border-bottom:1px solid #3a404a}
       .tab{border:0;border-bottom:2px solid transparent;border-radius:0;background:none;padding:6px 10px;color:#b7c1ce}
       .tab[aria-selected=true]{color:#fff;border-bottom-color:#74c0fc}
@@ -111,6 +113,7 @@
     </section>
     <section class="panel history" hidden aria-labelledby="history-title">
       <div class="history-head"><h2 id="history-title">Comment history</h2><small class="history-counts"></small>
+      <button class="history-team" type="button" title="Team status (:mesh)">Team</button>
       <button class="history-refresh icon" type="button" title="Refresh">↻</button>
       <button class="history-close icon" type="button" title="Close (Esc)" aria-label="Close">✕</button></div>
       <div class="tabs" role="tablist"></div>
@@ -128,6 +131,10 @@
         <div class="actions"><button class="thread-region" type="button" title="Attach a screenshot of a region (s)">Region</button>
         <button class="primary reply-send" type="submit">Reply</button></div></form>
       </section>
+    </section>
+    <section class="panel mesh-panel" hidden aria-label="Team status">
+      <div class="history-head"><h2>Team</h2><small class="mesh-note"></small><button class="mesh-close icon" type="button" aria-label="Close">✕</button></div>
+      <table class="mesh-table"><thead><tr><th>Who</th><th>Status</th><th>Machine</th><th>Harness</th><th>Session</th></tr></thead><tbody></tbody></table>
     </section>
     <div class="status" role="status" aria-live="polite"></div>
     <div class="region" hidden><div class="region-box" hidden></div><div class="region-tip">Drag to select a region · Esc cancels</div></div>
@@ -254,7 +261,7 @@
     comment: () => commentSelection(),
     tree: () => document.dispatchEvent(new KeyboardEvent("keydown", { key: "t", bubbles: true })),
     settings: () => loadSettings().then(() => message(`owner: ${settings.owner}\nteam: ${settings.team.join(", ") || "(none)"}\ndefault recipients: ${settings.default}\n:owner NAME · :team A B C · :default owner|last`)),
-    mesh: () => api("mesh").then(v => message(v.members.map(m => `${m.name.padEnd(22)} ${(m.status).padEnd(8)} ${(m.machine || "-").padEnd(14)} ${m.harness || "-"}  ${m.session.slice(0, 8)}`).join("\n") || "No team page found.")).catch(e => message(e.message, true)),
+    mesh: () => openMesh(),
     owner: name => name ? api("settings", { owner: name }).then(v => { settings = v; message("Owner: " + name); }).catch(e => message(e.message, true)) : message("Usage: :owner NAME (this preview's agent)", true),
     team: (_first, line = "") => api("settings", { team: line.trim().split(/[\s,]+/).filter(Boolean) }).then(v => { settings = v; message("Team: " + (v.team.join(", ") || "(none)")); }).catch(e => message(e.message, true)),
     default: arg => ["owner", "last"].includes(arg) ? api("settings", { default: arg }).then(v => { settings = v; message("Default recipients: " + arg); }).catch(e => message(e.message, true)) : message("Usage: :default owner|last", true),
@@ -540,6 +547,22 @@
     status.textContent = text;
     status.classList.toggle("error", error);
   }
+  let meshTimer;
+  function openMesh() {
+    const panelEl = find(".mesh-panel"), body = find(".mesh-table tbody");
+    const load = () => api("mesh").then(({ members }) => {
+      body.replaceChildren(...members.map(m => {
+        const row = document.createElement("tr");
+        const cell = (text, dot) => { const td = document.createElement("td"); if (dot) { const d = document.createElement("span"); d.className = "dot " + dot; td.append(d); } td.append(text); row.append(td); };
+        cell(m.name); cell(m.status === "human" ? "human" : m.status, m.status); cell(m.machine || "—"); cell(m.harness || "—"); cell(m.session ? m.session.slice(0, 8) : "—");
+        return row;
+      }));
+      find(".mesh-note").textContent = members.length ? "" : "No team page with a Session column found.";
+    }).catch(e => message(e.message, true));
+    panelEl.hidden = false; load(); clearInterval(meshTimer); meshTimer = setInterval(load, 10000);
+  }
+  find(".mesh-close").addEventListener("click", () => { find(".mesh-panel").hidden = true; clearInterval(meshTimer); });
+  find(".history-team").addEventListener("click", openMesh);
   let settings = { owner: "owner", team: [], default: "owner", last: [] };
   const loadSettings = () => api("settings").then(value => { settings = value; }).catch(() => {});
   const recipients = () => [...new Set([settings.owner, ...settings.team])];
