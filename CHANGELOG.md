@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.39.1 - 2026-11-15
+
+- Team status now resolves roster agents on enrolled peer machines (the `Machine` column matching a `machines.json` peer) over the mesh's SSH route, so remote agents no longer show offline. Cached for 15 s.
+
 ## 0.39.0 - 2026-11-15
 
 - `<TeamGraph />`: live team graph for the team page. One node per roster agent, coloured by mesh status (active / idle / offline), grouped into subgraphs by the roster's new `Working on` column. Needs a running preview.
