@@ -8,6 +8,7 @@ import ClassificationBanner from "../components/ClassificationBanner.vue";
 import WorkstreamBoard from "../components/WorkstreamBoard.vue";
 import PageTree from "../components/PageTree.vue";
 import "./task-lists.css";
+import "./layout.css";
 
 // The default theme plus <DocGraph src="/graph.json" /> (an editable layered graph) <RerunViewer src="x.rrd" /> (hosted Rerun web viewer) and the page tree:
 // breadcrumbs, child pages and a collapsible tree (`t`) driven by `parent:` / `order:` front matter.

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.40.0 - 2026-11-15
+
+- `<TeamGraph />` has Topic, Machine and Command views (tab remembered): topic groups, machine groups with nested topics, and a top-down reports-to tree (humans shown without a status colour). Larger labels. The roster reads two new optional columns, `Topic` and `Reports to`.
+- Wider reading column on doc pages (about 1040 px instead of 688 px) to cut the empty margins.
+
 ## 0.39.2 - 2026-11-15
 
 - Team status shows why a peer machine could not be resolved (`errors` from `/mesh`, shown in the Team panel).
