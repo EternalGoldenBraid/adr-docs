@@ -550,14 +550,14 @@
   let meshTimer;
   function openMesh() {
     const panelEl = find(".mesh-panel"), body = find(".mesh-table tbody");
-    const load = () => api("mesh").then(({ members }) => {
+    const load = () => api("mesh").then(({ members, errors = {} }) => {
       body.replaceChildren(...members.map(m => {
         const row = document.createElement("tr");
         const cell = (text, dot) => { const td = document.createElement("td"); if (dot) { const d = document.createElement("span"); d.className = "dot " + dot; td.append(d); } td.append(text); row.append(td); };
         cell(m.name); cell(m.status === "human" ? "human" : m.status, m.status); cell(m.machine || "—"); cell(m.harness || "—"); cell(m.session ? m.session.slice(0, 8) : "—");
         return row;
       }));
-      find(".mesh-note").textContent = members.length ? "" : "No team page with a Session column found.";
+      find(".mesh-note").textContent = members.length ? Object.entries(errors).map(([machine, text]) => `${machine}: ${text}`).join(" · ") : "No team page with a Session column found.";
     }).catch(e => message(e.message, true));
     panelEl.hidden = false; load(); clearInterval(meshTimer); meshTimer = setInterval(load, 10000);
   }

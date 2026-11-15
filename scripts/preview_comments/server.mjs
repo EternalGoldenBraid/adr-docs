@@ -94,6 +94,7 @@ export async function startCommentBridge({
   // Agents on enrolled peer machines are asked over the mesh's own SSH route (machines.json); cached so polling stays cheap.
   const remote = new Map();
   let remoteAt = 0, remoteLoading;
+  const remoteErrors = new Map();
   function refreshRemote() {
     if (remoteLoading) return remoteLoading;
     remoteAt = Date.now();
@@ -106,9 +107,10 @@ export async function startCommentBridge({
         try {
           const result = await requestPeer(config, machine, "list", { status: "all" });
           for (const agent of result.agents) remote.set(agent.session_id, agent);
-        } catch { /* unreachable peer stays unknown */ }
+          remoteErrors.delete(machine);
+        } catch (error) { remoteErrors.set(machine, error.message); }
       }));
-    })().catch(() => {}).finally(() => { remoteLoading = undefined; });
+    })().catch(error => remoteErrors.set("*", error.message)).finally(() => { remoteLoading = undefined; });
     return remoteLoading;
   }
 
@@ -362,7 +364,7 @@ export async function startCommentBridge({
         return reply(response, 200, { sessionId, revision, seenInit, comments: [...comments.values()] });
       }
       if (request.method === "GET" && request.url === "/settings") return reply(response, 200, effective());
-      if (request.method === "GET" && request.url === "/mesh") return reply(response, 200, { members: await meshStatus() });
+      if (request.method === "GET" && request.url === "/mesh") return reply(response, 200, { members: await meshStatus(), errors: Object.fromEntries(remoteErrors) });
       const readRoute = request.method === "GET" && /^\/read\?(.*)$/.exec(request.url);
       if (readRoute) {
         const query = new URLSearchParams(readRoute[1]);
