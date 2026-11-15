@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.38.0 - 2026-11-15
+
+- DocGraph: self-loop edges (an edge whose source and target are the same node) draw as a loop; an optional `loop` field (`left` default, `top`, `right`, `bottom`) picks the side. Compact nodes (any kind other than `node`) show their body as hover text.
+
 ## 0.37.1 - 2026-11-15
 
 - Team panel: a **Team** button in the comment history (and `:mesh`) opens a live table of roster members with status, machine, harness and session.
