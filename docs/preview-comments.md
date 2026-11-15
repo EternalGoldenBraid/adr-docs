@@ -19,7 +19,7 @@ appear in **History**; document edits appear through the existing hot preview.
 ## Comment history and replies
 
 **History** lists this session's saved comments as compact rows, with tabs
-**This page**, **Chat**, **Open**, **All** and **Resolved**. Open a thread to see
+**This page**, **Page history** (every thread on this page, resolved ones included), **Chat**, **Open**, **All** and **Resolved**. Open a thread to see
 its selected content, page link, link chips and dated replies from you and
 Copilot; the reply box stays at the bottom.
 

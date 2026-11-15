@@ -178,7 +178,7 @@
   let selectedThread;
   let historyFilter = "unresolved";
   let pendingFocus;
-  const FILTERS = [["page", "This page"], ["chat", "Chat"], ["unresolved", "Open"], ["all", "All"], ["resolved", "Resolved"], ["notes", "Notes"]];
+  const FILTERS = [["page", "This page"], ["pagehist", "Page history"], ["chat", "Chat"], ["unresolved", "Open"], ["all", "All"], ["resolved", "Resolved"], ["notes", "Notes"]];
   // Highlights and notes carry no resolve state and stay out of triage.
   const isNote = comment => Boolean(comment.note || comment.highlight && !comment.comment);
   let historyTimer;
@@ -812,6 +812,7 @@
       if (filter === "notes" ? !isNote(comment) : isNote(comment) && filter !== "all") continue;
       if (filter !== "notes" && (filter === "chat" ? closed || (comment.kind !== "page" && comment.kind !== "session")
         : filter === "page" ? closed || (comment.kind !== "session" && pagePath(comment.url) !== pagePath(location.href))
+        : filter === "pagehist" ? comment.kind === "session" || pagePath(comment.url) !== pagePath(location.href)
         : filter === "unresolved" ? closed
         : filter === "resolved" ? !comment.resolved : false)) continue;
       const card = document.createElement("button");
