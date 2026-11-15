@@ -147,7 +147,7 @@ onUnmounted(() => {
       <button type="button" aria-label="Exit presentation" @click="close">✕ Esc</button>
     </div>
     <div v-if="node" ref="stage" class="gp-stage" :class="{ split: embed }" @mouseup="onMouseUp">
-      <article class="gp-card" :class="{ deep: depth > 0, image: node.image }">
+      <article class="gp-card" :class="{ deep: depth > 0, image: node.image || node.video }">
         <div class="gp-text">
           <h1>{{ node.title }}</h1>
           <p v-if="node.body" class="gp-body">{{ node.body }}</p>
@@ -155,7 +155,9 @@ onUnmounted(() => {
             ↗ {{ node.link }} <small>{{ embed ? 'Enter: hide preview' : 'Enter: preview' }} · o: open page</small>
           </button>
         </div>
-        <img v-if="node.image" :src="imageSrc(node.image)" alt="" />
+        <video v-if="node.video" :key="node.id" class="gp-video" :src="imageSrc(node.video)" :poster="node.image ? imageSrc(node.image) : undefined"
+          autoplay muted loop playsinline preload="auto" @mouseenter="e => e.target.controls = true" @mouseleave="e => e.target.controls = false" />
+        <img v-else-if="node.image" :src="imageSrc(node.image)" alt="" />
       </article>
       <iframe v-if="embed && linkUrl" class="gp-frame" :src="linkUrl" title="Linked page" />
     </div>
@@ -183,8 +185,8 @@ onUnmounted(() => {
 .gp-card.image .gp-text { flex: 1; }
 .gp-card h1 { margin: 0 0 24px; font-size: clamp(32px, 5vw, 76px); line-height: 1.1; font-weight: 700; border: 0; padding: 0; letter-spacing: 0; }
 .gp-body { margin: 0; font-size: clamp(20px, 2.6vw, 40px); line-height: 1.4; white-space: pre-line; color: #cbd5e1; }
-.gp-card img { max-width: 48%; max-height: 100%; object-fit: contain; border-radius: 10px; }
-.gp-stage.split .gp-card img { max-width: 100%; max-height: 30vh; }
+.gp-card img, .gp-video { max-width: 48%; max-height: 100%; object-fit: contain; border-radius: 10px; }
+.gp-stage.split .gp-card img, .gp-stage.split .gp-video { max-width: 100%; max-height: 30vh; }
 .gp-stage.split .gp-card { flex-direction: column; gap: 20px; }
 .gp-link { margin-top: 32px; display: inline-flex; flex-direction: column; align-items: flex-start; gap: 2px; background: #1e293b; color: #7dd3fc; border: 1px solid #334155; border-radius: 10px; padding: 10px 18px; font-size: 22px; }
 .gp-link small { color: #64748b; font-size: 14px; }
@@ -193,5 +195,5 @@ onUnmounted(() => {
 .gp-dot { width: 14px; height: 14px; margin: auto; padding: 0; border-radius: 50%; background: #475569; border: 0; }
 .gp-dot.deep { background: #1e3a5f; }
 .gp-dot.now { background: #facc15; box-shadow: 0 0 0 4px #facc1544; }
-.gp-hint { padding: 4px 24px 14px; text-align: center; color: #64748b; font-size: 14px; }
+.gp-hint { padding: 4px 24px 40px; text-align: center; color: #64748b; font-size: 14px; }
 </style>

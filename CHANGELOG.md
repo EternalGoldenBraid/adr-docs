@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.55.1 - 2026-11-15
+
+- Presentation mode: a DocGraph node can have a `video` (mp4 path, resolved like `image`); it autoplays muted and looped, with controls on hover, and `image` becomes its poster. The key hint no longer hides under the status bar.
+
 ## 0.55.0 - 2026-11-15
 
 - Comment while presenting: `c` (or the 💬 button) opens the comment box on the slide in view; selecting text with the mouse opens it with the selection quoted. Comments anchor to the graph node (`node-<id>`), so they reach the page's owner like any node comment. The presenter now fullscreens the whole page so the overlay stays visible.
