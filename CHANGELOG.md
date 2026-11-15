@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.51.0 - 2026-11-15
+
+- New agent state `blocked` for `set_doc_review_status` ("stuck, need help"). It requires a reason (up to 120 characters) and stays until the agent sets another state. In the page it shows as a red "Copilot needs help" bar (even with vim off), a blinking red Comments dot, a ⛔ tab title and a desktop notification.
+- Fix: `read_doc_review_comments` and `update_doc_review_comment` with `store` set to your own session now go to the standalone `adr` server instead of failing (an `adr` server has no preview inside the agent session). `as` is optional for your own store.
+- Fix: `update_doc_review_comment` accepts the 8-character thread id shown in the UI and mesh notes, not only the full UUID.
+- Mesh notifications quote up to 400 characters (was 100) and say when truncated.
+
 ## 0.50.0 - 2026-11-15
 
 - `adr <folder> --name demo` names a server; open it as `http://demo.localhost:PORT` (any `NAME.localhost` reaches the same server, comments included). The port is still needed.

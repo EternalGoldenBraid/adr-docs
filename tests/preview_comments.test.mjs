@@ -506,3 +506,19 @@ test("without a hosting agent, the store's owner is told over the mesh too, incl
   }
   rmSync(directory, { recursive: true, force: true });
 });
+
+test("an update accepts a unique 8-character thread id prefix, and blocked needs a reason", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "adr-prefix-"));
+  writeFileSync(join(dir, "page.md"), "# Page\n\nBody text.\n");
+  const bridge = await startCommentBridge({ sessionId: randomUUID(), documentRoot: dir, storageRoot: dir, previewOrigin: "http://127.0.0.1:5199", onError() {}, notify: async () => {} });
+  try {
+    const created = bridge.add({ page: "/page", kind: "page", quote: "Page", comment: "hi" });
+    assert.ok(bridge.update({ id: randomUUID(), commentId: created.id.slice(0, 8), reply: "ok" }).saved);
+    assert.throws(() => bridge.update({ id: randomUUID(), commentId: "00000000", reply: "ok" }), /does not exist/);
+    assert.throws(() => bridge.setStatus({ state: "blocked", text: " " }), /reason/);
+    assert.ok(bridge.setStatus({ state: "blocked", text: "need credentials" }).saved);
+  } finally {
+    await bridge.close();
+    rmSync(dir, { recursive: true });
+  }
+});

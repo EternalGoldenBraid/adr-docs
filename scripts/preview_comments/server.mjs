@@ -140,7 +140,8 @@ export async function startCommentBridge({
       const target = agents().find(row => row.slug === name);
       if (!target || (name === ownerName() && !ownerViaMesh)) continue;
       const page = new URL(comment.url).pathname;
-      const preview = text.replace(/\s+/g, " ").slice(0, 100);
+      const flat = text.replace(/\s+/g, " ");
+      const preview = flat.length > 400 ? `${flat.slice(0, 400)}… [truncated; read the thread for the rest]` : flat;
       Promise.resolve(mesh.send(target.session, `ADR comment for you on ${page} (thread ${comment.id.slice(0, 8)}): "${preview}". ` +
         `Read: read_doc_review_comments(as="${target.slug}", store="${sessionId}"); reply: update_doc_review_comment(store="${sessionId}", comment_id="${comment.id}").`))
         .catch(error => onError?.(error));
@@ -281,6 +282,17 @@ export async function startCommentBridge({
     };
   }
 
+  // The page and mesh notes show 8-character ids; accept a unique prefix of a thread id.
+  function resolveCommentId(value) {
+    const text = field(value, "Comment ID", 36).toLowerCase();
+    if (/^[\da-f]{8}(-[\da-f-]{0,27})?$/.test(text) && text.length < 36) {
+      const hits = [...comments.keys()].filter(id => id.startsWith(text));
+      if (hits.length === 1) return hits[0];
+      throw new Error(hits.length ? `Comment id prefix '${text}' is ambiguous; use more characters.` : "The comment does not exist in this session.");
+    }
+    return identifier(value, "Comment ID");
+  }
+
   function normalizeUpdate(input, author) {
     if (!["user", "copilot"].includes(author)) throw new Error("Invalid reply author.");
     if (author === "user" && input.sessionId !== sessionId) {
@@ -288,7 +300,7 @@ export async function startCommentBridge({
     }
     const value = {
       id: identifier(input.id, "Update ID"),
-      commentId: identifier(input.commentId, "Comment ID"), author,
+      commentId: resolveCommentId(input.commentId), author,
     };
     if (comments.has(value.id)) throw new CommentConflict("This update ID already identifies a comment.");
     if (!comments.has(value.commentId)) throw new Error("The comment does not exist in this session.");
@@ -514,6 +526,7 @@ export async function startCommentBridge({
       return { id: record.id, saved: true, url: record.url };
     },
     setStatus: ({ state = "working", text = "" }) => {
+      if (state === "blocked" && !String(text).trim()) throw new Error("state 'blocked' needs a reason in text (up to 120 characters).");
       agentStatus = { state: String(state).slice(0, 24), text: String(text).slice(0, 120), at: new Date().toISOString() };
       return { saved: true };
     },
