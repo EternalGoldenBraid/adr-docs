@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.51.2 - 2026-11-15
+
+- `add_doc_review_comment` and `set_doc_review_status` now work against a standalone `adr` server (they failed with "Tool execution failed"); both take an optional `store`, defaulting to your own session's server.
+- Restart a standalone server after updating ADR: it keeps running the code it started with.
+
 ## 0.51.1 - 2026-11-15
 
 - Fix: `read_doc_review_comments` and `update_doc_review_comment` called with no `store` from a session whose `adr` server runs standalone now use that session's own store (they failed with "Start a document preview first").
