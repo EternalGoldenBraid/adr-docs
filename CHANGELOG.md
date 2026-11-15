@@ -2,6 +2,11 @@
 
 ## 0.38.0 - 2026-11-15
 
+- `<TeamGraph />`: live team graph for the team page. One node per roster agent, coloured by mesh status (active / idle / offline), grouped into subgraphs by the roster's new `Working on` column. Needs a running preview.
+- Composer: Esc leaves the comment field (draft kept) and focuses the **To:** chips; `h`/`l` move between chips, Space toggles, `i` returns to the text, Esc again closes.
+
+## 0.38.0 - 2026-11-15
+
 - DocGraph: self-loop edges (an edge whose source and target are the same node) draw as a loop; an optional `loop` field (`left` default, `top`, `right`, `bottom`) picks the side. Compact nodes (any kind other than `node`) show their body as hover text.
 
 ## 0.37.1 - 2026-11-15

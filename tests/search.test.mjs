@@ -50,9 +50,9 @@ test("the team page table is the roster", async () => {
   const { readRoster } = await import("../src/roster.mjs");
   const root = mkdtempSync(join(tmpdir(), "roster-"));
   writeFileSync(join(root, "index.md"), "# Home\n");
-  writeFileSync(join(root, "team.md"), "# Team\n\n| Who | Role | Machine | Session | Harness |\n|---|---|---|---|---|\n| Nicklas | Lead | | | |\n| GPU agent | Builder | gpu-box | `28588d53-1116-45c0-947d-69fc9bc1c727` | copilot |\n");
+  writeFileSync(join(root, "team.md"), "# Team\n\n| Who | Role | Machine | Session | Harness | Working on |\n|---|---|---|---|---|---|\n| Nicklas | Lead | | | | |\n| GPU agent | Builder | gpu-box | `28588d53-1116-45c0-947d-69fc9bc1c727` | copilot | Run 7 |\n");
   const roster = readRoster(root);
   assert.equal(roster.length, 2);
-  assert.deepEqual(roster[1], { name: "GPU agent", slug: "gpu-agent", role: "Builder", machine: "gpu-box", harness: "copilot", session: "28588d53-1116-45c0-947d-69fc9bc1c727" });
+  assert.deepEqual(roster[1], { name: "GPU agent", slug: "gpu-agent", role: "Builder", machine: "gpu-box", harness: "copilot", work: "Run 7", session: "28588d53-1116-45c0-947d-69fc9bc1c727" });
   assert.equal(roster[0].session, "");
 });

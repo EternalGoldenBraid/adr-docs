@@ -6,7 +6,7 @@ const cells = line => line.trim().replace(/^\||\|$/g, "").split("|").map(cell =>
 export const slugify = text => text.toLowerCase().replace(/[^a-z\d]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
 
 // The team page is the roster: a Markdown table whose header has "Who" and "Session". Optional columns:
-// Role, Machine, Harness. Rows with a session id are agents and become the comment recipients.
+// Role, Machine, Harness, Working on (agents with the same text share a subgraph in <TeamGraph />). Rows with a session id are agents and become the comment recipients.
 // The page is `team-page:` in the root index.md front matter, default `team.md`.
 export function readRoster(documentRoot) {
   const index = join(documentRoot, "index.md");
@@ -22,7 +22,7 @@ export function readRoster(documentRoot) {
   if (start < 0) return [];
   const header = cells(lines[start]).map(cell => cell.toLowerCase());
   const column = name => header.findIndex(cell => cell === name || cell.startsWith(name));
-  const [who, role, machine, session, harness] = ["who", "role", "machine", "session", "harness"].map(column);
+  const [who, role, machine, session, harness, work] = ["who", "role", "machine", "session", "harness", "working"].map(column);
   const rows = [];
   for (const line of lines.slice(start + 2)) {
     if (!line.trim().startsWith("|")) break;
@@ -31,7 +31,7 @@ export function readRoster(documentRoot) {
     if (!name) continue;
     rows.push({
       name, slug: slugify(name), role: row[role] ?? "", machine: row[machine]?.replace(/[`—-]+$/, "") ?? "",
-      harness: row[harness]?.replace(/[`—-]+$/, "") ?? "", session: row[session]?.match(UUID)?.[0] ?? "",
+      harness: row[harness]?.replace(/[`—-]+$/, "") ?? "", work: row[work]?.replace(/^[—-]+$/, "") ?? "", session: row[session]?.match(UUID)?.[0] ?? "",
     });
   }
   return rows;

@@ -1,5 +1,6 @@
 import { h } from "vue";
 import DefaultTheme from "vitepress/theme";
+import TeamGraph from "../components/TeamGraph.vue";
 import DocGraph from "../components/DocGraph.vue";
 import RerunViewer from "../components/RerunViewer.vue";
 import WorkstreamLinks from "../components/WorkstreamLinks.vue";
@@ -14,5 +15,5 @@ const tree = pad => () => h(PageTree, { pad });
 export default {
   extends: DefaultTheme,
   Layout: () => h(DefaultTheme.Layout, null, { "doc-before": tree(false), "page-top": tree(true), "home-hero-before": tree(true), "layout-top": () => h(ClassificationBanner), "layout-bottom": () => h(WorkstreamLinks) }),
-  enhanceApp({ app }) { app.component("DocGraph", DocGraph); app.component("RerunViewer", RerunViewer); app.component("WorkstreamBoard", WorkstreamBoard); },
+  enhanceApp({ app }) { app.component("DocGraph", DocGraph); app.component("TeamGraph", TeamGraph); app.component("RerunViewer", RerunViewer); app.component("WorkstreamBoard", WorkstreamBoard); },
 };
