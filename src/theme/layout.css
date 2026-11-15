@@ -1,0 +1,6 @@
+/* Wider reading column: the VitePress defaults leave large empty margins on wide screens. */
+:root { --vp-layout-max-width: 1680px; }
+.VPDoc:not(.has-sidebar) .container { max-width: 1440px !important; }
+.VPDoc.has-aside .content-container, .VPDoc .content-container { max-width: 1040px !important; }
+.VPDoc:not(.has-sidebar) .content { max-width: none !important; }
+@media (min-width: 1440px) { .VPDoc .content-container { max-width: 1160px !important; } }
