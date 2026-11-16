@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.62.0 - 2026-11-16
+
+- Read aloud: 🔊 on each message, `:read [stop]`, and `p` in the history read comments in a cloned voice (F5-TTS on a GPU host, localhost only). `node tools/tts.mjs start|stop|status` manages the server. Audio is cached per text.
+
 ## 0.61.1 - 2026-11-16
 
 - `:help` has an **Export** section (`:export`, `single`, `compress`, multi-page, CLI), and `:help export` opens a section by name.
