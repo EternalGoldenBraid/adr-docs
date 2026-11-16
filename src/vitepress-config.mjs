@@ -48,6 +48,18 @@ function searchPlugin(documentRoot) {
   return {
     name: "adr-search",
     configureServer(server) {
+      server.middlewares.use("/__adr/semantic", async (request, response) => {
+        let raw = "";
+        for await (const chunk of request) { raw += chunk; if (raw.length > 4_000_000) break; }
+        let code = 200, body;
+        try {
+          const { semanticSearch } = await import("./semantic.mjs");
+          const input = JSON.parse(raw || "{}");
+          body = await semanticSearch(documentRoot, { query: input.query, threads: Array.isArray(input.threads) ? input.threads : [] });
+        } catch (error) { code = 400; body = { error: error.message }; }
+        response.writeHead(code, { "Content-Type": "application/json" });
+        response.end(JSON.stringify(body));
+      });
       server.middlewares.use("/__adr/search", async (request, response) => {
         const q = new URL(request.url, "http://x").searchParams;
         const count = name => (q.has(name) ? Number(q.get(name)) : undefined);
