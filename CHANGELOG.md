@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.58.1 - 2026-11-16
+
+- Team panel: shows each local agent's hook state (working / waiting / asking / idle) from the desktop's `agent-notify` files (`$XDG_RUNTIME_DIR/agent-notify/*.json`, matched by working directory; ignored when older than 12 h). Complements the `STATUS` text; absent files change nothing. Agreed with the .dotfiles agent. `/mesh` members gain `activity`.
+
 ## 0.58.0 - 2026-11-16
 
 - Team panel: shows each agent's latest `STATUS <ticket> | <state> | <doing> | <next>` mesh reply with its age, and who messaged whom in the last hour (counts only; no message bodies except STATUS lines). Read from the existing mesh database, so no mesh API change was needed. `/__preview_comments/mesh` now also returns `statusLine` per member and `edges`.
