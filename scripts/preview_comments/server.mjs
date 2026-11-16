@@ -429,6 +429,11 @@ export async function startCommentBridge({
       if (ids.length) value[name] = ids;
     }
     if (author === "copilot" && typeof input.from === "string" && /^[\w .@-]{1,60}$/.test(input.from.trim())) value.from = input.from.trim();
+    // No `as`: name the sender by its session in the team roster.
+    if (author === "copilot" && !value.from && typeof input.fromSession === "string") {
+      const row = roster().find(member => member.session && member.session === input.fromSession);
+      if (row?.name) value.from = String(row.name).slice(0, 60);
+    }
     if (author === "copilot" && input.proposal && typeof input.proposal === "object") {
       value.proposal = { before: String(input.proposal.before ?? "").slice(0, 8000), after: String(input.proposal.after ?? "").slice(0, 8000) };
       value.reply ??= "Proposed edit:";

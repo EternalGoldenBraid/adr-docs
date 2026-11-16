@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.63.8 - 2026-11-16
+
+- Agent replies are named without an `as` argument: the tool sends its session id and the server looks the name up in the team roster, so threads show e.g. "demo" instead of "Copilot". Each agent needs the updated plugin (new session or extension reload).
+
 ## 0.63.7 - 2026-11-16
 
 - Machine load strip says what it shows: a title (CPU load, last hour, 1-minute load average vs. cores), numbers like `73 load / 32 cores (2.3×)`, `mem 79 %`, `GPU util 47 % / 25 %`, a labelled "all cores busy" line and a −60 min … now axis (Team page). Hover a row for the busiest processes.
