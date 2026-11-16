@@ -10,15 +10,18 @@ for (let page; (page = flag("--page")) !== undefined;) pages.push(page);
 const out = flag("--out");
 const limit = flag("--inline-media-under");
 const zip = args.includes("--zip") ? (args.splice(args.indexOf("--zip"), 1), true) : undefined;
+const take = name => args.includes(name) ? (args.splice(args.indexOf(name), 1), true) : undefined;
+const single = take("--single");
+const compress = take("--compress");
 const [file] = args;
 if (!file) {
-  console.error("usage: adr-export <file.md> [--page /path]... [--out file] [--zip] [--inline-media-under <MB>]");
+  console.error("usage: adr-export <file.md> [--page /path]... [--out file] [--zip] [--single [--compress]] [--inline-media-under <MB>]");
   process.exit(2);
 }
 const result = await exportPage({
   documentPath: resolve(file), pages,
   onProgress: ({ stage, done, total }) => console.error(`[${done}/${total}] ${stage}`),
-  outFile: out, zip,
+  outFile: out, zip, single, compress,
   ...(limit ? { inlineLimit: Number(limit) * 1024 * 1024 } : {}),
 });
 for (const warning of result.warnings) console.error(`warning: ${warning}`);
