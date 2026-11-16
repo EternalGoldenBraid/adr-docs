@@ -73,7 +73,7 @@
       .thread-messages{padding-bottom:6px}
       .note{margin:8px 0;padding:8px 12px;background:#252a32;border-radius:10px}.note.copilot{background:#1e2a3a;margin-right:36px}.note.mine{margin-left:36px}
       .note .tools{opacity:0;transition:opacity .1s}.note:hover .tools,.note:focus-within .tools{opacity:1}
-      .note p{margin:6px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}.note .speak{background:none;border:0;padding:0 2px;cursor:pointer;opacity:.5;font-size:12px}.note .speak:hover{opacity:1}.reader{display:flex;align-items:center;gap:6px;max-width:390px;margin:8px 0;padding:6px 10px;border:1px solid #74c0fc;border-radius:8px;background:#1b1d22}.reader[hidden]{display:none}.reader button{background:#2a2f38;border:1px solid #3a404a;border-radius:6px;color:inherit;padding:2px 8px;cursor:pointer}.reader button:focus-visible{outline:2px solid #74c0fc}.reader .reader-pos{margin-left:auto;font-size:12px;opacity:.8}.reply-target{display:flex;gap:8px;align-items:baseline;margin:0 0 6px;padding:4px 8px;border-left:3px solid #74c0fc;background:#23272e;font-size:12px}.reply-target[hidden]{display:none}.reply-target span{flex:1;overflow-wrap:anywhere}.reply-target button,.note .quote-ref{background:none;border:0;color:inherit;cursor:pointer;padding:0}.note .quote-ref{display:block;text-align:left;margin-top:6px;padding:2px 8px;border-left:3px solid #74c0fc;opacity:.8;font-size:12px;overflow-wrap:anywhere}.note .quote-ref:hover{opacity:1}.note a{color:#74c0fc}.note code{background:#2a2f38;padding:0 4px;border-radius:3px;font:12px ui-monospace,monospace}
+      .note p{margin:6px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}.note .speak{background:none;border:0;padding:0 2px;cursor:pointer;opacity:.5;font-size:12px}.note .speak:hover{opacity:1}.reader{display:flex;align-items:center;gap:6px;max-width:390px;margin:8px 0;padding:6px 10px;border:1px solid #74c0fc;border-radius:8px;background:#1b1d22}.reader[hidden]{display:none}.reader button{background:#2a2f38;border:1px solid #3a404a;border-radius:6px;color:inherit;padding:2px 8px;cursor:pointer}.reader button:focus-visible{outline:2px solid #74c0fc}.reader .reader-pos{margin-left:auto;font-size:12px;opacity:.8}.reply-target{display:flex;gap:8px;align-items:baseline;margin:0 0 6px;padding:4px 8px;border-left:3px solid #74c0fc;background:#23272e;font-size:12px}.reply-target[hidden]{display:none}.reply-target span{flex:1;overflow-wrap:anywhere}.reply-target button,.note .quote-ref{background:none;border:0;color:inherit;cursor:pointer;padding:0}.note .quote-ref{display:block;text-align:left;margin-top:6px;padding:2px 8px;border-left:3px solid #74c0fc;opacity:.8;font-size:12px;overflow-wrap:anywhere}.note .quote-ref:hover{opacity:1}.note a{color:#74c0fc}.note p img{display:block;max-width:100%;border-radius:6px;margin:6px 0}.note code{background:#2a2f38;padding:0 4px;border-radius:3px;font:12px ui-monospace,monospace}
       a{color:#74c0fc}
       .contextual{display:flex;gap:6px;align-items:center;padding:6px;background:#1b1d22;border:1px solid #59616d;border-radius:10px;box-shadow:0 8px 24px #0008}
       .contextual button{padding:5px 10px;border-radius:7px}
@@ -975,13 +975,22 @@
   // Inline Markdown for messages (bold, italic, code), built from DOM nodes so message text is never parsed as HTML.
   function inlineMarkdown(text) {
     const fragment = document.createDocumentFragment();
-    const pattern = /\[([^\]\n]+)\]\(((?:https?:\/\/|\/(?!\/))[^\s)]+)\)|\*\*([^*\n]+?)\*\*|`([^`\n]+)`|(?<![\w*])\*([^*\s][^*\n]*?)\*(?![\w*])/g;
+    const pattern = /(!?)\[([^\]\n]*)\]\(((?:https?:\/\/|\/(?!\/))[^\s)]+)\)|\*\*([^*\n]+?)\*\*|`([^`\n]+)`|(?<![\w*])\*([^*\s][^*\n]*?)\*(?![\w*])/g;
     let last = 0, match;
     while ((match = pattern.exec(text))) {
       if (match.index > last) fragment.append(text.slice(last, match.index));
-      const [, label, href, bold, code, italic] = match;
+      const [, bang, label, href, bold, code, italic] = match;
+      if (href && bang) {
+        const link = document.createElement("a");
+        const img = document.createElement("img");
+        img.src = img.alt = ""; img.src = href; img.alt = label; img.loading = "lazy";
+        link.href = href; link.target = "_blank"; link.rel = "noopener"; link.append(img);
+        fragment.append(link);
+        last = pattern.lastIndex;
+        continue;
+      }
       const el = document.createElement(href ? "a" : bold ? "strong" : code ? "code" : "em");
-      el.textContent = label ?? bold ?? code ?? italic;
+      el.textContent = label || href || bold || code || italic;
       if (href) { el.href = href; el.target = "_blank"; el.rel = "noopener"; }
       fragment.append(el);
       last = pattern.lastIndex;
