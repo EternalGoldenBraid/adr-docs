@@ -11,12 +11,18 @@ const view = ref((typeof localStorage !== 'undefined' && localStorage.getItem('t
 let cy = null
 let timer = null
 let members = []
+let edges = []
 
-const COLOURS = { active: '#51cf66', idle: '#fcc419', stopped: '#868e96', unknown: '#868e96', human: '#74c0fc' }
+const COLOURS = { active: '#51cf66', idle: '#fcc419', waiting: '#ff922b', blocked: '#f03e3e', stopped: '#868e96', unknown: '#868e96', human: '#74c0fc' }
 const state = m => {
   if (m.status !== 'active') return COLOURS[m.status] ? m.status : 'unknown'
-  return m.lastSeen && Date.now() - Date.parse(m.lastSeen) > 120000 ? 'idle' : 'active'
+  if (m.lastSeen && Date.now() - Date.parse(m.lastSeen) > 120000) return 'idle'
+  // Hook state and the agent's own STATUS line refine "active".
+  if (m.activity === 'asking' || m.activity === 'waiting' || m.statusLine?.state === 'waiting') return 'waiting'
+  if (m.statusLine?.state === 'blocked') return 'blocked'
+  return 'active'
 }
+const clip = (text, n) => text.length > n ? text.slice(0, n - 1) + '…' : text
 const slug = text => text.toLowerCase().replace(/[^a-z\d]+/g, '-')
 const id = m => m.session || 'h:' + m.slug
 
@@ -39,7 +45,8 @@ function build() {
       group('g:' + m.machine, m.machine)
       if (m.topic) { parent = 'g:' + m.machine + ':' + m.topic; group(parent, m.topic, 'g:' + m.machine) } else parent = 'g:' + m.machine
     }
-    const label = m.name + (m.work ? '\n' + (m.work.length > 26 ? m.work.slice(0, 25) + '…' : m.work) : '')
+    const doing = m.statusLine?.doing || m.work
+    const label = m.name + (doing ? '\n' + clip(doing, 34) : '')
     elements.push({ data: { id: id(m), label, parent, colour: COLOURS[state(m)], human: !m.session }, position })
   }
   if (mode === 'command') {
@@ -63,6 +70,9 @@ function build() {
     let left = 0
     for (const m of top) left += place(m, left, 0, new Set())
   }
+  // Recent messages between agents, thicker with count; kept apart from the reporting lines of the Command view.
+  const ids = new Set(elements.filter(e => !e.data.group && !e.data.source).map(e => e.data.id))
+  for (const e of edges) if (ids.has(e.from) && ids.has(e.to)) elements.push({ data: { id: `m:${e.from}>${e.to}`, source: e.from, target: e.to, msg: true, w: Math.min(6, 1 + e.count) } })
   cy.json({ elements })
   cy.layout({ name: 'preset', padding: 30 }).run()
   cy.fit(undefined, 30)
@@ -78,7 +88,9 @@ async function load() {
   try {
     const response = await fetch('/__preview_comments/mesh', { headers: { 'X-Preview-Comment': '1' } })
     if (!response.ok) throw new Error()
-    members = (await response.json()).members
+    const data = await response.json()
+    members = data.members
+    edges = data.edges ?? []
   } catch {
     note.value = 'Live team status needs a running preview.'
     return
@@ -96,6 +108,7 @@ onMounted(() => {
       { selector: 'node[?human]', style: { shape: 'round-rectangle', 'border-color': '#74c0fc' } },
       { selector: 'node[?group]', style: { shape: 'round-rectangle', 'background-color': '#2a2f38', 'background-opacity': 0.55, 'border-color': '#59616d', 'border-width': 1, 'text-valign': 'top', 'text-margin-y': -8, 'font-size': 17, 'font-weight': 'bold', padding: 24, width: 'label', height: 'label' } },
       { selector: 'edge', style: { width: 2, 'line-color': '#74c0fc', 'target-arrow-color': '#74c0fc', 'target-arrow-shape': 'triangle', 'curve-style': 'bezier' } },
+      { selector: 'edge[?msg]', style: { width: 'data(w)', 'line-style': 'dashed', 'line-color': '#adb5bd', 'target-arrow-color': '#adb5bd', opacity: 0.7, 'curve-style': 'unbundled-bezier', 'control-point-distances': [40], 'control-point-weights': [0.5] } },
     ],
   })
   load()
@@ -111,7 +124,7 @@ onUnmounted(() => { clearInterval(timer); cy?.destroy() })
     </div>
     <div ref="host" class="team-graph-canvas"></div>
     <p v-if="note" class="team-graph-note">{{ note }}</p>
-    <p class="team-graph-legend"><span class="d active"></span>active <span class="d idle"></span>idle <span class="d stopped"></span>offline <span class="d human"></span>human</p>
+    <p class="team-graph-legend"><span class="d active"></span>active <span class="d idle"></span>idle <span class="d waiting"></span>waiting/asking <span class="d blocked"></span>blocked <span class="d stopped"></span>offline <span class="d human"></span>human · dashed lines: messages in the last hour</p>
   </div>
 </template>
 
@@ -124,5 +137,5 @@ onUnmounted(() => { clearInterval(timer); cy?.destroy() })
 .team-graph-note { color: var(--vp-c-text-2); font-size: 13px }
 .team-graph-legend { font-size: 12px; color: var(--vp-c-text-2) }
 .d { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin: 0 4px 0 10px; background: #868e96 }
-.d.active { background: #51cf66 } .d.idle { background: #fcc419 } .d.human { background: #74c0fc }
+.d.active { background: #51cf66 } .d.idle { background: #fcc419 } .d.waiting { background: #ff922b } .d.blocked { background: #f03e3e } .d.human { background: #74c0fc }
 </style>

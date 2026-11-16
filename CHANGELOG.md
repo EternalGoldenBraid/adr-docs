@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.59.0 - 2026-11-16
+
+- TeamGraph: node colour now reflects hook state and STATUS (orange waiting/asking, red blocked), the label's second line is the agent's own STATUS "doing" text, and dashed lines show who messaged whom in the last hour (thicker = more). Works in all three views.
+- The team peek has a visible small **Team** tab on the right edge (hover to peek, `-m` to pin) instead of an invisible corner zone.
+
 ## 0.58.1 - 2026-11-16
 
 - Team panel: shows each local agent's hook state (working / waiting / asking / idle) from the desktop's `agent-notify` files (`$XDG_RUNTIME_DIR/agent-notify/*.json`, matched by working directory; ignored when older than 12 h). Complements the `STATUS` text; absent files change nothing. Agreed with the .dotfiles agent. `/mesh` members gain `activity`.
