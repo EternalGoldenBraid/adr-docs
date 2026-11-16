@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.63.6 - 2026-11-16
+
+- Machine load in the Team panel and on the Team page: one row per machine with a load/cores sparkline (red above 90%), memory and GPU use; hover for the busiest processes. Read from `~/.mesh/load.jsonl` (sampled every minute by the dotfiles timer), locally or over ssh for roster machines (the roster's machine name must be an ssh host). `/mesh` returns it as `machines`.
+
 ## 0.63.5 - 2026-11-16
 
 - Messages you send show their recipients (`You → agent`). Replies now keep their own recipients.

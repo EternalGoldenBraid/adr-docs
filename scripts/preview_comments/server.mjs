@@ -5,7 +5,8 @@ import {
   readdirSync, readFileSync, realpathSync, unlinkSync, writeFileSync,
 } from "node:fs";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
-import { homedir } from "node:os";
+import { homedir, hostname } from "node:os";
+import { execFile } from "node:child_process";
 import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import { readRoster } from "../../src/roster.mjs";
@@ -137,6 +138,39 @@ export async function startCommentBridge({
       }));
     })().catch(error => remoteErrors.set("*", error.message)).finally(() => { remoteLoading = undefined; });
     return remoteLoading;
+  }
+
+  // Machine load from each host's ~/.mesh/load.jsonl (one sample a minute); remote hosts are read over ssh, cached for 20 s.
+  const loadCache = new Map();
+  function summariseLoad(name, lines) {
+    const rows = lines.map(line => { try { return JSON.parse(line); } catch { return null; } }).filter(row => row?.loadavg);
+    const last = rows.at(-1);
+    if (!last) return { name, error: "no samples" };
+    return {
+      name, host: last.host, nproc: last.nproc, at: last.ts, stale: Date.now() / 1000 - last.ts > 300,
+      loadavg: last.loadavg, history: rows.map(row => row.loadavg[0]),
+      memUsed: last.memory?.total ? 1 - last.memory.available / last.memory.total : undefined,
+      gpus: last.gpus ?? [], top: (last.top ?? []).slice(0, 3),
+    };
+  }
+  function machineLoad(name, remoteHost) {
+    const cached = loadCache.get(name);
+    if (cached && Date.now() - cached.at < 20000) return cached.promise;
+    const promise = new Promise(resolveLoad => {
+      if (!remoteHost) {
+        try { resolveLoad(summariseLoad(name, readFileSync(join(homedir(), ".mesh", "load.jsonl"), "utf8").trim().split("\n").slice(-60))); } catch { resolveLoad({ name, error: "no load file" }); }
+        return;
+      }
+      execFile("ssh", ["-o", "BatchMode=yes", "-o", "ConnectTimeout=4", remoteHost, "tail -n 60 ~/.mesh/load.jsonl"], { timeout: 8000, maxBuffer: 1 << 20 },
+        (error, stdout) => resolveLoad(error ? { name, error: "unreachable" } : summariseLoad(name, stdout.trim().split("\n"))));
+    });
+    loadCache.set(name, { at: Date.now(), promise });
+    return promise;
+  }
+  async function machines() {
+    const local = hostname();
+    const names = [...new Set(roster().map(row => row.machine).filter(Boolean))].filter(name => name !== local);
+    return Promise.all([machineLoad(local, null), ...names.map(name => machineLoad(name, name))]);
   }
 
   let meshEdges = [];
@@ -449,7 +483,7 @@ export async function startCommentBridge({
         return reply(response, 200, { sessionId, revision, seenInit, comments: [...comments.values()] });
       }
       if (request.method === "GET" && request.url === "/settings") return reply(response, 200, effective());
-      if (request.method === "GET" && request.url === "/mesh") return reply(response, 200, { members: await meshStatus(), edges: meshEdges, errors: Object.fromEntries(remoteErrors) });
+      if (request.method === "GET" && request.url === "/mesh") return reply(response, 200, { members: await meshStatus(), edges: meshEdges, machines: await machines(), errors: Object.fromEntries(remoteErrors) });
       const readRoute = request.method === "GET" && /^\/read\?(.*)$/.exec(request.url);
       if (readRoute) {
         const query = new URLSearchParams(readRoute[1]);
