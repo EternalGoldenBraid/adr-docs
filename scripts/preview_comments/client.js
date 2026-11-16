@@ -277,7 +277,7 @@
     ]],
     ["Search & commands", [
       "/ or :grep [-d N] [-u N] [-s] [-p|-c] <regex> searches pages and threads (no flag: all pages; -d 0: this page; -d N: N levels below; -u N: N ancestors; -1 = all)",
-      "Commands: :help :man :history :chat :comment :tree :present :export :figure :restart :grep :vim off|on :keys",
+      "Commands: :help :man :history :chat :comment :tree :present :export [single|compress] :figure :restart :grep :vim off|on :keys",
       "Keys are configured in ~/.config/agent-doc-review/keymap.json",
     ]],
   ];
@@ -320,13 +320,13 @@
   };
   let exporting = false;
   // pages: site paths to export; default is the current page. Polls the server job and shows a progress bar.
-  async function exportPage(pages = [pagePath(location.href)]) {
+  async function exportPage(pages = [pagePath(location.href)], mode = "") {
     if (exporting) return message("An export is already running.", true);
     exporting = true;
     const bar = (done, total) => "█".repeat(Math.round(10 * done / total)).padEnd(10, "░");
     try {
       message(`Exporting ${pages.length} page${pages.length > 1 ? "s" : ""}… starting`);
-      const started = await fetch("/__adr/export/start?" + pages.map(page => "page=" + encodeURIComponent(page)).join("&"));
+      const started = await fetch("/__adr/export/start?" + pages.map(page => "page=" + encodeURIComponent(page)).join("&") + (mode === "single" ? "&single=1" : mode === "compress" ? "&compress=1" : ""));
       const { id, error } = await started.json();
       if (!id) throw new Error(error || "could not start");
       for (;;) {
@@ -351,7 +351,11 @@
     }
   }
   document.addEventListener("adr-export", event => exportPage(event.detail?.pages?.length ? event.detail.pages : undefined));
-  commands.export = () => exportPage();
+  // :export (zip or page), :export single (one self-contained HTML file), :export compress (single, videos re-encoded smaller).
+  commands.export = arg => {
+    if (arg && !["single", "compress"].includes(arg)) return message("Usage: :export [single|compress]", true);
+    exportPage(undefined, arg);
+  };
   // :figure — click a graph, inline SVG, image or canvas; it downloads at print size (graphs 4x PNG, SVG as SVG).
   let picking = false;
   function saveBlob(blob, name) {

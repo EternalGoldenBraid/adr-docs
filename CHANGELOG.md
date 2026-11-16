@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.61.0 - 2026-11-16
+
+- `:export single` downloads one self-contained `.html` (everything inlined); `:export compress` does the same with videos re-encoded smaller (ffmpeg, lossy). Same as the CLI `--single` / `--compress`. Plain `:export` is unchanged.
+
 ## 0.60.2 - 2026-11-16
 
 - Thread messages render inline Markdown: `**bold**`, `*italic*` and `` `code` ``. Built from DOM nodes, so HTML in a message stays text. Editing still shows the raw text.
