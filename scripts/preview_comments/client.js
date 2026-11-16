@@ -43,7 +43,7 @@
       .history-head h2{margin:0}.history-head .history-counts{margin-left:auto;margin-right:12px}
       .icon{padding:2px 9px;border-radius:6px;line-height:1.4}
       .help-panel{width:min(640px,94vw)}.help-tabs,.help-tabs-look{display:flex;gap:6px;margin:8px 0;flex-wrap:wrap}.help-tabs button,.help-tabs-look button{background:#2a2e36;color:inherit;border:1px solid #59616d;border-radius:6px;padding:3px 10px;cursor:pointer}.help-tabs button[aria-selected=true],.help-tabs-look button[aria-selected=true]{background:#3b4a63;border-color:#8ab4f8}.help-body{white-space:pre-wrap;font:13px/1.5 ui-monospace,monospace;margin:0;max-height:50vh;overflow:auto}
-      .mesh-machines{margin-top:10px}.mach{display:grid;grid-template-columns:110px 1fr auto;gap:8px;align-items:center;font-size:12px;padding:2px 0}.mach svg{width:100%;height:22px}.mach .hot{color:#f38ba8}.mach.stale{opacity:.5}.mesh-panel{width:min(640px,94vw)}.mesh-panel.peek{position:fixed;left:auto;top:auto;right:12px;bottom:52px;margin:0;max-height:70vh;overflow:auto;opacity:.97}.mesh-corner{position:fixed;right:0;bottom:130px;padding:10px 3px;z-index:2147483000;background:#1b1d22cc;color:#aab;border:1px solid #3a404a;border-right:0;border-radius:8px 0 0 8px;font:11px/1 ui-monospace,monospace;writing-mode:vertical-rl;cursor:pointer;opacity:.55}.mesh-corner:hover{opacity:1}.mesh-table td:nth-child(2){white-space:nowrap}.mesh-tabs{margin:0 8px}.mesh-graph[hidden]{display:none}.mesh-graph{width:100%;height:auto;display:block}.mesh-graph text{fill:#d7dde6;font:11px ui-monospace,monospace;text-anchor:middle}.mesh-edges{font-size:12px;color:#aab;margin-top:8px}.mesh-table{width:100%;border-collapse:collapse;font-size:13px}.mesh-table th,.mesh-table td{text-align:left;padding:4px 8px;border-bottom:1px solid #3a404a}
+      .mesh-machines{margin-top:10px}.mach{display:grid;grid-template-columns:100px 1fr 230px;gap:8px;align-items:center;font-size:12px;padding:2px 0}.mach svg{width:100%;height:22px}.mach .hot{color:#f38ba8}.mach.stale{opacity:.5}.mesh-panel{width:min(640px,94vw)}.mesh-panel.peek{position:fixed;left:auto;top:auto;right:12px;bottom:52px;margin:0;max-height:70vh;overflow:auto;opacity:.97}.mesh-corner{position:fixed;right:0;bottom:130px;padding:10px 3px;z-index:2147483000;background:#1b1d22cc;color:#aab;border:1px solid #3a404a;border-right:0;border-radius:8px 0 0 8px;font:11px/1 ui-monospace,monospace;writing-mode:vertical-rl;cursor:pointer;opacity:.55}.mesh-corner:hover{opacity:1}.mesh-table td:nth-child(2){white-space:nowrap}.mesh-tabs{margin:0 8px}.mesh-graph[hidden]{display:none}.mesh-graph{width:100%;height:auto;display:block}.mesh-graph text{fill:#d7dde6;font:11px ui-monospace,monospace;text-anchor:middle}.mesh-edges{font-size:12px;color:#aab;margin-top:8px}.mesh-table{width:100%;border-collapse:collapse;font-size:13px}.mesh-table th,.mesh-table td{text-align:left;padding:4px 8px;border-bottom:1px solid #3a404a}
       .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:#59616d}.dot.active{background:#51cf66}.dot.idle{background:#fcc419}
       .tabs{display:flex;gap:2px;margin-top:4px!important;margin-bottom:6px!important;border-bottom:1px solid #3a404a}
       .tab{border:0;border-bottom:2px solid transparent;border-radius:0;background:none;padding:6px 10px;color:#b7c1ce}
@@ -799,7 +799,9 @@
   }
   // One row per machine: load / cores as a sparkline, plus memory and GPU use. Hover for the busiest processes.
   function machineRows(machines) {
-    return machines.map(m => {
+    const title = document.createElement("small");
+    title.textContent = "CPU load, last hour (1-minute load average vs. number of cores; dashed line = all cores busy)";
+    return [title, ...machines.map(m => {
       const row = document.createElement("div");
       row.className = "mach" + (m.stale || m.error ? " stale" : "");
       const name = document.createElement("span"); name.textContent = m.name;
@@ -812,12 +814,12 @@
       svg.innerHTML = `<line x1="0" x2="100" y1="${(22 - m.nproc / peak * 20).toFixed(1)}" y2="${(22 - m.nproc / peak * 20).toFixed(1)}" stroke="#59616d" stroke-dasharray="2 2"/><polyline points="${pts}" fill="none" stroke="${hot ? "#f38ba8" : "#6fb7e8"}" stroke-width="1.5" vector-effect="non-scaling-stroke"/>`;
       const text = document.createElement("span");
       text.className = hot ? "hot" : "";
-      const gpu = m.gpus.length ? ` · GPU ${m.gpus.map(g => `${g.util}%`).join("/")}` : "";
-      text.textContent = `${m.loadavg[0].toFixed(0)}/${m.nproc}${m.memUsed !== undefined ? ` · mem ${Math.round(m.memUsed * 100)}%` : ""}${gpu}`;
+      const gpu = m.gpus.length ? ` · GPU util ${m.gpus.map(g => `${g.util} %`).join(" / ")}` : "";
+      text.textContent = `${m.loadavg[0].toFixed(0)} load / ${m.nproc} cores (${(m.loadavg[0] / m.nproc).toFixed(1)}×)${m.memUsed !== undefined ? ` · mem ${Math.round(m.memUsed * 100)} %` : ""}${gpu}`;
       row.title = m.top.map(p => `${p.user} ${p.pcpu}% ${p.cmd}`).join("\n") + (m.stale ? "\n(no recent sample)" : "");
       row.append(name, svg, text);
       return row;
-    });
+    })];
   }
   function openMesh(peek = false) {
     showMeshTab(meshTab);

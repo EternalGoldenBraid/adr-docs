@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.63.7 - 2026-11-16
+
+- Machine load strip says what it shows: a title (CPU load, last hour, 1-minute load average vs. cores), numbers like `73 load / 32 cores (2.3×)`, `mem 79 %`, `GPU util 47 % / 25 %`, a labelled "all cores busy" line and a −60 min … now axis (Team page). Hover a row for the busiest processes.
+
 ## 0.63.6 - 2026-11-16
 
 - Machine load in the Team panel and on the Team page: one row per machine with a load/cores sparkline (red above 90%), memory and GPU use; hover for the busiest processes. Read from `~/.mesh/load.jsonl` (sampled every minute by the dotfiles timer), locally or over ssh for roster machines (the roster's machine name must be an ssh host). `/mesh` returns it as `machines`.
