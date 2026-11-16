@@ -103,7 +103,7 @@ const sourceFor = (root, page) => {
 };
 
 // One built page -> standalone html plus the media files it references (copied by the caller).
-async function renderPage(dist, page, inlineLimit, mediaPrefix, warnings, links = {}) {
+async function renderPage(dist, page, inlineLimit, mediaPrefix, warnings, links = {}, documentRoot = dist) {
   const { html: htmlName, key } = pageFiles(page);
   const htmlPath = join(dist, htmlName);
   if (!existsSync(htmlPath)) throw new Error(`Page not found: ${page}`);
@@ -126,6 +126,31 @@ async function renderPage(dist, page, inlineLimit, mediaPrefix, warnings, links 
   }
 
   const media = [];
+  // Graph nodes reference images and videos by site-absolute path, which does not resolve under file://.
+  const assetOf = url => {
+    const clean = url.split(/[?#]/)[0].replace(/^\//, "");
+    return [join(dist, clean), join(documentRoot, "public", clean)].find(path => existsSync(path) && statSync(path).isFile());
+  };
+  const rewriteAsset = url => {
+    if (typeof url !== "string" || !url.startsWith("/") || url.startsWith("//")) return url;
+    const path = assetOf(url);
+    if (!path) { warnings.push(`Missing graph file: ${url}`); return url; }
+    if (statSync(path).size <= inlineLimit) return `data:${MIME[extname(path)] ?? "application/octet-stream"};base64,${readFileSync(path).toString("base64")}`;
+    const name = `media/${mediaPrefix}${media.length}-${basename(path)}`;
+    media.push({ path, name });
+    return `./${name}`;
+  };
+  const rewriteGraph = value => {
+    if (Array.isArray(value)) value.forEach(rewriteGraph);
+    else if (value && typeof value === "object") {
+      for (const key of ["image", "video"]) if (key in value) value[key] = rewriteAsset(value[key]);
+      Object.values(value).forEach(rewriteGraph);
+    }
+  };
+  for (const [name, text] of Object.entries(files)) {
+    if (name === "hashmap.json") continue;
+    try { const data = JSON.parse(text); rewriteGraph(data); files[name] = JSON.stringify(data); } catch (_) { /* not graph JSON */ }
+  }
   html = html.replace(/\b(src|poster)="([^"]+)"/g, (whole, attribute, url) => {
     if (!isLocal(url)) return whole;
     const path = url.startsWith("/") ? join(dist, url.split(/[?#]/)[0]) : join(pageDir, url.split(/[?#]/)[0]);
@@ -196,7 +221,7 @@ export async function exportPage({ documentPath, documentRoot, page, pages, outF
     for (const [index, item] of pages.entries()) {
       onProgress({ stage: `Packaging ${item}`, done: index + 1, total });
       const prefix = many ? `${index}-` : "";
-      const result = await renderPage(dist, item, inlineLimit, prefix, warnings, links);
+      const result = await renderPage(dist, item, inlineLimit, prefix, warnings, links, documentRoot);
       rendered.push({ ...result, page: item });
     }
     const media = rendered.flatMap(item => item.media);
