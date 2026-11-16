@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.60.0 - 2026-11-16
+
+- `<TeamGraph />` is redrawn in the peek's style (SVG): animated status indicators, grouped boxes for Topic and Machine, and the reports-to tree for Command. Messages are no longer arrows: a pulse travels from sender to receiver with a ripple at the receiver, so direction reads from motion. Cytoscape is no longer used by the Team page.
+
 ## 0.59.2 - 2026-11-16
 
 - `<TeamGraph />` now also shows the live team table (Who, Status with the shared indicators, Doing, Machine) under the graph and hides the hand-written roster table. The markdown table stays as the roster source.
