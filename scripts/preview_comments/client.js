@@ -991,8 +991,9 @@
   }
   function renderNote(author, text, at, opts = {}) {
     const note = document.createElement("article");
-    note.className = `${opts.note ? "note private" : "note"} ${author === "Copilot" ? "copilot" : "mine"}`;
+    note.className = `${opts.note ? "note private" : "note"} ${author !== "You" ? "copilot" : "mine"}`;
     if (opts.mid) note.dataset.mid = opts.mid;
+    if (opts.from) note.dataset.from = opts.from;
     const label = document.createElement("small");
     label.textContent = `${author}${opts.note ? " · private note" : ""} · ${new Date(at).toLocaleString()}${opts.edited ? " · edited" : ""}`;
     const body = document.createElement("p");
@@ -1109,11 +1110,12 @@
     if (comment.images?.length) nodes.push(thumbnails(comment.images));
     for (const reply of comment.replies) {
       const mine = reply.author !== "copilot";
+      const sender = reply.from || "Copilot";
       const target = reply.inReplyTo;
       const targetAuthor = target && (target.id === comment.id ? comment : comment.replies.find(r => r.id === target.id));
-      nodes.push(renderNote(mine ? "You" : "Copilot", target ? reply.comment.replace(/^> [^\n]*\n\n/, "") : reply.comment, reply.at, {
-        note: reply.note, edited: reply.edited, mid: reply.id,
-        ref: target && { id: target.id, quote: (target.quote || "").slice(0, 140), author: targetAuthor?.author === "copilot" ? "Copilot" : "You" },
+      nodes.push(renderNote(mine ? "You" : sender, target ? reply.comment.replace(/^> [^\n]*\n\n/, "") : reply.comment, reply.at, {
+        note: reply.note, edited: reply.edited, mid: reply.id, from: reply.from,
+        ref: target && { id: target.id, quote: (target.quote || "").slice(0, 140), author: targetAuthor?.author === "copilot" ? targetAuthor.from || "Copilot" : "You" },
         onEdit: mine ? text => run({ editReply: { id: reply.id, text } }) : undefined,
         onDelete: () => run({ removeReply: reply.id }),
       }));
@@ -1441,11 +1443,11 @@
     const picked = shadow.getSelection?.() ?? getSelection();
     let quote = picked.rangeCount && note.contains(picked.getRangeAt(0).commonAncestorContainer) ? picked.toString().trim() : "";
     quote ||= (note.querySelector("p")?.textContent || "").trim();
-    const author = note.classList.contains("copilot") ? "Copilot" : "You";
+    const author = note.classList.contains("copilot") ? note.dataset.from || "Copilot" : "You";
     setReplyTarget({ id: note.dataset.mid, author, quote: quote.slice(0, 600) });
     // Address the reply like the quoted message. Agent replies don't record which agent wrote them, so use whoever the message before it was sent to.
     const thread = currentThread(), items = thread ? [thread, ...thread.replies] : [], at = items.findIndex(m => m.id === note.dataset.mid);
-    let to;
+    let to = items[at]?.from ? [items[at].from] : undefined;
     for (let i = author === "You" ? at : at - 1; i >= 0 && !to; i--) if (items[i].author !== "copilot" && items[i].to?.length) to = items[i].to;
     if (to) { replyTo = new Set(to); chipRow(find(".to-reply"), replyTo); }
     replyInput.focus();
