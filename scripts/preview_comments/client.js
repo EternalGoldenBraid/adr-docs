@@ -73,7 +73,7 @@
       .thread-messages{padding-bottom:6px}
       .note{margin:8px 0;padding:8px 12px;background:#252a32;border-radius:10px}.note.copilot{background:#1e2a3a;margin-right:36px}.note.mine{margin-left:36px}
       .note .tools{opacity:0;transition:opacity .1s}.note:hover .tools,.note:focus-within .tools{opacity:1}
-      .note p{margin:6px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
+      .note p{margin:6px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}.note code{background:#2a2f38;padding:0 4px;border-radius:3px;font:12px ui-monospace,monospace}
       a{color:#74c0fc}
       .contextual{display:flex;gap:6px;align-items:center;padding:6px;background:#1b1d22;border:1px solid #59616d;border-radius:10px;box-shadow:0 8px 24px #0008}
       .contextual button{padding:5px 10px;border-radius:7px}
@@ -875,13 +875,29 @@
   function currentThread() {
     return historyComments.find(comment => comment.id === selectedThread);
   }
+  // Inline Markdown for messages (bold, italic, code), built from DOM nodes so message text is never parsed as HTML.
+  function inlineMarkdown(text) {
+    const fragment = document.createDocumentFragment();
+    const pattern = /\*\*([^*\n]+?)\*\*|`([^`\n]+)`|(?<![\w*])\*([^*\s][^*\n]*?)\*(?![\w*])/g;
+    let last = 0, match;
+    while ((match = pattern.exec(text))) {
+      if (match.index > last) fragment.append(text.slice(last, match.index));
+      const [, bold, code, italic] = match;
+      const el = document.createElement(bold ? "strong" : code ? "code" : "em");
+      el.textContent = bold ?? code ?? italic;
+      fragment.append(el);
+      last = pattern.lastIndex;
+    }
+    if (last < text.length) fragment.append(text.slice(last));
+    return fragment;
+  }
   function renderNote(author, text, at, opts = {}) {
     const note = document.createElement("article");
     note.className = `${opts.note ? "note private" : "note"} ${author === "Copilot" ? "copilot" : "mine"}`;
     const label = document.createElement("small");
     label.textContent = `${author}${opts.note ? " · private note" : ""} · ${new Date(at).toLocaleString()}${opts.edited ? " · edited" : ""}`;
     const body = document.createElement("p");
-    body.textContent = text;
+    body.append(inlineMarkdown(text));
     note.append(label, body);
     if (opts.onEdit || opts.onDelete) {
       const tools = document.createElement("div");

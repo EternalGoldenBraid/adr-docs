@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.60.2 - 2026-11-16
+
+- Thread messages render inline Markdown: `**bold**`, `*italic*` and `` `code` ``. Built from DOM nodes, so HTML in a message stays text. Editing still shows the raw text.
+
 ## 0.60.1 - 2026-11-16
 
 - The history panel opens on **This page** instead of **Open**.
