@@ -181,7 +181,7 @@
   let historyRevision = -1;
   let serverSeenInit = false;
   let selectedThread;
-  let historyFilter = "unresolved";
+  let historyFilter = "page";
   let tabChord;
   let pendingFocus;
   const FILTERS = [["page", "This page"], ["pagehist", "Page history"], ["chat", "Chat"], ["unresolved", "Open"], ["all", "All"], ["resolved", "Resolved"], ["notes", "Notes"]];
