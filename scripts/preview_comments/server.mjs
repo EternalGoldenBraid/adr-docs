@@ -237,6 +237,7 @@ export async function startCommentBridge({
         comment.replies.push({
           id: record.id, at: record.at, author: record.author, comment: record.reply,
           ...(record.note ? { note: true } : {}),
+          ...(record.inReplyTo ? { inReplyTo: record.inReplyTo } : {}),
           ...(record.proposal ? { proposal: record.proposal } : {}),
         });
       }
@@ -361,6 +362,12 @@ export async function startCommentBridge({
     if (comments.has(value.id)) throw new CommentConflict("This update ID already identifies a comment.");
     if (!comments.has(value.commentId)) throw new Error("The comment does not exist in this session.");
     if (Object.hasOwn(input, "reply")) value.reply = field(input.reply, "Reply", 8192);
+    if (value.reply !== undefined && input.inReplyTo && typeof input.inReplyTo === "object") {
+      const target = identifier(input.inReplyTo.id, "Reply target ID");
+      const thread = comments.get(value.commentId);
+      if (target !== thread.id && !thread.replies.some(reply => reply.id === target)) throw new Error("The replied-to message is not in this thread.");
+      value.inReplyTo = { id: target, quote: String(input.inReplyTo.quote ?? "").slice(0, 600) };
+    }
     if (Object.hasOwn(input, "resolved")) {
       if (typeof input.resolved !== "boolean") throw new Error("Resolved must be a boolean.");
       value.resolved = input.resolved;

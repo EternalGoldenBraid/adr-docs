@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.63.0 - 2026-11-16
+
+- Reply to one message: `q` on a focused message (with an optional selected passage) links your reply to it. The reply shows the quote, `u` jumps back, agents receive the quote.
+- Read aloud has a visible control bar (⏮ ⏯ ⏭ ⏹) with Vim keys: `p` pause/resume, `<` `>` skip, `Esc` stop.
+
 ## 0.62.0 - 2026-11-16
 
 - Read aloud: 🔊 on each message, `:read [stop]`, and `p` in the history read comments in a cloned voice (F5-TTS on a GPU host, localhost only). `node tools/tts.mjs start|stop|status` manages the server. Audio is cached per text.

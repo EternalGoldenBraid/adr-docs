@@ -73,7 +73,7 @@
       .thread-messages{padding-bottom:6px}
       .note{margin:8px 0;padding:8px 12px;background:#252a32;border-radius:10px}.note.copilot{background:#1e2a3a;margin-right:36px}.note.mine{margin-left:36px}
       .note .tools{opacity:0;transition:opacity .1s}.note:hover .tools,.note:focus-within .tools{opacity:1}
-      .note p{margin:6px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}.note .speak{background:none;border:0;padding:0 2px;cursor:pointer;opacity:.5;font-size:12px}.note .speak:hover{opacity:1}.note code{background:#2a2f38;padding:0 4px;border-radius:3px;font:12px ui-monospace,monospace}
+      .note p{margin:6px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}.note .speak{background:none;border:0;padding:0 2px;cursor:pointer;opacity:.5;font-size:12px}.note .speak:hover{opacity:1}.reader{display:flex;align-items:center;gap:6px;max-width:390px;margin:8px 0;padding:6px 10px;border:1px solid #74c0fc;border-radius:8px;background:#1b1d22}.reader[hidden]{display:none}.reader button{background:#2a2f38;border:1px solid #3a404a;border-radius:6px;color:inherit;padding:2px 8px;cursor:pointer}.reader button:focus-visible{outline:2px solid #74c0fc}.reader .reader-pos{margin-left:auto;font-size:12px;opacity:.8}.reply-target{display:flex;gap:8px;align-items:baseline;margin:0 0 6px;padding:4px 8px;border-left:3px solid #74c0fc;background:#23272e;font-size:12px}.reply-target[hidden]{display:none}.reply-target span{flex:1;overflow-wrap:anywhere}.reply-target button,.note .quote-ref{background:none;border:0;color:inherit;cursor:pointer;padding:0}.note .quote-ref{display:block;text-align:left;margin-top:6px;padding:2px 8px;border-left:3px solid #74c0fc;opacity:.8;font-size:12px;overflow-wrap:anywhere}.note .quote-ref:hover{opacity:1}.note code{background:#2a2f38;padding:0 4px;border-radius:3px;font:12px ui-monospace,monospace}
       a{color:#74c0fc}
       .contextual{display:flex;gap:6px;align-items:center;padding:6px;background:#1b1d22;border:1px solid #59616d;border-radius:10px;box-shadow:0 8px 24px #0008}
       .contextual button{padding:5px 10px;border-radius:7px}
@@ -128,7 +128,7 @@
         <details class="quote-box"><summary class="quote-summary">Selected content</summary><div class="quote thread-quote"></div></details>
         <div class="thread-links"></div>
         <div class="thread-messages"></div>
-        <form class="reply-form"><div class="to to-reply" hidden></div><textarea id="thread-reply" aria-label="Your reply" placeholder="Reply (i to focus · Ctrl+Enter sends · Esc/jk normal mode, again leaves)" required maxlength="4000"></textarea>
+        <form class="reply-form"><div class="reply-target" hidden><span></span><button type="button" title="Drop (Esc in the field, or click)">✕</button></div><div class="to to-reply" hidden></div><textarea id="thread-reply" aria-label="Your reply" placeholder="Reply (i to focus · Ctrl+Enter sends · Esc/jk normal mode, again leaves)" required maxlength="4000"></textarea>
         <div class="actions"><button class="thread-region" type="button" title="Attach a screenshot of a region (s)">Region</button>
         <button class="thread-branch" type="button" title="Start a linked child thread from the selected text or focused message (n)">↳ New thread</button>
         <button class="primary reply-send" type="submit">Reply</button></div></form>
@@ -142,7 +142,7 @@
       <div class="history-head"><h2>Help</h2><small>[ ] or h/l switch tab · Esc closes</small><button class="help-close icon" type="button" aria-label="Close">✕</button></div>
       <div class="help-tabs" role="tablist"></div><pre class="help-body"></pre>
     </section>
-    <div class="status" role="status" aria-live="polite"></div>
+    <div class="reader" hidden><button type="button" data-act="prev" title="Previous (<)">⏮</button><button type="button" data-act="pause" title="Pause / resume (p)">⏯</button><button type="button" data-act="next" title="Next (>)">⏭</button><button type="button" data-act="stop" title="Stop (Esc)">⏹</button><span class="reader-pos"></span></div><div class="status" role="status" aria-live="polite"></div>
     <div class="region" hidden><div class="region-box" hidden></div><div class="region-tip">Drag to select a region · Esc cancels</div></div>
     <div class="vim-caret" hidden aria-hidden="true"></div>
     <div class="banners"></div><div class="statusbar" hidden><span class="sb-mode"></span><span class="sb-hint"></span><span class="sb-stale" hidden></span><span class="agent-status" hidden></span></div>
@@ -247,7 +247,7 @@
     const bar = find(".statusbar");
     bar.hidden = !vimEnabled && !find(".agent-status")?.classList.contains("blocked");
     find(".sb-hint").textContent = !history.hidden ? (selectedThread
-      ? "j/k scroll messages · J/K next/prev thread · r resolve · i reply · o page · h back · Esc"
+      ? "j/k scroll messages · J/K next/prev thread · q reply to message · p read · r resolve · i reply · o page · h back · Esc"
       : "j/k move · l open · o go to page · r resolve · [ ] tabs · A all P page O open · PA page history · Esc") : visual ? "c comment · Esc cancel · hjkl extend" : caretMode ? `hjklwb move caret · ${KM.page.visual} select · V paragraph · ${KM.page.comment} comment · Esc scroll mode` : `j/k scroll · i caret · ${KM.page.visual} select text · ${KM.page.comment} comment · ${KM.leader}${KM.leaderKeys.history} threads · ] next awaiting · : commands · :help`;
     find(".sb-mode").textContent = `-- ${mode}${prefix ? " " + prefix : ""} --`;
     vimButton.setAttribute("aria-pressed", String(vimEnabled));
@@ -264,7 +264,7 @@
     ["History", [
       "j/k move · l or Enter open · r resolve · p read aloud · o go to page · g/G ends",
       "Tabs: [ ] switch · A all · P this page · O open · C chat · R resolved · N notes · P then A page history",
-      "In a thread: j/k messages · J/K next/previous thread · r resolve · p read aloud · i reply · n new child thread · s attach region · h back",
+      "In a thread: j/k messages · J/K next/previous thread · r resolve · p read aloud (p pause · < > skip) · q reply to a message or selection · u jump to the quoted message · i reply · n new child thread · s attach region · h back",
     ]],
     ["Graph", [
       ":present (or ▶ Present on a graph) shows a DocGraph full screen, one node at a time",
@@ -909,37 +909,68 @@
     return out;
   };
   const readThreads = threads => readAloud(threads.flatMap(c => [c.comment, ...c.replies.map(r => r.comment)]).filter(Boolean));
-  const stopReading = () => { readToken++; readAudio?.pause(); readAudio = null; };
+  const reader = find(".reader");
+  let readState = null;
+  const stopReading = () => { readToken++; readAudio?.pause(); readAudio = null; readState = null; reader.hidden = true; };
+  const readerPos = () => { find(".reader-pos").textContent = readState ? `${readState.i + 1}/${readState.chunks.length}${readState.paused ? " · paused" : ""}` : ""; };
+  // Skip by chunk (delta), or pause/resume (0).
+  function readerStep(delta) {
+    if (!readState) return false;
+    if (!delta) { readState.paused = !readState.paused; if (readState.paused) readAudio?.pause(); else readAudio?.play(); readerPos(); return true; }
+    readState.paused = false;
+    const target = readState.i + delta;
+    if (target < 0 || target >= readState.chunks.length) { if (delta > 0) { stopReading(); message("Done reading"); } return true; }
+    readState.jump = target;
+    readAudio?.pause();
+    readAudio?.dispatchEvent(new Event("ended"));
+    return true;
+  }
+  reader.addEventListener("click", event => {
+    const act = event.target.closest("button")?.dataset.act;
+    if (act === "stop") { stopReading(); message("Stopped reading"); }
+    else if (act) readerStep(act === "prev" ? -1 : act === "next" ? 1 : 0);
+  });
   async function readAloud(texts) {
     stopReading();
     const token = readToken, chunks = texts.flatMap(speechChunks);
     if (!chunks.length) return message("Nothing to read.", true);
-    const fetchUrl = chunk => {
-      const request = api("tts", { text: chunk })
-        .then(result => fetch("/__preview_comments/tts/" + result.id, { headers: { "X-Preview-Comment": "1" } }))
-        .then(response => { if (!response.ok) throw new Error("Could not load audio."); return response.blob(); })
-        .then(blob => URL.createObjectURL(blob));
-      request.catch(() => {});
-      return request;
-    };
-    let next = fetchUrl(chunks[0]);
-    try {
-      for (let i = 0; i < chunks.length; i++) {
-        message(`Reading ${i + 1}/${chunks.length} (Esc stops)`);
-        const url = await next;
-        if (token !== readToken) return;
-        if (i + 1 < chunks.length) next = fetchUrl(chunks[i + 1]);
-        const audio = readAudio = new Audio(url);
-        await new Promise((resolve, reject) => { audio.onended = resolve; audio.onerror = () => reject(new Error("Could not play audio.")); audio.play().catch(reject); });
-        if (token !== readToken) return;
+    const urls = new Map();
+    const fetchUrl = i => {
+      if (!urls.has(i)) {
+        const request = api("tts", { text: chunks[i] })
+          .then(result => fetch("/__preview_comments/tts/" + result.id, { headers: { "X-Preview-Comment": "1" } }))
+          .then(response => { if (!response.ok) throw new Error("Could not load audio."); return response.blob(); })
+          .then(blob => URL.createObjectURL(blob));
+        request.catch(() => {});
+        urls.set(i, request);
       }
+      return urls.get(i);
+    };
+    const state = readState = { chunks, i: 0, jump: undefined, paused: false };
+    reader.hidden = false;
+    try {
+      while (state.i < chunks.length) {
+        readerPos();
+        message("Loading speech…");
+        const url = await fetchUrl(state.i);
+        if (token !== readToken) return;
+        if (state.i + 1 < chunks.length) fetchUrl(state.i + 1);
+        status.textContent = "";
+        const audio = readAudio = new Audio(url);
+        readerPos();
+        await new Promise((resolve, reject) => { audio.onended = resolve; audio.onerror = () => reject(new Error("Could not play audio.")); audio.play().catch(reject); if (state.paused) audio.pause(); });
+        if (token !== readToken) return;
+        state.i = state.jump ?? state.i + 1;
+        state.jump = undefined;
+      }
+      stopReading();
       message("Done reading");
     } catch (error) {
-      if (token === readToken) message(error.message, true);
+      if (token === readToken) { stopReading(); message(error.message, true); }
     }
   }
   document.addEventListener("keydown", event => {
-    if (event.key === "Escape" && readAudio) { stopReading(); message("Stopped reading"); }
+    if (event.key === "Escape" && readState) { stopReading(); message("Stopped reading"); }
   }, true);
   // Inline Markdown for messages (bold, italic, code), built from DOM nodes so message text is never parsed as HTML.
   function inlineMarkdown(text) {
@@ -960,6 +991,7 @@
   function renderNote(author, text, at, opts = {}) {
     const note = document.createElement("article");
     note.className = `${opts.note ? "note private" : "note"} ${author === "Copilot" ? "copilot" : "mine"}`;
+    if (opts.mid) note.dataset.mid = opts.mid;
     const label = document.createElement("small");
     label.textContent = `${author}${opts.note ? " · private note" : ""} · ${new Date(at).toLocaleString()}${opts.edited ? " · edited" : ""}`;
     const body = document.createElement("p");
@@ -968,7 +1000,16 @@
     speak.type = "button"; speak.className = "speak"; speak.textContent = "🔊"; speak.title = "Read aloud (:read)";
     speak.addEventListener("click", () => readAloud([text]));
     label.append(" ", speak);
-    note.append(label, body);
+    if (opts.ref) {
+      const ref = document.createElement("button");
+      ref.type = "button"; ref.className = "quote-ref"; ref.title = "Jump to the message (u)";
+      ref.textContent = `↩ ${opts.ref.author}: “${opts.ref.quote}”`;
+      ref.addEventListener("click", () => {
+        const target = find(`.thread-messages [data-mid="${opts.ref.id}"]`);
+        if (target) { target.focus(); target.scrollIntoView({ block: "nearest" }); }
+      });
+      note.append(label, ref, body);
+    } else note.append(label, body);
     if (opts.onEdit || opts.onDelete) {
       const tools = document.createElement("div");
       tools.className = "tools";
@@ -1059,7 +1100,7 @@
     const nodes = [];
     if (comment.comment) {
       nodes.push(renderNote(comment.author === "copilot" ? "Copilot" : "You", comment.comment, comment.at, {
-        note: comment.note, edited: comment.commentEdited,
+        note: comment.note, edited: comment.commentEdited, mid: comment.id,
         onEdit: text => run({ editComment: text }),
       }));
     }
@@ -1067,8 +1108,11 @@
     if (comment.images?.length) nodes.push(thumbnails(comment.images));
     for (const reply of comment.replies) {
       const mine = reply.author !== "copilot";
-      nodes.push(renderNote(mine ? "You" : "Copilot", reply.comment, reply.at, {
-        note: reply.note, edited: reply.edited,
+      const target = reply.inReplyTo;
+      const targetAuthor = target && (target.id === comment.id ? comment : comment.replies.find(r => r.id === target.id));
+      nodes.push(renderNote(mine ? "You" : "Copilot", target ? reply.comment.replace(/^> [^\n]*\n\n/, "") : reply.comment, reply.at, {
+        note: reply.note, edited: reply.edited, mid: reply.id,
+        ref: target && { id: target.id, quote: (target.quote || "").slice(0, 140), author: targetAuthor?.author === "copilot" ? "Copilot" : "You" },
         onEdit: mine ? text => run({ editReply: { id: reply.id, text } }) : undefined,
         onDelete: () => run({ removeReply: reply.id }),
       }));
@@ -1151,7 +1195,7 @@
     find(".thread-resolve").textContent = isNote(comment) ? "Remove" : comment.resolved ? "Reopen" : "Resolve";
     markSeen(comment);
     renderLinks(comment);
-    if (find(".to-reply").dataset.for !== comment.id) { find(".to-reply").dataset.for = comment.id; renderReplyTo(comment); }
+    if (find(".to-reply").dataset.for !== comment.id) { setReplyTarget(null); find(".to-reply").dataset.for = comment.id; renderReplyTo(comment); }
     find(".thread-messages").replaceChildren(...threadNodes(comment, values => updateThread(values)));
     for (const item of find(".thread-messages").children) item.tabIndex = -1;
   }
@@ -1337,6 +1381,7 @@
       if (values.reply !== undefined) {
         replyDrafts.delete(commentId);
         replyInput.value = "";
+        setReplyTarget(null);
         host.dataset.replyDrafts = String([...replyDrafts.values()].filter(draft => draft.text.trim()).length);
         message("Reply saved");
       } else if (values.resolved !== undefined) message(result.resolved ? "Comment resolved" : "Comment reopened");
@@ -1380,6 +1425,25 @@
     replyTo = new Set(comment?.to?.length ? comment.to : defaultTo());
     chipRow(find(".to-reply"), replyTo);
   }
+  // Replying to one message (optionally one highlighted passage of it): the reply is linked to it.
+  let replyTarget = null;
+  function setReplyTarget(target) {
+    replyTarget = target;
+    const row = find(".reply-target");
+    row.hidden = !target;
+    if (target) row.firstElementChild.textContent = `↩ ${target.author}: “${target.quote.slice(0, 160)}${target.quote.length > 160 ? "…" : ""}”`;
+  }
+  find(".reply-target button").addEventListener("click", () => setReplyTarget(null));
+  function replyToMessage(item) {
+    const note = item?.closest?.(".note");
+    if (!note?.dataset.mid) { message("Focus a message (j/k), optionally select text in it, then q", true); return; }
+    const picked = shadow.getSelection?.() ?? getSelection();
+    let quote = picked.rangeCount && note.contains(picked.getRangeAt(0).commonAncestorContainer) ? picked.toString().trim() : "";
+    quote ||= (note.querySelector("p")?.textContent || "").trim();
+    const author = note.classList.contains("copilot") ? "Copilot" : "You";
+    setReplyTarget({ id: note.dataset.mid, author, quote: quote.slice(0, 600) });
+    replyInput.focus();
+  }
   find(".reply-form").addEventListener("submit", event => {
     event.preventDefault();
     if (!replyInput.value.trim() || historySaving) return;
@@ -1387,7 +1451,9 @@
     if (!draft.id || draft.submitted !== replyInput.value) draft.id = crypto.randomUUID();
     draft.submitted = replyInput.value;
     replyDrafts.set(selectedThread, draft);
-    updateThread({ id: draft.id, reply: replyInput.value, ...toValue(replyTo, !find(".to-reply").hidden) });
+    const target = replyTarget;
+    const quoted = target ? "> " + target.quote.replace(/\s+/g, " ").slice(0, 300) + "\n\n" : "";
+    updateThread({ id: draft.id, reply: quoted + replyInput.value, ...(target ? { inReplyTo: { id: target.id, quote: target.quote } } : {}), ...toValue(replyTo, !find(".to-reply").hidden) });
     rememberTo(replyTo);
   });
   find(".thread-resolve").addEventListener("click", () => {
@@ -1609,7 +1675,10 @@
       const here = ids.indexOf(selectedThread);
       if (key === "h" || key === "ArrowLeft") leaveThread();
       else if (key === "r") triage(selectedThread);
-      else if (key === "p") { if (readAudio) { stopReading(); message("Stopped reading"); } else readThreads([currentThread()]); }
+      else if (readState && (key === "p" || key === "<" || key === ">")) readerStep(key === "p" ? 0 : key === "<" ? -1 : 1);
+      else if (key === "p") readThreads([currentThread()]);
+      else if (key === "q") replyToMessage(field);
+      else if (key === "u") field.querySelector?.(".quote-ref")?.click();
       else if (key === "i") replyInput.focus();
       else if (key === "n") branchThread();
       else if (key === "o") find(".thread-source").click();
@@ -1631,7 +1700,8 @@
     else if (key === "G") step(Infinity);
     else if (key === "l" || key === "ArrowRight") { if (at >= 0) cards[at].click(); }
     else if (key === "r") { if (at >= 0) triage(ids[at]); }
-    else if (key === "p") { if (readAudio) { stopReading(); message("Stopped reading"); } else if (at >= 0) readThreads([historyComments.find(c => c.id === ids[at])]); }
+    else if (readState && (key === "p" || key === "<" || key === ">")) readerStep(key === "p" ? 0 : key === "<" ? -1 : 1);
+    else if (key === "p") { if (at >= 0) readThreads([historyComments.find(c => c.id === ids[at])]); }
     else if (key === "o") { if (at >= 0) { selectThread(ids[at]); find(".thread-source").click(); } }
     else if (key === "[" || key === "]") {
       setFilter(values[(values.indexOf(historyFilter) + (key === "]" ? 1 : values.length - 1)) % values.length]);
