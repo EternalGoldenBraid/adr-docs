@@ -238,6 +238,7 @@ export async function startCommentBridge({
           id: record.id, at: record.at, author: record.author, comment: record.reply,
           ...(record.note ? { note: true } : {}),
           ...(record.inReplyTo ? { inReplyTo: record.inReplyTo } : {}),
+          ...(record.from ? { from: record.from } : {}),
           ...(record.proposal ? { proposal: record.proposal } : {}),
         });
       }
@@ -392,6 +393,7 @@ export async function startCommentBridge({
       if (name === "addRefs" && ids.some(id => id === value.commentId || !comments.has(id))) throw new Error("Linked comments must be other threads in this session.");
       if (ids.length) value[name] = ids;
     }
+    if (author === "copilot" && typeof input.from === "string" && /^[\w .@-]{1,60}$/.test(input.from.trim())) value.from = input.from.trim();
     if (author === "copilot" && input.proposal && typeof input.proposal === "object") {
       value.proposal = { before: String(input.proposal.before ?? "").slice(0, 8000), after: String(input.proposal.after ?? "").slice(0, 8000) };
       value.reply ??= "Proposed edit:";

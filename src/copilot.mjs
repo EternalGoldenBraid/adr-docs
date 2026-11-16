@@ -103,6 +103,7 @@ export async function connectDocumentReview({
         type: "object", required: ["comment_id"],
         properties: {
           comment_id: { type: "string" }, reply: { type: "string" },
+          as: { type: "string", description: "Your agent name; shown as the sender of the reply and used as the recipient when the user replies to it." },
           resolved: { type: "boolean" },
           proposal: { type: "object", description: "Optional proposed edit shown as a diff card in this thread, with Accept/Reject buttons. Accepting replies to you; apply the edit yourself then.", properties: { before: { type: "string" }, after: { type: "string" } } },
           link_comment_ids: { type: "array", items: { type: "string" }, description: "Link this thread to other threads (ids); the user sees them as jumpable links with backlinks." },
@@ -113,6 +114,7 @@ export async function connectDocumentReview({
       handler: args => {
         const input = { id: args.update_id ?? randomUUID(), commentId: args.comment_id };
         if (args.reply !== undefined) input.reply = args.reply;
+        if (args.as) input.from = args.as;
         if (args.resolved !== undefined) input.resolved = args.resolved;
         if (args.proposal !== undefined) input.proposal = args.proposal;
         if (args.link_comment_ids !== undefined) input.addRefs = args.link_comment_ids;

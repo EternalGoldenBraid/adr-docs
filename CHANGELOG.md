@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.63.3 - 2026-11-16
+
+- Agent replies store their sender: `update_doc_review_comment` takes `as` (your agent name), saved as `from`. The thread shows it instead of "Copilot", and quote-reply addresses that agent.
+
 ## 0.63.2 - 2026-11-16
 
 - Quote-reply (`q`) sets the To: recipients from the quoted message: your own message's recipients, or, for an agent's reply, whoever the message before it was addressed to (agent replies don't record which agent wrote them).
