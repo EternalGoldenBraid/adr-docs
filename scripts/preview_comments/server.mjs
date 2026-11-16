@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { createServer } from "node:http";
 import {
   appendFileSync, closeSync, existsSync, fsyncSync, mkdirSync, openSync,
-  readFileSync, realpathSync, unlinkSync, writeFileSync,
+  readdirSync, readFileSync, realpathSync, unlinkSync, writeFileSync,
 } from "node:fs";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { homedir } from "node:os";
@@ -126,7 +126,7 @@ export async function startCommentBridge({
       try {
         const marks = known.map(() => "?").join(",");
         const columns = db.prepare("PRAGMA table_info(agent_sessions)").all().some(column => column.name === "kind") ? "kind" : "'agent' AS kind";
-        live = new Map(db.prepare(`SELECT session_id, status, ${columns}, last_heartbeat FROM agent_sessions WHERE session_id IN (${marks})`).all(...known.map(row => row.session)).map(row => [row.session_id, row]));
+        live = new Map(db.prepare(`SELECT session_id, cwd, status, ${columns}, last_heartbeat FROM agent_sessions WHERE session_id IN (${marks})`).all(...known.map(row => row.session)).map(row => [row.session_id, row]));
         // Latest `STATUS <ticket> | <state> | <doing> | <next>` reply per agent, and who wrote to whom recently (never other message bodies).
         const bare = id => String(id).match(/[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}/i)?.[0] ?? id;
         const sessions = new Set(known.map(row => row.session));
@@ -147,9 +147,18 @@ export async function startCommentBridge({
       } finally { db.close(); }
     } catch { /* no local mesh database */ }
     meshEdges = [...edges.values()];
+    // Per-pane hook state from the desktop's agent-notify (working|waiting|asking|idle), matched by working directory.
+    const activity = new Map();
+    try {
+      const dir = join(process.env.XDG_RUNTIME_DIR || `/run/user/${process.getuid?.() ?? 1000}`, "agent-notify");
+      for (const name of readdirSync(dir).filter(file => file.endsWith(".json"))) {
+        const note = JSON.parse(readFileSync(join(dir, name), "utf8"));
+        if (note.cwd && note.state && Date.now() / 1000 - note.ts < 12 * 3600 && !(activity.get(note.cwd)?.ts > note.ts)) activity.set(note.cwd, note);
+      }
+    } catch { /* no agent-notify on this machine */ }
     return roster().map(row => {
       const seen = live.get(row.session) ?? remote.get(row.session);
-      return { ...row, status: !row.session ? "human" : seen ? seen.status : "unknown", lastSeen: seen?.last_heartbeat ?? null, kind: seen?.kind ?? (row.session ? "agent" : "human"), statusLine: statusLines.get(row.session) ?? null };
+      return { ...row, status: !row.session ? "human" : seen ? seen.status : "unknown", lastSeen: seen?.last_heartbeat ?? null, kind: seen?.kind ?? (row.session ? "agent" : "human"), statusLine: statusLines.get(row.session) ?? null, activity: activity.get(seen?.cwd)?.state ?? null };
     });
   }
   // Quiet mesh note to each addressed agent other than the owner; they pull the thread when they choose.

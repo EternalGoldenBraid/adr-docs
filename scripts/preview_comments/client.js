@@ -740,7 +740,7 @@
         const row = document.createElement("tr");
         const cell = (text, dot) => { const td = document.createElement("td"); if (dot) { const d = document.createElement("span"); d.className = "dot " + dot; td.append(d); } td.append(text); row.append(td); };
         const l = m.statusLine;
-        cell(m.name); cell(m.status === "human" ? "human" : m.status, m.status);
+        cell(m.name); cell(m.status === "human" ? "human" : m.activity && m.status === "active" ? `${m.status} · ${m.activity}` : m.status, m.activity === "asking" || m.activity === "waiting" ? "waiting" : m.status);
         cell(l ? `${l.ticket ? l.ticket + " · " : ""}${l.state} · ${l.doing}${l.next ? " → " + l.next : ""} (${ago(l.at)})` : "—");
         cell(m.machine || "—");
         return row;
