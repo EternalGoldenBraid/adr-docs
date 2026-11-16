@@ -103,7 +103,7 @@ const sourceFor = (root, page) => {
 };
 
 // One built page -> standalone html plus the media files it references (copied by the caller).
-async function renderPage(dist, page, inlineLimit, mediaPrefix, warnings, links = {}, documentRoot = dist) {
+async function renderPage(dist, page, inlineLimit, mediaPrefix, warnings, links = {}, documentRoot = dist, prepare = path => path) {
   const { html: htmlName, key } = pageFiles(page);
   const htmlPath = join(dist, htmlName);
   if (!existsSync(htmlPath)) throw new Error(`Page not found: ${page}`);
@@ -133,7 +133,7 @@ async function renderPage(dist, page, inlineLimit, mediaPrefix, warnings, links 
   };
   const rewriteAsset = url => {
     if (typeof url !== "string" || !url.startsWith("/") || url.startsWith("//")) return url;
-    const path = assetOf(url);
+    const path = prepare(assetOf(url));
     if (!path) { warnings.push(`Missing graph file: ${url}`); return url; }
     if (statSync(path).size <= inlineLimit) return `data:${MIME[extname(path)] ?? "application/octet-stream"};base64,${readFileSync(path).toString("base64")}`;
     const name = `media/${mediaPrefix}${media.length}-${basename(path)}`;
@@ -153,8 +153,9 @@ async function renderPage(dist, page, inlineLimit, mediaPrefix, warnings, links 
   }
   html = html.replace(/\b(src|poster)="([^"]+)"/g, (whole, attribute, url) => {
     if (!isLocal(url)) return whole;
-    const path = url.startsWith("/") ? join(dist, url.split(/[?#]/)[0]) : join(pageDir, url.split(/[?#]/)[0]);
+    let path = url.startsWith("/") ? join(dist, url.split(/[?#]/)[0]) : join(pageDir, url.split(/[?#]/)[0]);
     if (!existsSync(path) || !statSync(path).isFile()) { warnings.push(`Missing file: ${url}`); return whole; }
+    path = prepare(path);
     if (statSync(path).size <= inlineLimit) {
       return `${attribute}="data:${MIME[extname(path)] ?? "application/octet-stream"};base64,${readFileSync(path).toString("base64")}"`;
     }
@@ -187,7 +188,7 @@ async function renderPage(dist, page, inlineLimit, mediaPrefix, warnings, links 
 }
 
 // `pages` (several) or `page` (one). onProgress({ stage, done, total }) reports coarse steps.
-export async function exportPage({ documentPath, documentRoot, page, pages, outFile, inlineLimit = 2 * 1024 * 1024, zip, onProgress = () => {} } = {}) {
+export async function exportPage({ documentPath, documentRoot, page, pages, outFile, inlineLimit = 2 * 1024 * 1024, zip, single, compress, onProgress = () => {} } = {}) {
   let stem = "index";
   if (documentPath) {
     const document = realpathSync(documentPath);
@@ -210,6 +211,11 @@ export async function exportPage({ documentPath, documentRoot, page, pages, outF
     return source;
   });
   const many = pages.length > 1;
+  if (single) {
+    if (many) throw new Error("Single-file export takes one page.");
+    inlineLimit = Infinity;
+    zip = false;
+  }
   const total = pages.length + 2;
   const warnings = [];
   onProgress({ stage: "Building site", done: 0, total });
@@ -217,11 +223,28 @@ export async function exportPage({ documentPath, documentRoot, page, pages, outF
   try {
     const dist = join(workspace, "dist");
     const rendered = [];
+    // Optional lossy re-encode of videos (smaller, 960 px wide, no audio); originals are untouched.
+    const encoded = new Map();
+    const prepare = path => {
+      if (!compress || !path || extname(path).toLowerCase() !== ".mp4") return path;
+      if (!encoded.has(path)) {
+        const out = join(workspace, `enc-${encoded.size}.mp4`);
+        try {
+          execFileSync("ffmpeg", ["-y", "-v", "error", "-i", path, "-vf", "scale='min(960,iw)':-2", "-c:v", "libx264", "-crf", "30", "-preset", "veryfast",
+            "-an", "-movflags", "+faststart", "-pix_fmt", "yuv420p", out]);
+          encoded.set(path, statSync(out).size < statSync(path).size ? out : path);
+        } catch (error) {
+          warnings.push(`Could not re-encode ${basename(path)}: ${String(error.message).split("\n")[0]}`);
+          encoded.set(path, path);
+        }
+      }
+      return encoded.get(path);
+    };
     const links = many ? Object.fromEntries(pages.map(item => [normalPage(item), zipName(item, true)])) : {};
     for (const [index, item] of pages.entries()) {
-      onProgress({ stage: `Packaging ${item}`, done: index + 1, total });
+      onProgress({ stage: `${compress ? "Re-encoding videos and packaging" : "Packaging"} ${item}`, done: index + 1, total });
       const prefix = many ? `${index}-` : "";
-      const result = await renderPage(dist, item, inlineLimit, prefix, warnings, links, documentRoot);
+      const result = await renderPage(dist, item, inlineLimit, prefix, warnings, links, documentRoot, prepare);
       rendered.push({ ...result, page: item });
     }
     const media = rendered.flatMap(item => item.media);

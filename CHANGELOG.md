@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.57.0 - 2026-11-16
+
+- Export: `--single` writes one self-contained `.html` with all images and videos inlined (no zip, one page). `--single --compress` first re-encodes videos with ffmpeg (H.264, max 960 px wide, no audio, CRF 30; originals untouched), typically less than half the size. Without these flags the export is unchanged.
+
 ## 0.56.6 - 2026-11-16
 
 - Offline exports: `:` on the page now opens the graph's command line (exports have no page command line), so `:present` works without clicking the graph first. The **▶ Present** button was already there.
