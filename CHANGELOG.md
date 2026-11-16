@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.59.2 - 2026-11-16
+
+- `<TeamGraph />` now also shows the live team table (Who, Status with the shared indicators, Doing, Machine) under the graph and hides the hand-written roster table. The markdown table stays as the roster source.
+
 ## 0.59.1 - 2026-11-16
 
 - Team peek has **Table** and **Graph** tabs (choice remembered); the graph is a live SVG.
