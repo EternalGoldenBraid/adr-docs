@@ -1443,6 +1443,11 @@
     quote ||= (note.querySelector("p")?.textContent || "").trim();
     const author = note.classList.contains("copilot") ? "Copilot" : "You";
     setReplyTarget({ id: note.dataset.mid, author, quote: quote.slice(0, 600) });
+    // Address the reply like the quoted message. Agent replies don't record which agent wrote them, so use whoever the message before it was sent to.
+    const thread = currentThread(), items = thread ? [thread, ...thread.replies] : [], at = items.findIndex(m => m.id === note.dataset.mid);
+    let to;
+    for (let i = author === "You" ? at : at - 1; i >= 0 && !to; i--) if (items[i].author !== "copilot" && items[i].to?.length) to = items[i].to;
+    if (to) { replyTo = new Set(to); chipRow(find(".to-reply"), replyTo); }
     replyInput.focus();
   }
   find(".reply-form").addEventListener("submit", event => {

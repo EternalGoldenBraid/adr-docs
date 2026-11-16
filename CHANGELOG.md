@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.63.2 - 2026-11-16
+
+- Quote-reply (`q`) sets the To: recipients from the quoted message: your own message's recipients, or, for an agent's reply, whoever the message before it was addressed to (agent replies don't record which agent wrote them).
+
 ## 0.63.1 - 2026-11-16
 
 - Comment bodies render Markdown links `[text](url)` (http(s) or site-relative) as clickable links that open in a new tab.
