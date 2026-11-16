@@ -452,10 +452,11 @@
   async function grep(_first, line = "") {
     const words = line.split(/\s+/).filter(Boolean);
     const query = new URLSearchParams();
-    let scoped = false, only;
+    let scoped = false, only, meaning = false;
     while (words[0]?.startsWith("-") && words[0].length > 1) {
       const flag = words.shift();
-      if (flag === "-s") query.set("case", "1");
+      if (flag === "-m") meaning = true;
+      else if (flag === "-s") query.set("case", "1");
       else if (flag === "-p" || flag === "-c") only = flag;
       else if (flag === "-d" || flag === "-u") {
         const n = Number(words.shift());
@@ -466,6 +467,7 @@
     }
     const pattern = words.join(" ");
     if (!pattern) return message("Usage: :grep [-d N] [-u N] [-s] [-p|-c] <regex>", true);
+    if (meaning) return semantic(pattern);
     query.set("q", pattern);
     if (scoped) query.set("from", pagePath(location.href));
     message(`Searching “${pattern}”…`);
@@ -510,6 +512,40 @@
         if (pagePath(new URL(hit.link, location.origin)) === pagePath(location.href)) findPending(); else location.assign(hit.link);
       })),
       ...threads.map(hit => row(`💬 ${hit.thread.kind === "session" ? "session" : hit.thread.section || pagePath(hit.thread.url)}${hit.thread.resolved ? " ✓" : ""}`, hit, () => goToThread(hit.thread))));
+    grepPanel.hidden = false;
+    grepList.firstElementChild.focus();
+  }
+  // :grep -m <words>: rank page paragraphs and comment threads by meaning (local embedding model, first use downloads it).
+  async function semantic(words) {
+    message(`Searching by meaning “${words}” (the first search downloads a small model and can take a minute)…`);
+    const threads = historyComments.filter(c => !c.removed).map(c => ({ id: c.id, url: pagePath(c.url), title: c.section || "", text: [c.comment, c.quote, ...c.replies.map(r => r.comment)].filter(Boolean).join(" ") }));
+    let result;
+    try {
+      const response = await fetch("/__adr/semantic", { method: "POST", body: JSON.stringify({ query: words, threads }) });
+      result = await response.json();
+      if (!response.ok) return message(result.error, true);
+    } catch (error) { return message(`Semantic search failed: ${error.message}`, true); }
+    message(`${result.hits.length} closest of ${result.searched} passages`);
+    grepPanel.querySelector("header").textContent = `meaning “${words}” · ${result.hits.length} closest · j/k move · Enter open · Esc close`;
+    const rows = result.hits.map(hit => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "grep-hit";
+      const where = document.createElement("b");
+      where.textContent = hit.kind === "thread" ? `💬 ${hit.title || hit.link}` : `${hit.title}${hit.heading ? " › " + hit.heading : ""}`;
+      const text = document.createElement("span");
+      text.textContent = ` ${hit.score.toFixed(2)} ${hit.text.slice(0, 200)}`;
+      button.append(where, text);
+      button.addEventListener("click", () => {
+        closeGrep();
+        if (hit.kind === "thread") { const thread = historyComments.find(c => c.id === hit.id); if (thread) goToThread(thread); return; }
+        sessionStorage.setItem("adr-find", JSON.stringify({ text: hit.text.slice(0, 40), sensitive: false }));
+        if (pagePath(new URL(hit.link, location.origin)) === pagePath(location.href)) findPending(); else location.assign(hit.link);
+      });
+      return button;
+    });
+    if (!rows.length) return closeGrep();
+    grepList.replaceChildren(...rows);
     grepPanel.hidden = false;
     grepList.firstElementChild.focus();
   }

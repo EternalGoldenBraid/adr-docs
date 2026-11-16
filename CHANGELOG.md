@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.64.0 - 2026-11-16
+
+- `:grep -m <words>` is a semantic search over page paragraphs and comment threads, run locally on CPU (bge-small through an isolated `uv run --with fastembed` worker, started on demand and stopped after 10 idle minutes). Embeddings are cached on disk.
+
 ## 0.63.8 - 2026-11-16
 
 - Agent replies are named without an `as` argument: the tool sends its session id and the server looks the name up in the team roster, so threads show e.g. "demo" instead of "Copilot". Each agent needs the updated plugin (new session or extension reload).
