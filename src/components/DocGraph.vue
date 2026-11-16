@@ -591,6 +591,8 @@ function runCmd() {
 
 function onKey(e) {
   if ((e.composedPath?.()[0] || e.target).matches?.('input,textarea,select') || e.ctrlKey || e.metaKey || e.altKey) return
+  // Offline exports have no page command line, so `:` on the page goes to the graph's.
+  if (!active.value && e.key === ':' && typeof window !== 'undefined' && window.__ADR_PAGE !== undefined && vimOn.value) activate()
   if (!active.value) return
   if (e.key === '?') { help.value = !help.value; return }
   if (!vimOn.value) return
