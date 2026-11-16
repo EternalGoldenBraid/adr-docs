@@ -115,6 +115,7 @@ export async function connectDocumentReview({
         const input = { id: args.update_id ?? randomUUID(), commentId: args.comment_id };
         if (args.reply !== undefined) input.reply = args.reply;
         if (args.as) input.from = args.as;
+        input.fromSession = session.sessionId;
         if (args.resolved !== undefined) input.resolved = args.resolved;
         if (args.proposal !== undefined) input.proposal = args.proposal;
         if (args.link_comment_ids !== undefined) input.addRefs = args.link_comment_ids;
