@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.61.1 - 2026-11-16
+
+- `:help` has an **Export** section (`:export`, `single`, `compress`, multi-page, CLI), and `:help export` opens a section by name.
+- Fixed: since 0.59.1 `:help` drew its tabs into the Team panel's tab row, so the help tab bar was missing and the Table/Graph buttons were replaced.
+
 ## 0.61.0 - 2026-11-16
 
 - `:export single` downloads one self-contained `.html` (everything inlined); `:export compress` does the same with videos re-encoded smaller (ffmpeg, lossy). Same as the CLI `--single` / `--compress`. Plain `:export` is unchanged.

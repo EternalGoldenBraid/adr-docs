@@ -42,7 +42,7 @@
       .thread{margin:0!important}.thread>*{margin-left:20px;margin-right:20px}
       .history-head h2{margin:0}.history-head .history-counts{margin-left:auto;margin-right:12px}
       .icon{padding:2px 9px;border-radius:6px;line-height:1.4}
-      .help-panel{width:min(640px,94vw)}.help-tabs{display:flex;gap:6px;margin:8px 0;flex-wrap:wrap}.help-tabs button{background:#2a2e36;color:inherit;border:1px solid #59616d;border-radius:6px;padding:3px 10px;cursor:pointer}.help-tabs button[aria-selected=true]{background:#3b4a63;border-color:#8ab4f8}.help-body{white-space:pre-wrap;font:13px/1.5 ui-monospace,monospace;margin:0;max-height:50vh;overflow:auto}
+      .help-panel{width:min(640px,94vw)}.help-tabs,.help-tabs-look{display:flex;gap:6px;margin:8px 0;flex-wrap:wrap}.help-tabs button,.help-tabs-look button{background:#2a2e36;color:inherit;border:1px solid #59616d;border-radius:6px;padding:3px 10px;cursor:pointer}.help-tabs button[aria-selected=true],.help-tabs-look button[aria-selected=true]{background:#3b4a63;border-color:#8ab4f8}.help-body{white-space:pre-wrap;font:13px/1.5 ui-monospace,monospace;margin:0;max-height:50vh;overflow:auto}
       .mesh-panel{width:min(640px,94vw)}.mesh-panel.peek{position:fixed;left:auto;top:auto;right:12px;bottom:52px;margin:0;max-height:70vh;overflow:auto;opacity:.97}.mesh-corner{position:fixed;right:0;bottom:130px;padding:10px 3px;z-index:2147483000;background:#1b1d22cc;color:#aab;border:1px solid #3a404a;border-right:0;border-radius:8px 0 0 8px;font:11px/1 ui-monospace,monospace;writing-mode:vertical-rl;cursor:pointer;opacity:.55}.mesh-corner:hover{opacity:1}.mesh-table td:nth-child(2){white-space:nowrap}.mesh-tabs{margin:0 8px}.mesh-graph[hidden]{display:none}.mesh-graph{width:100%;height:auto;display:block}.mesh-graph text{fill:#d7dde6;font:11px ui-monospace,monospace;text-anchor:middle}.mesh-edges{font-size:12px;color:#aab;margin-top:8px}.mesh-table{width:100%;border-collapse:collapse;font-size:13px}.mesh-table th,.mesh-table td{text-align:left;padding:4px 8px;border-bottom:1px solid #3a404a}
       .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:#59616d}.dot.active{background:#51cf66}.dot.idle{background:#fcc419}
       .tabs{display:flex;gap:2px;margin-top:4px!important;margin-bottom:6px!important;border-bottom:1px solid #3a404a}
@@ -135,7 +135,7 @@
       </section>
     </section>
     <section class="panel mesh-panel" hidden aria-label="Team status">
-      <div class="history-head"><h2>Team</h2><span class="help-tabs mesh-tabs"><button type="button" data-tab="table">Table</button><button type="button" data-tab="graph">Graph</button></span><small class="mesh-note"></small><button class="mesh-close icon" type="button" aria-label="Close">✕</button></div>
+      <div class="history-head"><h2>Team</h2><span class="mesh-tabs help-tabs-look"><button type="button" data-tab="table">Table</button><button type="button" data-tab="graph">Graph</button></span><small class="mesh-note"></small><button class="mesh-close icon" type="button" aria-label="Close">✕</button></div>
       <table class="mesh-table"><thead><tr><th>Who</th><th>Status</th><th>Doing</th><th>Machine</th></tr></thead><tbody></tbody></table><svg class="mesh-graph" viewBox="0 0 600 320" hidden></svg><div class="mesh-edges"></div>
     </section>
     <section class="panel help-panel" hidden aria-label="Help">
@@ -275,9 +275,16 @@
       "Esc or jk → normal mode (h j k l w b e 0 ^ $ gg G · x dd D cc cw yy p P u Ctrl-r · i a I A o O · v V then y d c)",
       "Esc or jk again leaves the field",
     ]],
+    ["Export", [
+      ":export downloads this page for offline use: one .html, or a .zip when videos or large files are included. The Export button does the same.",
+      ":export single makes one self-contained .html file (images and videos inlined, so it can be large). Open it directly in a browser; type : and then present for the presenter.",
+      ":export compress is :export single with videos re-encoded smaller (lossy, ffmpeg; originals are untouched).",
+      "Several pages: open the tree (t), press v for select mode, Space/x ticks a page, X adds descendants, a/A all/none, e exports a .zip with working links between pages.",
+      "From a terminal: npm run export -- doc.md --page /p --out deck.html [--single] [--compress] [--zip]",
+    ]],
     ["Search & commands", [
       "/ or :grep [-d N] [-u N] [-s] [-p|-c] <regex> searches pages and threads (no flag: all pages; -d 0: this page; -d N: N levels below; -u N: N ancestors; -1 = all)",
-      "Commands: :help :man :history :chat :comment :tree :present :export [single|compress] :figure :restart :grep :vim off|on :keys",
+      "Commands: :help [section] :man :history :chat :comment :tree :present :export [single|compress] :figure :restart :grep :vim off|on :keys",
       "Keys are configured in ~/.config/agent-doc-review/keymap.json",
     ]],
   ];
@@ -286,7 +293,7 @@
   function showHelp(index = helpIndex) {
     const tabs = helpTabs();
     helpIndex = (index + tabs.length) % tabs.length;
-    find(".help-tabs").replaceChildren(...tabs.map(([name], i) => {
+    find(".help-panel .help-tabs").replaceChildren(...tabs.map(([name], i) => {
       const b = document.createElement("button");
       b.type = "button"; b.role = "tab"; b.textContent = name; b.setAttribute("aria-selected", String(i === helpIndex));
       b.addEventListener("click", () => showHelp(i));
@@ -305,7 +312,7 @@
     event.preventDefault(); event.stopImmediatePropagation();
   }, true);
   const commands = {
-    help: () => showHelp(), man: () => showHelp(),
+    help: arg => showHelp(arg ? Math.max(0, helpTabs().findIndex(([name]) => name.toLowerCase().startsWith(arg.toLowerCase()))) : undefined), man: arg => commands.help(arg),
     keys: () => message(JSON.stringify(KM.resize) + "\n" + JSON.stringify(KM.leaderKeys)),
     history: () => openHistory(), chat: () => open(sessionTarget()),
     comment: () => commentSelection(),
