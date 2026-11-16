@@ -104,6 +104,19 @@ function pick(value) {
   model.value = layout()
 }
 
+const machines = ref([])
+function machineOf(m) {
+  if (m.error) return { name: m.name, error: m.error }
+  const peak = Math.max(m.nproc, ...m.history), y = v => (22 - v / peak * 20).toFixed(1)
+  const points = m.history.map((v, i) => `${(i / Math.max(1, m.history.length - 1) * 100).toFixed(1)},${y(v)}`).join(' ')
+  const gpu = m.gpus.length ? ` · GPU ${m.gpus.map(g => g.util + '%').join('/')}` : ''
+  return {
+    name: m.name, points, limit: y(m.nproc), hot: m.loadavg[0] > m.nproc * 0.9, stale: m.stale,
+    text: `${m.loadavg[0].toFixed(0)}/${m.nproc}${m.memUsed !== undefined ? ` · mem ${Math.round(m.memUsed * 100)}%` : ''}${gpu}`,
+    top: m.top.map(p => `${p.user} ${p.pcpu}% ${p.cmd}`).join('\n'),
+  }
+}
+
 async function load() {
   try {
     const response = await fetch('/__preview_comments/mesh', { headers: { 'X-Preview-Comment': '1' } })
@@ -111,6 +124,7 @@ async function load() {
     const data = await response.json()
     members = data.members
     edges = data.edges ?? []
+    machines.value = (data.machines ?? []).map(machineOf)
     rows.value = members.filter(m => m.session).map(rowOf)
     hideSource(rows.value.length > 0)
     model.value = layout()
@@ -172,12 +186,25 @@ onUnmounted(() => { hideSource(false); clearInterval(timer) })
         </tr>
       </tbody>
     </table>
+    <div v-if="machines.length" class="team-machines">
+      <div v-for="m in machines" :key="m.name" class="mach" :class="{ stale: m.stale || m.error }" :title="m.top">
+        <span>{{ m.name }}</span>
+        <span v-if="m.error">{{ m.error }}</span>
+        <svg v-else viewBox="0 0 100 22" preserveAspectRatio="none"><line x1="0" x2="100" :y1="m.limit" :y2="m.limit" stroke="#59616d" stroke-dasharray="2 2" /><polyline :points="m.points" fill="none" :stroke="m.hot ? '#f38ba8' : '#6fb7e8'" stroke-width="1.5" vector-effect="non-scaling-stroke" /></svg>
+        <span :class="{ hot: m.hot }">{{ m.text }}</span>
+      </div>
+    </div>
     <p class="team-graph-legend"><span class="d working"></span>working <span class="d waiting"></span>waiting <span class="d asking"></span>asking <span class="d idle"></span>idle <span class="d ring"></span>active <span class="d ring off"></span>offline · a pulse travels from sender to receiver for each message in the last hour</p>
   </div>
 </template>
 
 <style scoped>
 .team-graph { margin: 16px 0 }
+.team-machines { margin: 12px 0 }
+.mach { display: grid; grid-template-columns: 140px 1fr auto; gap: 10px; align-items: center; font-size: 13px; padding: 2px 0 }
+.mach svg { width: 100%; height: 24px }
+.mach .hot { color: #f38ba8 }
+.mach.stale { opacity: .5 }
 .team-graph-tabs { display: flex; gap: 4px; margin-bottom: 6px }
 .team-graph-tabs button { border: 1px solid var(--vp-c-divider); background: var(--vp-c-bg-soft); color: var(--vp-c-text-2); border-radius: 6px; padding: 3px 12px; cursor: pointer }
 .team-graph-tabs button.on { color: var(--vp-c-text-1); border-color: var(--vp-c-brand-1) }
