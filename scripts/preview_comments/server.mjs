@@ -239,6 +239,7 @@ export async function startCommentBridge({
           ...(record.note ? { note: true } : {}),
           ...(record.inReplyTo ? { inReplyTo: record.inReplyTo } : {}),
           ...(record.from ? { from: record.from } : {}),
+          ...(record.to?.length ? { to: record.to } : {}),
           ...(record.proposal ? { proposal: record.proposal } : {}),
         });
       }

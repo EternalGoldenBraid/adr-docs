@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.63.5 - 2026-11-16
+
+- Messages you send show their recipients (`You → agent`). Replies now keep their own recipients.
+
 ## 0.63.4 - 2026-11-16
 
 - Comment bodies render Markdown images `![alt](url)` inline (click to open full size).
