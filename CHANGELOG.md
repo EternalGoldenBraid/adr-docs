@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.59.1 - 2026-11-16
+
+- Team peek has **Table** and **Graph** tabs (choice remembered); the graph is a live SVG.
+- Status indicators match the desktop panel: working = blue with spinning arc, waiting = pink pulse, asking = yellow pulse, idle = green, active = hollow ring, offline = dim ring. Same palette in the Team page graph, plus a legend.
+
 ## 0.59.0 - 2026-11-16
 
 - TeamGraph: node colour now reflects hook state and STATUS (orange waiting/asking, red blocked), the label's second line is the agent's own STATUS "doing" text, and dashed lines show who messaged whom in the last hour (thicker = more). Works in all three views.
