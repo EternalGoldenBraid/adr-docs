@@ -13,15 +13,16 @@ let timer = null
 let members = []
 let edges = []
 
-const COLOURS = { active: '#51cf66', idle: '#fcc419', waiting: '#ff922b', blocked: '#f03e3e', stopped: '#868e96', unknown: '#868e96', human: '#74c0fc' }
+// Indicators shared with the desktop mesh panel: blue working, pink waiting, yellow asking, green idle, hollow ring = active (state unknown).
+const COLOURS = { working: '#6fb7e8', waiting: '#f38ba8', asking: '#ffd500', idle: '#9ccc65', active: '#9399b2', offline: '#9399b2', human: '#e6edf7' }
 const state = m => {
-  if (m.status !== 'active') return COLOURS[m.status] ? m.status : 'unknown'
-  if (m.lastSeen && Date.now() - Date.parse(m.lastSeen) > 120000) return 'idle'
-  // Hook state and the agent's own STATUS line refine "active".
-  if (m.activity === 'asking' || m.activity === 'waiting' || m.statusLine?.state === 'waiting') return 'waiting'
-  if (m.statusLine?.state === 'blocked') return 'blocked'
-  return 'active'
+  if (!m.session) return 'human'
+  if (m.status !== 'active' || (m.lastSeen && Date.now() - Date.parse(m.lastSeen) > 30 * 60000)) return 'offline'
+  if (['working', 'waiting', 'asking', 'idle'].includes(m.activity)) return m.activity
+  const line = m.statusLine?.state
+  return line === 'running' ? 'working' : line === 'waiting' || line === 'blocked' ? 'waiting' : line === 'idle' ? 'idle' : 'active'
 }
+const hollow = s => s === 'active' || s === 'offline'
 const clip = (text, n) => text.length > n ? text.slice(0, n - 1) + '…' : text
 const slug = text => text.toLowerCase().replace(/[^a-z\d]+/g, '-')
 const id = m => m.session || 'h:' + m.slug
@@ -47,7 +48,7 @@ function build() {
     }
     const doing = m.statusLine?.doing || m.work
     const label = m.name + (doing ? '\n' + clip(doing, 34) : '')
-    elements.push({ data: { id: id(m), label, parent, colour: COLOURS[state(m)], human: !m.session }, position })
+    elements.push({ data: { id: id(m), label, parent, colour: COLOURS[state(m)], hollow: hollow(state(m)), off: state(m) === 'offline', human: !m.session }, position })
   }
   if (mode === 'command') {
     // Tidy tree: each subtree takes the width of its leaves, so children stay under their parent.
@@ -105,7 +106,11 @@ onMounted(() => {
     userZoomingEnabled: false,
     style: [
       { selector: 'node', style: { label: 'data(label)', 'text-wrap': 'wrap', 'font-size': 15, color: '#f1f3f5', 'text-valign': 'bottom', 'text-margin-y': 6, 'background-color': 'data(colour)', width: 46, height: 46, 'border-width': 3, 'border-color': '#1b1d22' } },
-      { selector: 'node[?human]', style: { shape: 'round-rectangle', 'border-color': '#74c0fc' } },
+      { selector: 'node[?human]', style: { shape: 'round-rectangle', 'border-color': '#e6edf7' } },
+      { selector: 'node[?hollow]', style: { 'background-opacity': 0, 'border-color': 'data(colour)', 'underlay-opacity': 0 } },
+      { selector: 'node[?off]', style: { opacity: 0.4 } },
+      { selector: 'node[colour]', style: { 'underlay-color': 'data(colour)', 'underlay-opacity': 0.22, 'underlay-padding': 9, 'underlay-shape': 'ellipse' } },
+      { selector: 'node[?hollow]', style: { 'underlay-opacity': 0 } },
       { selector: 'node[?group]', style: { shape: 'round-rectangle', 'background-color': '#2a2f38', 'background-opacity': 0.55, 'border-color': '#59616d', 'border-width': 1, 'text-valign': 'top', 'text-margin-y': -8, 'font-size': 17, 'font-weight': 'bold', padding: 24, width: 'label', height: 'label' } },
       { selector: 'edge', style: { width: 2, 'line-color': '#74c0fc', 'target-arrow-color': '#74c0fc', 'target-arrow-shape': 'triangle', 'curve-style': 'bezier' } },
       { selector: 'edge[?msg]', style: { width: 'data(w)', 'line-style': 'dashed', 'line-color': '#adb5bd', 'target-arrow-color': '#adb5bd', opacity: 0.7, 'curve-style': 'unbundled-bezier', 'control-point-distances': [40], 'control-point-weights': [0.5] } },
@@ -124,7 +129,7 @@ onUnmounted(() => { clearInterval(timer); cy?.destroy() })
     </div>
     <div ref="host" class="team-graph-canvas"></div>
     <p v-if="note" class="team-graph-note">{{ note }}</p>
-    <p class="team-graph-legend"><span class="d active"></span>active <span class="d idle"></span>idle <span class="d waiting"></span>waiting/asking <span class="d blocked"></span>blocked <span class="d stopped"></span>offline <span class="d human"></span>human · dashed lines: messages in the last hour</p>
+    <p class="team-graph-legend"><span class="d working"></span>working <span class="d waiting"></span>waiting <span class="d asking"></span>asking <span class="d idle"></span>idle <span class="d ring"></span>active <span class="d ring off"></span>offline · dashed lines: messages in the last hour</p>
   </div>
 </template>
 
@@ -137,5 +142,5 @@ onUnmounted(() => { clearInterval(timer); cy?.destroy() })
 .team-graph-note { color: var(--vp-c-text-2); font-size: 13px }
 .team-graph-legend { font-size: 12px; color: var(--vp-c-text-2) }
 .d { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin: 0 4px 0 10px; background: #868e96 }
-.d.active { background: #51cf66 } .d.idle { background: #fcc419 } .d.waiting { background: #ff922b } .d.blocked { background: #f03e3e } .d.human { background: #74c0fc }
+.d.working { background: #6fb7e8 } .d.waiting { background: #f38ba8 } .d.asking { background: #ffd500 } .d.idle { background: #9ccc65 } .d.ring { background: none; border: 2px solid #9399b2; box-sizing: border-box } .d.ring.off { opacity: .4 }
 </style>

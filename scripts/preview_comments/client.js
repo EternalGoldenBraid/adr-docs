@@ -43,7 +43,7 @@
       .history-head h2{margin:0}.history-head .history-counts{margin-left:auto;margin-right:12px}
       .icon{padding:2px 9px;border-radius:6px;line-height:1.4}
       .help-panel{width:min(640px,94vw)}.help-tabs{display:flex;gap:6px;margin:8px 0;flex-wrap:wrap}.help-tabs button{background:#2a2e36;color:inherit;border:1px solid #59616d;border-radius:6px;padding:3px 10px;cursor:pointer}.help-tabs button[aria-selected=true]{background:#3b4a63;border-color:#8ab4f8}.help-body{white-space:pre-wrap;font:13px/1.5 ui-monospace,monospace;margin:0;max-height:50vh;overflow:auto}
-      .mesh-panel{width:min(640px,94vw)}.mesh-panel.peek{position:fixed;left:auto;top:auto;right:12px;bottom:52px;margin:0;max-height:70vh;overflow:auto;opacity:.97}.mesh-corner{position:fixed;right:0;bottom:130px;padding:10px 3px;z-index:2147483000;background:#1b1d22cc;color:#aab;border:1px solid #3a404a;border-right:0;border-radius:8px 0 0 8px;font:11px/1 ui-monospace,monospace;writing-mode:vertical-rl;cursor:pointer;opacity:.55}.mesh-corner:hover{opacity:1}.mesh-table td:nth-child(2){white-space:nowrap}.mesh-edges{font-size:12px;color:#aab;margin-top:8px}.mesh-table{width:100%;border-collapse:collapse;font-size:13px}.mesh-table th,.mesh-table td{text-align:left;padding:4px 8px;border-bottom:1px solid #3a404a}
+      .mesh-panel{width:min(640px,94vw)}.mesh-panel.peek{position:fixed;left:auto;top:auto;right:12px;bottom:52px;margin:0;max-height:70vh;overflow:auto;opacity:.97}.mesh-corner{position:fixed;right:0;bottom:130px;padding:10px 3px;z-index:2147483000;background:#1b1d22cc;color:#aab;border:1px solid #3a404a;border-right:0;border-radius:8px 0 0 8px;font:11px/1 ui-monospace,monospace;writing-mode:vertical-rl;cursor:pointer;opacity:.55}.mesh-corner:hover{opacity:1}.mesh-table td:nth-child(2){white-space:nowrap}.mesh-tabs{margin:0 8px}.mesh-graph[hidden]{display:none}.mesh-graph{width:100%;height:auto;display:block}.mesh-graph text{fill:#d7dde6;font:11px ui-monospace,monospace;text-anchor:middle}.mesh-edges{font-size:12px;color:#aab;margin-top:8px}.mesh-table{width:100%;border-collapse:collapse;font-size:13px}.mesh-table th,.mesh-table td{text-align:left;padding:4px 8px;border-bottom:1px solid #3a404a}
       .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:#59616d}.dot.active{background:#51cf66}.dot.idle{background:#fcc419}
       .tabs{display:flex;gap:2px;margin-top:4px!important;margin-bottom:6px!important;border-bottom:1px solid #3a404a}
       .tab{border:0;border-bottom:2px solid transparent;border-radius:0;background:none;padding:6px 10px;color:#b7c1ce}
@@ -135,8 +135,8 @@
       </section>
     </section>
     <section class="panel mesh-panel" hidden aria-label="Team status">
-      <div class="history-head"><h2>Team</h2><small class="mesh-note"></small><button class="mesh-close icon" type="button" aria-label="Close">✕</button></div>
-      <table class="mesh-table"><thead><tr><th>Who</th><th>Status</th><th>Doing</th><th>Machine</th></tr></thead><tbody></tbody></table><div class="mesh-edges"></div>
+      <div class="history-head"><h2>Team</h2><span class="help-tabs mesh-tabs"><button type="button" data-tab="table">Table</button><button type="button" data-tab="graph">Graph</button></span><small class="mesh-note"></small><button class="mesh-close icon" type="button" aria-label="Close">✕</button></div>
+      <table class="mesh-table"><thead><tr><th>Who</th><th>Status</th><th>Doing</th><th>Machine</th></tr></thead><tbody></tbody></table><svg class="mesh-graph" viewBox="0 0 600 320" hidden></svg><div class="mesh-edges"></div>
     </section>
     <section class="panel help-panel" hidden aria-label="Help">
       <div class="history-head"><h2>Help</h2><small>[ ] or h/l switch tab · Esc closes</small><button class="help-close icon" type="button" aria-label="Close">✕</button></div>
@@ -731,7 +731,56 @@
   }
   let meshTimer, meshPinned = false;
   const ago = at => { const m = Math.max(0, Math.round((Date.now() - Date.parse(at)) / 60000)); return m < 1 ? "now" : m < 60 ? `${m}m` : `${Math.round(m / 60)}h`; };
+  let meshTab = localStorage.getItem("preview-comments-mesh-tab") || "table";
+  // Same indicators as the desktop mesh panel: blue working, pink waiting, yellow asking, green idle, hollow grey ring = active, state unknown.
+  const MESH_COLOURS = { working: "#6fb7e8", waiting: "#f38ba8", asking: "#ffd500", idle: "#9ccc65", active: "#9399b2", offline: "#9399b2", human: "#e6edf7" };
+  function meshState(m) {
+    if (!m.session) return "human";
+    if (m.status !== "active" || (m.lastSeen && Date.now() - Date.parse(m.lastSeen) > 30 * 60000)) return "offline";
+    if (MESH_COLOURS[m.activity] && !["active", "offline", "human"].includes(m.activity)) return m.activity;
+    const line = m.statusLine?.state;
+    return line === "running" ? "working" : line === "waiting" || line === "blocked" ? "waiting" : line === "idle" ? "idle" : "active";
+  }
+  function showMeshTab(tab) {
+    meshTab = tab;
+    localStorage.setItem("preview-comments-mesh-tab", tab);
+    find(".mesh-table").hidden = tab !== "table";
+    find(".mesh-graph").toggleAttribute("hidden", tab !== "graph");
+    for (const b of find(".mesh-tabs").children) b.setAttribute("aria-selected", String(b.dataset.tab === tab));
+  }
+  find(".mesh-tabs").addEventListener("click", event => { const t = event.target.dataset?.tab; if (t) showMeshTab(t); });
+  function drawMeshGraph(members, edges) {
+    const ns = "http://www.w3.org/2000/svg", svg = find(".mesh-graph");
+    const mk = (tag, attrs, text) => { const e = document.createElementNS(ns, tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); if (text) e.textContent = text; return e; };
+    const at = new Map(members.map((m, i) => { const a = (i / Math.max(1, members.length)) * 2 * Math.PI - Math.PI / 2; return [m.session || m.slug, { x: 300 + 210 * Math.cos(a), y: 160 + 115 * Math.sin(a) }]; }));
+    const out = [];
+    for (const e of edges) {
+      const a = at.get(e.from), b = at.get(e.to);
+      if (a && b) out.push(mk("line", { x1: a.x, y1: a.y, x2: b.x, y2: b.y, stroke: "#adb5bd", "stroke-width": Math.min(5, 1 + e.count), "stroke-dasharray": "5 4", opacity: ".6" }));
+    }
+    for (const m of members) {
+      const p = at.get(m.session || m.slug), state = meshState(m);
+      const colour = MESH_COLOURS[state], solid = !["active", "offline"].includes(state);
+      if (solid && state !== "human") {
+        const halo = mk("circle", { cx: p.x, cy: p.y, r: 20, fill: colour, opacity: ".22" });
+        const pulse = state === "working" ? ["r", "20;23;20", "2s"] : state === "waiting" || state === "asking" ? ["r", "20;25;20", "1.6s"] : null;
+        if (pulse) halo.append(mk("animate", { attributeName: pulse[0], values: pulse[1], dur: pulse[2], repeatCount: "indefinite" }));
+        out.push(halo);
+      }
+      out.push(mk("circle", { cx: p.x, cy: p.y, r: 11, fill: solid ? colour : "none", stroke: solid ? "#1b1d22" : colour, "stroke-width": solid ? 3 : 2, opacity: state === "offline" ? ".4" : "1" }));
+      if (state === "working") {
+        const arc = mk("path", { d: `M ${p.x + 17} ${p.y} A 17 17 0 0 1 ${p.x + 17 * Math.cos(1.6)} ${p.y + 17 * Math.sin(1.6)}`, fill: "none", stroke: "#e6edf7", "stroke-width": 2.5, "stroke-linecap": "round" });
+        arc.append(mk("animateTransform", { attributeName: "transform", type: "rotate", from: `0 ${p.x} ${p.y}`, to: `360 ${p.x} ${p.y}`, dur: "3.1s", repeatCount: "indefinite" }));
+        out.push(arc);
+      }
+      out.push(mk("text", { x: p.x, y: p.y + 26 }, m.name));
+      const doing = m.statusLine?.doing || "";
+      if (doing) out.push(mk("text", { x: p.x, y: p.y + 38, opacity: ".7" }, doing.length > 30 ? doing.slice(0, 29) + "…" : doing));
+    }
+    svg.replaceChildren(...out);
+  }
   function openMesh(peek = false) {
+    showMeshTab(meshTab);
     const panelEl = find(".mesh-panel"), body = find(".mesh-table tbody");
     meshPinned = peek !== true;
     panelEl.classList.add("peek");
@@ -740,12 +789,17 @@
         const row = document.createElement("tr");
         const cell = (text, dot) => { const td = document.createElement("td"); if (dot) { const d = document.createElement("span"); d.className = "dot " + dot; td.append(d); } td.append(text); row.append(td); };
         const l = m.statusLine;
-        cell(m.name); cell(m.status === "human" ? "human" : m.activity && m.status === "active" ? `${m.status} · ${m.activity}` : m.status, m.activity === "asking" || m.activity === "waiting" ? "waiting" : m.status);
+        const st = meshState(m);
+        cell(m.name);
+        cell(st === "offline" ? m.status : st === "active" ? "active" : st, st);
+        const d = row.lastChild.querySelector(".dot");
+        if (d) { d.style.background = ["active", "offline"].includes(st) ? "none" : MESH_COLOURS[st]; if (["active", "offline"].includes(st)) d.style.boxShadow = `inset 0 0 0 2px ${MESH_COLOURS[st]}`; if (st === "offline") d.style.opacity = ".4"; }
         cell(l ? `${l.ticket ? l.ticket + " · " : ""}${l.state} · ${l.doing}${l.next ? " → " + l.next : ""} (${ago(l.at)})` : "—");
         cell(m.machine || "—");
         return row;
       }));
       const name = id => members.find(m => m.session === id)?.name ?? id.slice(0, 8);
+      drawMeshGraph(members, edges);
       find(".mesh-edges").textContent = edges.length ? "Last hour: " + edges.sort((a, b) => b.at.localeCompare(a.at)).slice(0, 6).map(e => `${name(e.from)} → ${name(e.to)} ×${e.count} (${ago(e.at)})`).join(" · ") : "";
       find(".mesh-note").textContent = members.length ? Object.entries(errors).map(([machine, text]) => `${machine}: ${text}`).join(" · ") : "No team page with a Session column found.";
     }).catch(e => message(e.message, true));
