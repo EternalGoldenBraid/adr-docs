@@ -63,7 +63,7 @@ function searchPlugin(documentRoot) {
   };
 }
 
-// Export jobs: GET /__adr/export/start?page=/a&page=/b -> {id}; /status?id -> progress; /file?id -> the download.
+// Export jobs: GET /__adr/export/start?page=/a&page=/b[&single=1][&compress=1] -> {id}; /status?id -> progress; /file?id -> the download.
 // GET /__adr/export?page=/x still returns one page directly. All work with or without an agent session.
 function exportPlugin(documentRoot) {
   const jobs = new Map();
@@ -89,7 +89,8 @@ function exportPlugin(documentRoot) {
         const job = { state: "running", stage: "Starting", done: 0, total: pages.length + 2, pages, directory };
         jobs.set(id, job);
         const { exportPage } = await import("./export.mjs");
-        exportPage({ documentRoot, pages, outFile: join(directory, "out.bin"), onProgress: step => Object.assign(job, step) })
+        const compress = param(request, "compress")[0] === "1", single = compress || param(request, "single")[0] === "1";
+        exportPage({ documentRoot, pages: single ? pages.slice(0, 1) : pages, single, compress, outFile: join(directory, "out.bin"), onProgress: step => Object.assign(job, step) })
           .then(result => Object.assign(job, { state: "done", result, warnings: result.warnings }))
           .catch(error => Object.assign(job, { state: "failed", error: error.message }));
         setTimeout(() => { jobs.delete(id); rmSync(directory, { recursive: true, force: true }); }, 30 * 60 * 1000).unref();
