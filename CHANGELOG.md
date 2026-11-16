@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.63.1 - 2026-11-16
+
+- Comment bodies render Markdown links `[text](url)` (http(s) or site-relative) as clickable links that open in a new tab.
+
 ## 0.63.0 - 2026-11-16
 
 - Reply to one message: `q` on a focused message (with an optional selected passage) links your reply to it. The reply shows the quote, `u` jumps back, agents receive the quote.
