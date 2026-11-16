@@ -58,11 +58,15 @@ const step = d => { const id = story.value[storyIndex.value + d]; id ? go(id) : 
 const down = () => { const id = dashed.value.next.get(current.value); id ? go(id) : say(dashed.value.prev.has(current.value) ? 'End of this branch' : 'Nothing deeper here') }
 const up = () => { const id = dashed.value.prev.get(current.value); id ? go(id) : say('Already on the story line') }
 
-const imageSrc = u => !u ? '' : /^(https?:|data:|blob:)/.test(u) ? u : withBase(u)
+const imageSrc = u => !u ? '' : /^(https?:|data:|blob:|\.\/)/.test(u) ? u : withBase(u)
 const isExternal = link => /^[a-z][a-z\d+.-]*:/i.test(link)
 const linkUrl = computed(() => { const l = node.value?.link; return !l ? '' : isExternal(l) ? l : withBase(l) })
+// Offline exports set __ADR_PAGE; only pages exported together are reachable there.
+const offline = typeof window !== 'undefined' && window.__ADR_PAGE !== undefined
+const offlineTarget = link => window.__ADR_LINKS?.[link.replace(/[?#].*$/, '').replace(/(.)\/$/, '$1')]
 function toggleEmbed() {
   if (!node.value?.link) return say('No link on this node')
+  if (offline && !isExternal(node.value.link)) return say(offlineTarget(node.value.link) ? 'o opens the page' : 'Not available in the offline copy')
   if (isExternal(node.value.link)) window.open(node.value.link, '_blank', 'noopener')
   else {
     embed.value = !embed.value
@@ -101,6 +105,12 @@ const onFocus = () => { inPreview.value = false }
 function openPage() {
   const l = node.value?.link
   if (!l) return say('No link on this node')
+  if (offline && !isExternal(l)) {
+    const target = offlineTarget(l)
+    if (!target) return say('Not available in the offline copy')
+    location.href = target
+    return
+  }
   isExternal(l) ? (location.href = l) : router.go(withBase(l))
   emit('close')
 }

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.56.5 - 2026-11-16
+
+- Fix: exports now package graph node `image` and `video` files (from the built site or `public/`): small ones are inlined, large ones go to `media/` (the export becomes a zip). Previously they stayed absolute paths and 404'd offline. Missing files are reported as warnings.
+- Presenter in an offline export: `Enter` no longer opens a blank preview for pages that are not part of the export; `o` follows links to pages exported together and says so otherwise.
+
 ## 0.56.4 - 2026-11-15
 
 - Fix: the selection toolbar (Comment + colour dots) no longer appears over the presenter. Clicking ▶ Present focused the button, which offered the toolbar; offers are now suppressed while presenting (comment with `c` or by selecting text).

@@ -47,7 +47,7 @@ const labelEls = new Map()
 let labelFrame = 0
 
 const SHAPES = new Set(['round-rectangle', 'rectangle', 'ellipse', 'diamond', 'hexagon', 'octagon', 'round-tag', 'barrel'])
-const imageSrc = u => !u ? '' : /^(https?:|data:|blob:)/.test(u) ? u : withBase(u)
+const imageSrc = u => !u ? '' : /^(https?:|data:|blob:|\.\/)/.test(u) ? u : withBase(u)
 
 function nodeLabel(n) {
   return n.data('kind') === 'node' ? '' : (n.data('title') || '') + (n.data('status') ? '  ' + n.data('status') : '') + (n.data('badge') || '')
