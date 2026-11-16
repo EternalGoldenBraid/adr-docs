@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.56.6 - 2026-11-16
+
+- Offline exports: `:` on the page now opens the graph's command line (exports have no page command line), so `:present` works without clicking the graph first. The **▶ Present** button was already there.
+
 ## 0.56.5 - 2026-11-16
 
 - Fix: exports now package graph node `image` and `video` files (from the built site or `public/`): small ones are inlined, large ones go to `media/` (the export becomes a zip). Previously they stayed absolute paths and 404'd offline. Missing files are reported as warnings.
