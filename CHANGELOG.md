@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.58.0 - 2026-11-16
+
+- Team panel: shows each agent's latest `STATUS <ticket> | <state> | <doing> | <next>` mesh reply with its age, and who messaged whom in the last hour (counts only; no message bodies except STATUS lines). Read from the existing mesh database, so no mesh API change was needed. `/__preview_comments/mesh` now also returns `statusLine` per member and `edges`.
+- Hot-corner peek: hover the bottom-right corner for a quick team view (hides on leave); `-m` pins or closes it.
+
 ## 0.57.0 - 2026-11-16
 
 - Export: `--single` writes one self-contained `.html` with all images and videos inlined (no zip, one page). `--single --compress` first re-encodes videos with ffmpeg (H.264, max 960 px wide, no audio, CRF 30; originals untouched), typically less than half the size. Without these flags the export is unchanged.

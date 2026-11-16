@@ -43,7 +43,7 @@
       .history-head h2{margin:0}.history-head .history-counts{margin-left:auto;margin-right:12px}
       .icon{padding:2px 9px;border-radius:6px;line-height:1.4}
       .help-panel{width:min(640px,94vw)}.help-tabs{display:flex;gap:6px;margin:8px 0;flex-wrap:wrap}.help-tabs button{background:#2a2e36;color:inherit;border:1px solid #59616d;border-radius:6px;padding:3px 10px;cursor:pointer}.help-tabs button[aria-selected=true]{background:#3b4a63;border-color:#8ab4f8}.help-body{white-space:pre-wrap;font:13px/1.5 ui-monospace,monospace;margin:0;max-height:50vh;overflow:auto}
-      .mesh-panel{width:min(640px,94vw)}.mesh-table{width:100%;border-collapse:collapse;font-size:13px}.mesh-table th,.mesh-table td{text-align:left;padding:4px 8px;border-bottom:1px solid #3a404a}
+      .mesh-panel{width:min(640px,94vw)}.mesh-panel.peek{position:fixed;left:auto;top:auto;right:12px;bottom:52px;margin:0;max-height:70vh;overflow:auto;opacity:.97}.mesh-corner{position:fixed;right:0;bottom:0;width:18px;height:18px;z-index:2147483000}.mesh-table td:nth-child(2){white-space:nowrap}.mesh-edges{font-size:12px;color:#aab;margin-top:8px}.mesh-table{width:100%;border-collapse:collapse;font-size:13px}.mesh-table th,.mesh-table td{text-align:left;padding:4px 8px;border-bottom:1px solid #3a404a}
       .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:#59616d}.dot.active{background:#51cf66}.dot.idle{background:#fcc419}
       .tabs{display:flex;gap:2px;margin-top:4px!important;margin-bottom:6px!important;border-bottom:1px solid #3a404a}
       .tab{border:0;border-bottom:2px solid transparent;border-radius:0;background:none;padding:6px 10px;color:#b7c1ce}
@@ -136,7 +136,7 @@
     </section>
     <section class="panel mesh-panel" hidden aria-label="Team status">
       <div class="history-head"><h2>Team</h2><small class="mesh-note"></small><button class="mesh-close icon" type="button" aria-label="Close">✕</button></div>
-      <table class="mesh-table"><thead><tr><th>Who</th><th>Status</th><th>Machine</th><th>Harness</th><th>Session</th></tr></thead><tbody></tbody></table>
+      <table class="mesh-table"><thead><tr><th>Who</th><th>Status</th><th>Doing</th><th>Machine</th></tr></thead><tbody></tbody></table><div class="mesh-edges"></div>
     </section>
     <section class="panel help-panel" hidden aria-label="Help">
       <div class="history-head"><h2>Help</h2><small>[ ] or h/l switch tab · Esc closes</small><button class="help-close icon" type="button" aria-label="Close">✕</button></div>
@@ -729,22 +729,40 @@
     status.textContent = text;
     status.classList.toggle("error", error);
   }
-  let meshTimer;
-  function openMesh() {
+  let meshTimer, meshPinned = false;
+  const ago = at => { const m = Math.max(0, Math.round((Date.now() - Date.parse(at)) / 60000)); return m < 1 ? "now" : m < 60 ? `${m}m` : `${Math.round(m / 60)}h`; };
+  function openMesh(peek = false) {
     const panelEl = find(".mesh-panel"), body = find(".mesh-table tbody");
-    const load = () => api("mesh").then(({ members, errors = {} }) => {
+    meshPinned = peek !== true;
+    panelEl.classList.add("peek");
+    const load = () => api("mesh").then(({ members, edges = [], errors = {} }) => {
       body.replaceChildren(...members.map(m => {
         const row = document.createElement("tr");
         const cell = (text, dot) => { const td = document.createElement("td"); if (dot) { const d = document.createElement("span"); d.className = "dot " + dot; td.append(d); } td.append(text); row.append(td); };
-        cell(m.name); cell(m.status === "human" ? "human" : m.status, m.status); cell(m.machine || "—"); cell(m.harness || "—"); cell(m.session ? m.session.slice(0, 8) : "—");
+        const l = m.statusLine;
+        cell(m.name); cell(m.status === "human" ? "human" : m.status, m.status);
+        cell(l ? `${l.ticket ? l.ticket + " · " : ""}${l.state} · ${l.doing}${l.next ? " → " + l.next : ""} (${ago(l.at)})` : "—");
+        cell(m.machine || "—");
         return row;
       }));
+      const name = id => members.find(m => m.session === id)?.name ?? id.slice(0, 8);
+      find(".mesh-edges").textContent = edges.length ? "Last hour: " + edges.sort((a, b) => b.at.localeCompare(a.at)).slice(0, 6).map(e => `${name(e.from)} → ${name(e.to)} ×${e.count} (${ago(e.at)})`).join(" · ") : "";
       find(".mesh-note").textContent = members.length ? Object.entries(errors).map(([machine, text]) => `${machine}: ${text}`).join(" · ") : "No team page with a Session column found.";
     }).catch(e => message(e.message, true));
     panelEl.hidden = false; load(); clearInterval(meshTimer); meshTimer = setInterval(load, 10000);
   }
-  find(".mesh-close").addEventListener("click", () => { find(".mesh-panel").hidden = true; clearInterval(meshTimer); });
-  find(".history-team").addEventListener("click", openMesh);
+  function closeMesh() { find(".mesh-panel").hidden = true; clearInterval(meshTimer); }
+  find(".mesh-close").addEventListener("click", closeMesh);
+  // Hot corner: hovering the bottom-right corner peeks at the team; it hides again unless opened with -m / :mesh.
+  const corner = Object.assign(document.createElement("div"), { className: "mesh-corner" });
+  find(".mesh-panel").before(corner);
+  let peekTimer;
+  corner.addEventListener("mouseenter", () => { if (find(".mesh-panel").hidden) { openMesh(true); meshPinned = false; } });
+  const leavePeek = () => { clearTimeout(peekTimer); peekTimer = setTimeout(() => { if (!meshPinned) closeMesh(); }, 700); };
+  find(".mesh-panel").addEventListener("mouseleave", leavePeek);
+  find(".mesh-panel").addEventListener("mouseenter", () => clearTimeout(peekTimer));
+  corner.addEventListener("mouseleave", leavePeek);
+  find(".history-team").addEventListener("click", () => openMesh());
   let settings = { owner: "owner", team: [], default: "owner", last: [] };
   const loadSettings = () => api("settings").then(value => { settings = value; }).catch(() => {});
   const recipients = () => [...new Set([settings.owner, ...settings.team])];
@@ -1897,6 +1915,11 @@
     if (event.key === KM.leaderKeys.history && previous === KM.leader) {
       event.preventDefault();
       openHistory();
+      return;
+    }
+    if (event.key === "m" && previous === KM.leader) {
+      event.preventDefault();
+      if (find(".mesh-panel").hidden || !meshPinned) openMesh(); else closeMesh();
       return;
     }
     if (event.key === KM.leaderKeys.chat && previous === KM.leader) {

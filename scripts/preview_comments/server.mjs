@@ -114,21 +114,42 @@ export async function startCommentBridge({
     return remoteLoading;
   }
 
+  let meshEdges = [];
   async function meshStatus() {
     if (!remoteAt) await refreshRemote(); else if (Date.now() - remoteAt > 15000) refreshRemote();
     const known = agents();
     let live = new Map();
+    const statusLines = new Map();
+    const edges = new Map();
     try {
       const db = new DatabaseSync(process.env.ADR_MESH_DB || join(homedir(), ".copilot", "extensions", "agent-mesh", "agent-mesh.db"), { readOnly: true });
       try {
         const marks = known.map(() => "?").join(",");
         const columns = db.prepare("PRAGMA table_info(agent_sessions)").all().some(column => column.name === "kind") ? "kind" : "'agent' AS kind";
         live = new Map(db.prepare(`SELECT session_id, status, ${columns}, last_heartbeat FROM agent_sessions WHERE session_id IN (${marks})`).all(...known.map(row => row.session)).map(row => [row.session_id, row]));
+        // Latest `STATUS <ticket> | <state> | <doing> | <next>` reply per agent, and who wrote to whom recently (never other message bodies).
+        const bare = id => String(id).match(/[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}/i)?.[0] ?? id;
+        const sessions = new Set(known.map(row => row.session));
+        const since = new Date(Date.now() - 3600_000).toISOString();
+        for (const message of db.prepare("SELECT sender_session_id AS s, recipient_session_id AS r, created_at AS at, CASE WHEN content LIKE 'STATUS %' THEN content END AS line FROM agent_messages WHERE created_at > ? OR content LIKE 'STATUS %' ORDER BY message_id").all(since)) {
+          const from = bare(message.s), to = bare(message.r);
+          if (message.line && sessions.has(from)) {
+            const [ticket, state, doing, next] = message.line.split("\n")[0].slice(7).split("|").map(part => part.trim());
+            if (state) statusLines.set(from, { ticket: ticket === "-" ? "" : ticket, state, doing: doing ?? "", next: !next || next === "-" ? "" : next, at: message.at });
+          }
+          if (message.at > since && sessions.has(from) && sessions.has(to) && from !== to) {
+            const key = `${from}>${to}`;
+            const edge = edges.get(key) ?? { from, to, count: 0, at: message.at };
+            edge.count += 1; edge.at = message.at;
+            edges.set(key, edge);
+          }
+        }
       } finally { db.close(); }
     } catch { /* no local mesh database */ }
+    meshEdges = [...edges.values()];
     return roster().map(row => {
       const seen = live.get(row.session) ?? remote.get(row.session);
-      return { ...row, status: !row.session ? "human" : seen ? seen.status : "unknown", lastSeen: seen?.last_heartbeat ?? null, kind: seen?.kind ?? (row.session ? "agent" : "human") };
+      return { ...row, status: !row.session ? "human" : seen ? seen.status : "unknown", lastSeen: seen?.last_heartbeat ?? null, kind: seen?.kind ?? (row.session ? "agent" : "human"), statusLine: statusLines.get(row.session) ?? null };
     });
   }
   // Quiet mesh note to each addressed agent other than the owner; they pull the thread when they choose.
@@ -384,7 +405,7 @@ export async function startCommentBridge({
         return reply(response, 200, { sessionId, revision, seenInit, comments: [...comments.values()] });
       }
       if (request.method === "GET" && request.url === "/settings") return reply(response, 200, effective());
-      if (request.method === "GET" && request.url === "/mesh") return reply(response, 200, { members: await meshStatus(), errors: Object.fromEntries(remoteErrors) });
+      if (request.method === "GET" && request.url === "/mesh") return reply(response, 200, { members: await meshStatus(), edges: meshEdges, errors: Object.fromEntries(remoteErrors) });
       const readRoute = request.method === "GET" && /^\/read\?(.*)$/.exec(request.url);
       if (readRoute) {
         const query = new URLSearchParams(readRoute[1]);
