@@ -73,7 +73,7 @@
       .thread-messages{padding-bottom:6px}
       .note{margin:8px 0;padding:8px 12px;background:#252a32;border-radius:10px}.note.copilot{background:#1e2a3a;margin-right:36px}.note.mine{margin-left:36px}
       .note .tools{opacity:0;transition:opacity .1s}.note:hover .tools,.note:focus-within .tools{opacity:1}
-      .note p{margin:6px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}.note code{background:#2a2f38;padding:0 4px;border-radius:3px;font:12px ui-monospace,monospace}
+      .note p{margin:6px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}.note .speak{background:none;border:0;padding:0 2px;cursor:pointer;opacity:.5;font-size:12px}.note .speak:hover{opacity:1}.note code{background:#2a2f38;padding:0 4px;border-radius:3px;font:12px ui-monospace,monospace}
       a{color:#74c0fc}
       .contextual{display:flex;gap:6px;align-items:center;padding:6px;background:#1b1d22;border:1px solid #59616d;border-radius:10px;box-shadow:0 8px 24px #0008}
       .contextual button{padding:5px 10px;border-radius:7px}
@@ -262,9 +262,9 @@
       `${KM.resize.narrower}/${KM.resize.wider}/${KM.resize.shorter}/${KM.resize.taller} resize panel · t page tree`,
     ]],
     ["History", [
-      "j/k move · l or Enter open · r resolve · o go to page · g/G ends",
+      "j/k move · l or Enter open · r resolve · p read aloud · o go to page · g/G ends",
       "Tabs: [ ] switch · A all · P this page · O open · C chat · R resolved · N notes · P then A page history",
-      "In a thread: j/k messages · J/K next/previous thread · r resolve · i reply · n new child thread · s attach region · h back",
+      "In a thread: j/k messages · J/K next/previous thread · r resolve · p read aloud · i reply · n new child thread · s attach region · h back",
     ]],
     ["Graph", [
       ":present (or ▶ Present on a graph) shows a DocGraph full screen, one node at a time",
@@ -284,7 +284,7 @@
     ]],
     ["Search & commands", [
       "/ or :grep [-d N] [-u N] [-s] [-p|-c] <regex> searches pages and threads (no flag: all pages; -d 0: this page; -d N: N levels below; -u N: N ancestors; -1 = all)",
-      "Commands: :help [section] :man :history :chat :comment :tree :present :export [single|compress] :figure :restart :grep :vim off|on :keys",
+      "Commands: :help [section] :man :history :chat :comment :tree :present :export [single|compress] :read [stop] :figure :restart :grep :vim off|on :keys",
       "Keys are configured in ~/.config/agent-doc-review/keymap.json",
     ]],
   ];
@@ -320,6 +320,13 @@
     tree: () => document.dispatchEvent(new KeyboardEvent("keydown", { key: "t", bubbles: true })),
     settings: () => loadSettings().then(() => message(`owner: ${settings.owner}\nteam: ${settings.team.join(", ") || "(none)"}\ndefault recipients: ${settings.default}\n:owner NAME · :team A B C · :default owner|last`)),
     mesh: () => openMesh(),
+    read: arg => {
+      if (arg === "stop") { stopReading(); return message("Stopped reading"); }
+      const thread = currentThread();
+      const threads = thread ? [thread] : [...find(".thread-list").children].map(card => historyComments.find(c => c.id === card.dataset.commentId)).filter(Boolean);
+      if (!threads.length) return message("Open history (-h) or a thread first, then :read.", true);
+      readThreads(threads);
+    },
     owner: name => name ? api("settings", { owner: name }).then(v => { settings = v; message("Owner: " + name); }).catch(e => message(e.message, true)) : message("Usage: :owner NAME (this preview's agent)", true),
     team: (_first, line = "") => api("settings", { team: line.trim().split(/[\s,]+/).filter(Boolean) }).then(v => { settings = v; message("Team: " + (v.team.join(", ") || "(none)")); }).catch(e => message(e.message, true)),
     default: arg => ["owner", "last"].includes(arg) ? api("settings", { default: arg }).then(v => { settings = v; message("Default recipients: " + arg); }).catch(e => message(e.message, true)) : message("Usage: :default owner|last", true),
@@ -886,6 +893,54 @@
   function currentThread() {
     return historyComments.find(comment => comment.id === selectedThread);
   }
+  // Read aloud: each message goes to the local text-to-speech server in short chunks; the next chunk is fetched while one plays.
+  let readToken = 0, readAudio = null;
+  const speechChunks = text => {
+    const plain = text.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/`([^`]+)`/g, "$1").replace(/[ \t]+/g, " ").trim();
+    const out = [];
+    for (const paragraph of plain.split(/\n+/)) {
+      let chunk = "";
+      for (const sentence of paragraph.match(/[^.!?]+[.!?]*\s*/g) || []) {
+        if (chunk && (chunk + sentence).length > 280) { out.push(chunk.trim()); chunk = ""; }
+        chunk += sentence;
+      }
+      if (chunk.trim()) out.push(chunk.trim());
+    }
+    return out;
+  };
+  const readThreads = threads => readAloud(threads.flatMap(c => [c.comment, ...c.replies.map(r => r.comment)]).filter(Boolean));
+  const stopReading = () => { readToken++; readAudio?.pause(); readAudio = null; };
+  async function readAloud(texts) {
+    stopReading();
+    const token = readToken, chunks = texts.flatMap(speechChunks);
+    if (!chunks.length) return message("Nothing to read.", true);
+    const fetchUrl = chunk => {
+      const request = api("tts", { text: chunk })
+        .then(result => fetch("/__preview_comments/tts/" + result.id, { headers: { "X-Preview-Comment": "1" } }))
+        .then(response => { if (!response.ok) throw new Error("Could not load audio."); return response.blob(); })
+        .then(blob => URL.createObjectURL(blob));
+      request.catch(() => {});
+      return request;
+    };
+    let next = fetchUrl(chunks[0]);
+    try {
+      for (let i = 0; i < chunks.length; i++) {
+        message(`Reading ${i + 1}/${chunks.length} (Esc stops)`);
+        const url = await next;
+        if (token !== readToken) return;
+        if (i + 1 < chunks.length) next = fetchUrl(chunks[i + 1]);
+        const audio = readAudio = new Audio(url);
+        await new Promise((resolve, reject) => { audio.onended = resolve; audio.onerror = () => reject(new Error("Could not play audio.")); audio.play().catch(reject); });
+        if (token !== readToken) return;
+      }
+      message("Done reading");
+    } catch (error) {
+      if (token === readToken) message(error.message, true);
+    }
+  }
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && readAudio) { stopReading(); message("Stopped reading"); }
+  }, true);
   // Inline Markdown for messages (bold, italic, code), built from DOM nodes so message text is never parsed as HTML.
   function inlineMarkdown(text) {
     const fragment = document.createDocumentFragment();
@@ -909,6 +964,10 @@
     label.textContent = `${author}${opts.note ? " · private note" : ""} · ${new Date(at).toLocaleString()}${opts.edited ? " · edited" : ""}`;
     const body = document.createElement("p");
     body.append(inlineMarkdown(text));
+    const speak = document.createElement("button");
+    speak.type = "button"; speak.className = "speak"; speak.textContent = "🔊"; speak.title = "Read aloud (:read)";
+    speak.addEventListener("click", () => readAloud([text]));
+    label.append(" ", speak);
     note.append(label, body);
     if (opts.onEdit || opts.onDelete) {
       const tools = document.createElement("div");
@@ -1550,6 +1609,7 @@
       const here = ids.indexOf(selectedThread);
       if (key === "h" || key === "ArrowLeft") leaveThread();
       else if (key === "r") triage(selectedThread);
+      else if (key === "p") { if (readAudio) { stopReading(); message("Stopped reading"); } else readThreads([currentThread()]); }
       else if (key === "i") replyInput.focus();
       else if (key === "n") branchThread();
       else if (key === "o") find(".thread-source").click();
@@ -1571,6 +1631,7 @@
     else if (key === "G") step(Infinity);
     else if (key === "l" || key === "ArrowRight") { if (at >= 0) cards[at].click(); }
     else if (key === "r") { if (at >= 0) triage(ids[at]); }
+    else if (key === "p") { if (readAudio) { stopReading(); message("Stopped reading"); } else if (at >= 0) readThreads([historyComments.find(c => c.id === ids[at])]); }
     else if (key === "o") { if (at >= 0) { selectThread(ids[at]); find(".thread-source").click(); } }
     else if (key === "[" || key === "]") {
       setFilter(values[(values.indexOf(historyFilter) + (key === "]" ? 1 : values.length - 1)) % values.length]);

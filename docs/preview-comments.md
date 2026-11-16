@@ -74,6 +74,7 @@ native input.
 | `-h` | Open comment history. |
 | `:figure` | Or the **Figure** button: click a graph, inline SVG, image or canvas and it downloads as a figure file: graphs as a 4× PNG including node labels (theme background), SVG as SVG at 2×, images as is. `Esc` cancels. |
 | `:help [section]` | Open the help, optionally at a section (`:help export`). |
+| `:read [stop]` | Read the open thread (or the listed threads) aloud in a cloned voice; `p` in the history does the same, `Esc` stops. Each message also has a 🔊 button. |
 | `:export` | Download this page as an offline file (also the **Export** button). One `.html`, or a `.zip` when media is over 2 MB; localhost iframes are replaced by a note; graph node images and videos are packaged too. `:export single` inlines everything into one `.html` (large); `:export compress` re-encodes videos with ffmpeg first (lossy, much smaller). The same as the CLI flags: `npm run export -- <file.md> --page /p --out deck.html --single [--compress]`. Progress shows in the status line. To export several pages, open the tree (`t`), press `v` (or **Select**) for select mode, tick pages (Space/`x`; `X` or **+ below** includes descendants; `a`/`A` all/none), press `e`: one `.zip`, an `.html` per page with working links between them. |
 | `/` or `:grep [-d N] [-u N] [-s] [-p\|-c] <regex>` | Search the Markdown of the page tree and the comment threads (quote, comment, replies) on those pages; `-p` pages only, `-c` threads only; thread rows start with 💬 and `Enter` opens the thread. A list of `page:line` matches opens (`j`/`k` move, `Enter` opens the page and selects the match, `Esc` closes). No flag searches every page; `-d 0` only this page, `-d N` this page plus N levels below, `-u N` also N ancestors; `-1` means all levels (`-d 1 -u -1`: this page, its children and every ancestor). Smart-case like ripgrep unless `-s`. Unpublished pages are skipped; at most 200 matches. |
 | `Space` inside a caveat | Open or close its details. |
@@ -283,3 +284,7 @@ Within a status, tickets sort by `priority:` (lower first, unnumbered last); the
 Links to `/workstreams/<id>` pages show a status chip (status, owner, progress) automatically.
 
 With a team configured, the **To:** recipients in a comment box form a grid; press `Esc` twice in the text box, then `h j k l` to move, `Space` to toggle. The box opens beside or above/below the commented element so it does not cover it when there is room.
+
+## Read aloud (local only)
+
+Comments can be spoken with F5-TTS, cloned from a short reference clip. Start the synthesis server with `node tools/tts.mjs start` (`stop`, `status`). It runs on a GPU host over ssh and is reached through a localhost tunnel. Settings: `ADR_TTS_HOST`, `ADR_TTS_GPU`, `ADR_TTS_VENV`, `ADR_TTS_REF` (reference wav), `ADR_TTS_PORT`, and `ADR_TTS_URL` for the bridge. Audio is cached in `<store>/speech`. The F5-TTS weights are CC-BY-NC: personal use only.

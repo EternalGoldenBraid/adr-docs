@@ -56,6 +56,31 @@ export async function startCommentBridge({
   const attachments = join(directory, "attachments");
   mkdirSync(attachments, { recursive: true, mode: 0o700 });
   const imageFile = id => join(attachments, id + ".png");
+  const speechDir = join(directory, "speech");
+  mkdirSync(speechDir, { recursive: true, mode: 0o700 });
+  // Read aloud: text goes to a local text-to-speech server (ADR_TTS_URL, default via `adr tts` on 127.0.0.1:8765); audio is cached by text.
+  const speechUrl = process.env.ADR_TTS_URL || "http://127.0.0.1:8765";
+  const speaking = new Map();
+  async function speech(text) {
+    if (typeof text !== "string" || !text.trim()) throw new Error("Nothing to read.");
+    const id = createHash("sha256").update(text.trim()).digest("hex");
+    const file = join(speechDir, id + ".wav");
+    if (existsSync(file)) return id;
+    if (!speaking.has(id)) {
+      speaking.set(id, (async () => {
+        let result;
+        try {
+          result = await fetch(speechUrl + "/speak", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: text.trim() }), signal: AbortSignal.timeout(120_000) });
+        } catch {
+          throw new Error("Text-to-speech server not reachable. Start it with `node tools/tts.mjs start`.");
+        }
+        if (!result.ok) throw new Error(`Text-to-speech failed (${result.status}).`);
+        writeFileSync(file, Buffer.from(await result.arrayBuffer()), { mode: 0o600 });
+      })().finally(() => speaking.delete(id)));
+    }
+    await speaking.get(id);
+    return id;
+  }
   const log = join(directory, "comments.jsonl");
   const connectionFile = join(directory, "connection.json");
   const records = existsSync(log)
@@ -424,13 +449,20 @@ export async function startCommentBridge({
         if (query.get("as") && agents().length && !teamNames().includes(as)) return reply(response, 400, { error: `Unknown agent "${as}". Use as=<name> from the team page: ${teamNames().join(", ")} (or your session id).` });
         return reply(response, 200, { sessionId, comments: readAs(as, query.get("includeSeen") === "1") });
       }
+      const spoken = request.method === "GET" && /^\/tts\/([\da-f]{64})$/.exec(request.url);
+      if (spoken) {
+        const file = join(speechDir, spoken[1] + ".wav");
+        if (!existsSync(file)) return reply(response, 404, { error: "Unknown audio." });
+        response.writeHead(200, { "Content-Type": "audio/wav", "Cache-Control": "private, max-age=31536000, immutable" });
+        return response.end(readFileSync(file));
+      }
       const download = request.method === "GET" && /^\/attachments\/([\da-f]{64})$/.exec(request.url);
       if (download) {
         if (!existsSync(imageFile(download[1]))) return reply(response, 404, { error: "Unknown image attachment." });
         response.writeHead(200, { "Content-Type": "image/png", "Cache-Control": "private, max-age=31536000, immutable" });
         return response.end(readFileSync(imageFile(download[1])));
       }
-      if (request.method !== "POST" || !["/comments", "/updates", "/attachments", "/userseen", "/settings", "/agent-update", "/agent-add", "/agent-status", "/restart"].includes(request.url)) {
+      if (request.method !== "POST" || !["/comments", "/updates", "/attachments", "/userseen", "/settings", "/agent-update", "/agent-add", "/agent-status", "/restart", "/tts"].includes(request.url)) {
         return reply(response, 404, { error: "Unknown comment endpoint." });
       }
       if (request.url === "/restart") {
@@ -447,6 +479,13 @@ export async function startCommentBridge({
           return reply(response, 413, { error: "Comment request is too large." });
         }
         chunks.push(chunk);
+      }
+      if (request.url === "/tts") {
+        try {
+          return reply(response, 200, { id: await speech(JSON.parse(Buffer.concat(chunks).toString("utf8")).text) });
+        } catch (error) {
+          return reply(response, 503, { error: error.message });
+        }
       }
       if (request.url === "/attachments") {
         try {
