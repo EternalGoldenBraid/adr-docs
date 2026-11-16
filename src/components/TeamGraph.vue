@@ -1,14 +1,12 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
-import cytoscape from 'cytoscape'
 
 // Live team graph with three views of the roster (Topic, Machine, Command), nodes coloured by mesh status.
 // Needs the preview's comment bridge; the built site shows a note instead.
 const VIEWS = [['topic', 'Topic'], ['machine', 'Machine'], ['command', 'Command']]
-const host = ref(null)
+const model = ref({ nodes: [], boxes: [], links: [], pulses: [] })
 const note = ref('Loading team…')
 const view = ref((typeof localStorage !== 'undefined' && localStorage.getItem('team-graph-view')) || 'topic')
-let cy = null
 let timer = null
 const rows = ref([])
 let members = []
@@ -39,62 +37,71 @@ const clip = (text, n) => text.length > n ? text.slice(0, n - 1) + '…' : text
 const slug = text => text.toLowerCase().replace(/[^a-z\d]+/g, '-')
 const id = m => m.session || 'h:' + m.slug
 
-function build() {
-  if (!cy) return
+// Positions in abstract grid units, then fitted to the SVG viewBox.
+function layout() {
   const mode = view.value
   const groupOf = m => mode === 'topic' ? m.topic : mode === 'machine' ? m.machine : ''
   const keys = [...new Set(members.map(m => groupOf(m) || ''))]
-  const elements = [], seen = new Set(), rows = new Map()
-  const group = (key, label, parent) => { if (!seen.has(key)) { seen.add(key); elements.push({ data: { id: key, label, group: true, parent } }) } }
+  const rowsIn = new Map(), pos = new Map(), groups = [], lines = []
   const ordered = mode === 'machine' ? [...members].sort((a, b) => (a.topic || '').localeCompare(b.topic || '')) : members
-  for (const m of ordered) {
-    const column = keys.indexOf(groupOf(m) || ''), row = rows.get(column) ?? 0
-    rows.set(column, row + 1)
-    // Topic groups wrap into rows of four; machine columns stack their topics with room for nested labels.
-    const position = mode === 'topic' ? { x: (column % 4) * 280 + (row % 2) * 120, y: Math.floor(column / 4) * 200 + Math.floor(row / 2) * 110 } : { x: column * 300, y: row * 200 }
-    let parent
-    if (mode === 'topic' && m.topic) { parent = 'g:' + m.topic; group(parent, m.topic) }
-    if (mode === 'machine' && m.machine) {
-      group('g:' + m.machine, m.machine)
-      if (m.topic) { parent = 'g:' + m.machine + ':' + m.topic; group(parent, m.topic, 'g:' + m.machine) } else parent = 'g:' + m.machine
-    }
-    const doing = m.statusLine?.doing || m.work
-    const label = m.name + (doing ? '\n' + clip(doing, 34) : '')
-    elements.push({ data: { id: id(m), label, parent, colour: COLOURS[state(m)], hollow: hollow(state(m)), off: state(m) === 'offline', human: !m.session }, position })
-  }
   if (mode === 'command') {
-    // Tidy tree: each subtree takes the width of its leaves, so children stay under their parent.
     const byName = new Map(members.map(m => [slug(m.name), m]))
     const kids = new Map(members.map(m => [id(m), []]))
     const top = []
     for (const m of members) {
       const boss = m.reportsTo && byName.get(slug(m.reportsTo))
-      if (boss && boss !== m) { kids.get(id(boss)).push(m); elements.push({ data: { id: 'e:' + id(m), source: id(boss), target: id(m) } }) } else top.push(m)
+      if (boss && boss !== m) { kids.get(id(boss)).push(m); lines.push([id(boss), id(m)]) } else top.push(m)
     }
     const place = (m, left, depth, trail) => {
       const children = trail.has(id(m)) ? [] : kids.get(id(m))
       let width = 0
       for (const child of children) width += place(child, left + width, depth + 1, new Set([...trail, id(m)]))
       width = Math.max(width, 1)
-      const node = elements.find(e => e.data.id === id(m))
-      node.position = { x: (left + width / 2) * 200, y: depth * 150 }
+      pos.set(id(m), { x: (left + width / 2) * 200, y: depth * 150 })
       return width
     }
     let left = 0
     for (const m of top) left += place(m, left, 0, new Set())
+  } else {
+    for (const m of ordered) {
+      const column = keys.indexOf(groupOf(m) || ''), row = rowsIn.get(column) ?? 0
+      rowsIn.set(column, row + 1)
+      pos.set(id(m), mode === 'topic' ? { x: (column % 4) * 280 + (row % 2) * 120, y: Math.floor(column / 4) * 200 + Math.floor(row / 2) * 110 } : { x: column * 300, y: row * 130 })
+    }
+    const boxes = new Map()
+    const add = (key, label, m, inner) => { const b = boxes.get(key) ?? { label, inner, ids: [] }; b.ids.push(id(m)); boxes.set(key, b) }
+    for (const m of ordered) {
+      if (mode === 'topic' && m.topic) add('t:' + m.topic, m.topic, m, false)
+      if (mode === 'machine' && m.machine) { add('m:' + m.machine, m.machine, m, false); if (m.topic) add('m:' + m.machine + ':' + m.topic, m.topic, m, true) }
+    }
+    for (const b of boxes.values()) groups.push(b)
   }
-  // Recent messages between agents, thicker with count; kept apart from the reporting lines of the Command view.
-  const ids = new Set(elements.filter(e => !e.data.group && !e.data.source).map(e => e.data.id))
-  for (const e of edges) if (ids.has(e.from) && ids.has(e.to)) elements.push({ data: { id: `m:${e.from}>${e.to}`, source: e.from, target: e.to, msg: true, w: Math.min(6, 1 + e.count) } })
-  cy.json({ elements })
-  cy.layout({ name: 'preset', padding: 30 }).run()
-  cy.fit(undefined, 30)
+  const pts = [...pos.values()]
+  const minX = Math.min(...pts.map(q => q.x)), maxX = Math.max(...pts.map(q => q.x))
+  const minY = Math.min(...pts.map(q => q.y)), maxY = Math.max(...pts.map(q => q.y))
+  const W = 900, H = 460, pad = 70
+  const scale = Math.min(1.6, (W - 2 * pad) / Math.max(1, maxX - minX), (H - 2 * (pad + 30)) / Math.max(1, maxY - minY))
+  const fit = q => ({ x: W / 2 + (q.x - (minX + maxX) / 2) * scale, y: H / 2 + (q.y - (minY + maxY) / 2) * scale })
+  const nodes = members.map((m, i) => {
+    const q = fit(pos.get(id(m))), st = state(m), doing = m.statusLine?.doing || m.work
+    return { key: id(m), name: m.name, doing: doing ? clip(doing, 34) : '', st, colour: COLOURS[st], solid: !hollow(st) && st !== 'human', human: st === 'human', x: q.x, y: q.y, i }
+  })
+  const at = new Map(nodes.map(n => [n.key, n]))
+  const boxes = groups.map(g => {
+    const q = g.ids.map(k => at.get(k))
+    const x1 = Math.min(...q.map(n => n.x)) - (g.inner ? 55 : 75), x2 = Math.max(...q.map(n => n.x)) + (g.inner ? 55 : 75)
+    const y1 = Math.min(...q.map(n => n.y)) - (g.inner ? 48 : 80), y2 = Math.max(...q.map(n => n.y)) + (g.inner ? 56 : 70)
+    return { label: g.label, x: x1, y: y1, w: x2 - x1, h: y2 - y1 }
+  })
+  const links = lines.map(([a, b]) => ({ a: at.get(a), b: at.get(b) }))
+  const pulses = edges.filter(e => at.has(e.from) && at.has(e.to)).map((e, i) => ({ key: e.from + '>' + e.to, a: at.get(e.from), b: at.get(e.to), n: e.count, delay: (i * 1.3) % 5 }))
+  return { nodes, boxes, links, pulses }
 }
 
 function pick(value) {
   view.value = value
   localStorage.setItem('team-graph-view', value)
-  build()
+  model.value = layout()
 }
 
 async function load() {
@@ -106,34 +113,16 @@ async function load() {
     edges = data.edges ?? []
     rows.value = members.filter(m => m.session).map(rowOf)
     hideSource(rows.value.length > 0)
+    model.value = layout()
   } catch {
     note.value = 'Live team status needs a running preview.'
     return
   }
   note.value = members.length ? '' : 'No team table found.'
-  build()
 }
 
-onMounted(() => {
-  cy = cytoscape({
-    container: host.value,
-    userZoomingEnabled: false,
-    style: [
-      { selector: 'node', style: { label: 'data(label)', 'text-wrap': 'wrap', 'font-size': 15, color: '#f1f3f5', 'text-valign': 'bottom', 'text-margin-y': 6, 'background-color': 'data(colour)', width: 46, height: 46, 'border-width': 3, 'border-color': '#1b1d22' } },
-      { selector: 'node[?human]', style: { shape: 'round-rectangle', 'border-color': '#e6edf7' } },
-      { selector: 'node[?hollow]', style: { 'background-opacity': 0, 'border-color': 'data(colour)', 'underlay-opacity': 0 } },
-      { selector: 'node[?off]', style: { opacity: 0.4 } },
-      { selector: 'node[colour]', style: { 'underlay-color': 'data(colour)', 'underlay-opacity': 0.22, 'underlay-padding': 9, 'underlay-shape': 'ellipse' } },
-      { selector: 'node[?hollow]', style: { 'underlay-opacity': 0 } },
-      { selector: 'node[?group]', style: { shape: 'round-rectangle', 'background-color': '#2a2f38', 'background-opacity': 0.55, 'border-color': '#59616d', 'border-width': 1, 'text-valign': 'top', 'text-margin-y': -8, 'font-size': 17, 'font-weight': 'bold', padding: 24, width: 'label', height: 'label' } },
-      { selector: 'edge', style: { width: 2, 'line-color': '#74c0fc', 'target-arrow-color': '#74c0fc', 'target-arrow-shape': 'triangle', 'curve-style': 'bezier' } },
-      { selector: 'edge[?msg]', style: { width: 'data(w)', 'line-style': 'dashed', 'line-color': '#adb5bd', 'target-arrow-color': '#adb5bd', opacity: 0.7, 'curve-style': 'unbundled-bezier', 'control-point-distances': [40], 'control-point-weights': [0.5] } },
-    ],
-  })
-  load()
-  timer = setInterval(load, 10000)
-})
-onUnmounted(() => { hideSource(false); clearInterval(timer); cy?.destroy() })
+onMounted(() => { load(); timer = setInterval(load, 10000) })
+onUnmounted(() => { hideSource(false); clearInterval(timer) })
 </script>
 
 <template>
@@ -141,7 +130,37 @@ onUnmounted(() => { hideSource(false); clearInterval(timer); cy?.destroy() })
     <div class="team-graph-tabs" role="tablist">
       <button v-for="[value, label] in VIEWS" :key="value" role="tab" :aria-selected="view === value" :class="{ on: view === value }" @click="pick(value)">{{ label }}</button>
     </div>
-    <div ref="host" class="team-graph-canvas"></div>
+    <svg v-show="model.nodes.length" class="team-graph-canvas" viewBox="0 0 900 460" preserveAspectRatio="xMidYMid meet">
+      <g v-for="b in model.boxes" :key="b.label + b.x + b.y">
+        <rect :x="b.x" :y="b.y" :width="b.w" :height="b.h" rx="14" class="box" />
+        <text :x="b.x + 12" :y="b.y + 18" class="box-label">{{ b.label }}</text>
+      </g>
+      <line v-for="l in model.links" :key="l.a.key + l.b.key" :x1="l.a.x" :y1="l.a.y" :x2="l.b.x" :y2="l.b.y" class="tie" />
+      <g v-for="p in model.pulses" :key="p.key">
+        <line :x1="p.a.x" :y1="p.a.y" :x2="p.b.x" :y2="p.b.y" class="msg" />
+        <circle r="4" fill="#fab387" opacity="0">
+          <animateMotion :path="`M ${p.a.x} ${p.a.y} L ${p.b.x} ${p.b.y}`" dur="5s" :begin="p.delay + 's'" repeatCount="indefinite" calcMode="linear" keyPoints="0;1;1" keyTimes="0;.28;1" />
+          <animate attributeName="opacity" values="0;1;1;0;0" keyTimes="0;.02;.27;.28;1" dur="5s" :begin="p.delay + 's'" repeatCount="indefinite" />
+        </circle>
+        <circle :cx="p.b.x" :cy="p.b.y" r="12" fill="none" stroke="#fab387" stroke-width="2" opacity="0">
+          <animate attributeName="r" values="12;12;30;30" keyTimes="0;.28;.42;1" dur="5s" :begin="p.delay + 's'" repeatCount="indefinite" />
+          <animate attributeName="opacity" values="0;0;.8;0;0" keyTimes="0;.28;.29;.42;1" dur="5s" :begin="p.delay + 's'" repeatCount="indefinite" />
+        </circle>
+      </g>
+      <g v-for="n in model.nodes" :key="n.key" :opacity="n.st === 'offline' ? 0.4 : 1">
+        <circle v-if="n.solid" :cx="n.x" :cy="n.y" r="20" :fill="n.colour" opacity=".22">
+          <animate v-if="n.st === 'working'" attributeName="r" values="20;23;20" dur="2s" repeatCount="indefinite" />
+          <animate v-else-if="n.st === 'waiting' || n.st === 'asking'" attributeName="r" values="20;25;20" dur="1.6s" repeatCount="indefinite" />
+        </circle>
+        <rect v-if="n.human" :x="n.x - 10" :y="n.y - 10" width="20" height="20" rx="4" :fill="n.colour" />
+        <circle v-else :cx="n.x" :cy="n.y" r="11" :fill="n.solid ? n.colour : '#1b1d22'" :stroke="n.solid ? '#1b1d22' : n.colour" :stroke-width="n.solid ? 3 : 2" />
+        <path v-if="n.st === 'working'" :d="`M ${n.x + 17} ${n.y} A 17 17 0 0 1 ${n.x + 17 * Math.cos(1.6)} ${n.y + 17 * Math.sin(1.6)}`" fill="none" stroke="#e6edf7" stroke-width="2.5" stroke-linecap="round">
+          <animateTransform attributeName="transform" type="rotate" :from="`0 ${n.x} ${n.y}`" :to="`360 ${n.x} ${n.y}`" dur="3.1s" repeatCount="indefinite" />
+        </path>
+        <text :x="n.x" :y="n.y + 30" class="name">{{ n.name }}</text>
+        <text v-if="n.doing" :x="n.x" :y="n.y + 44" class="doing">{{ n.doing }}</text>
+      </g>
+    </svg>
     <p v-if="note" class="team-graph-note">{{ note }}</p>
     <table v-if="rows.length" class="team-live">
       <thead><tr><th>Who</th><th>Status</th><th>Doing</th><th>Machine</th></tr></thead>
@@ -153,7 +172,7 @@ onUnmounted(() => { hideSource(false); clearInterval(timer); cy?.destroy() })
         </tr>
       </tbody>
     </table>
-    <p class="team-graph-legend"><span class="d working"></span>working <span class="d waiting"></span>waiting <span class="d asking"></span>asking <span class="d idle"></span>idle <span class="d ring"></span>active <span class="d ring off"></span>offline · dashed lines: messages in the last hour</p>
+    <p class="team-graph-legend"><span class="d working"></span>working <span class="d waiting"></span>waiting <span class="d asking"></span>asking <span class="d idle"></span>idle <span class="d ring"></span>active <span class="d ring off"></span>offline · a pulse travels from sender to receiver for each message in the last hour</p>
   </div>
 </template>
 
@@ -162,7 +181,7 @@ onUnmounted(() => { hideSource(false); clearInterval(timer); cy?.destroy() })
 .team-graph-tabs { display: flex; gap: 4px; margin-bottom: 6px }
 .team-graph-tabs button { border: 1px solid var(--vp-c-divider); background: var(--vp-c-bg-soft); color: var(--vp-c-text-2); border-radius: 6px; padding: 3px 12px; cursor: pointer }
 .team-graph-tabs button.on { color: var(--vp-c-text-1); border-color: var(--vp-c-brand-1) }
-.team-graph-canvas { height: 460px; border: 1px solid var(--vp-c-divider); border-radius: 8px; background: var(--vp-c-bg-soft) }
+.team-graph-canvas { width: 100%; height: auto; display: block; border: 1px solid var(--vp-c-divider); border-radius: 8px; background: var(--vp-c-bg-soft) }
 .team-graph-note { color: var(--vp-c-text-2); font-size: 13px }
 .team-graph-legend { font-size: 12px; color: var(--vp-c-text-2) }
 .d { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin: 0 4px 0 10px; background: #868e96 }
@@ -170,4 +189,7 @@ onUnmounted(() => { hideSource(false); clearInterval(timer); cy?.destroy() })
 .team-live { width: 100%; border-collapse: collapse; font-size: 14px; margin: 14px 0 }
 .team-live th, .team-live td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--vp-c-divider) }
 .team-live td.st { white-space: nowrap } .team-live .d { margin: 0 6px 0 0 }
+.box { fill: rgba(42,47,56,.45); stroke: #59616d } .box-label { fill: #aab; font: bold 13px sans-serif }
+.tie { stroke: #59616d; stroke-width: 1.5 } .msg { stroke: #adb5bd; stroke-width: 1; opacity: .25 }
+.name { fill: #e6edf7; font: 13px sans-serif; text-anchor: middle } .doing { fill: #e6edf7; opacity: .65; font: 11px ui-monospace, monospace; text-anchor: middle }
 </style>
