@@ -10,6 +10,7 @@ const note = ref('Loading team…')
 const view = ref((typeof localStorage !== 'undefined' && localStorage.getItem('team-graph-view')) || 'topic')
 let cy = null
 let timer = null
+const rows = ref([])
 let members = []
 let edges = []
 
@@ -21,6 +22,17 @@ const state = m => {
   if (['working', 'waiting', 'asking', 'idle'].includes(m.activity)) return m.activity
   const line = m.statusLine?.state
   return line === 'running' ? 'working' : line === 'waiting' || line === 'blocked' ? 'waiting' : line === 'idle' ? 'idle' : 'active'
+}
+const ago = iso => { const m = Math.round((Date.now() - Date.parse(iso)) / 60000); return m < 1 ? 'now' : m < 60 ? m + 'm' : Math.round(m / 60) + 'h' }
+const rowOf = m => {
+  const l = m.statusLine, st = state(m)
+  return { key: id(m), name: m.name, st, status: st === 'offline' ? m.status : st, doing: l ? `${l.ticket ? l.ticket + ' · ' : ''}${l.state} · ${l.doing}${l.next ? ' → ' + l.next : ''} (${ago(l.at)})` : '—', machine: m.machine || '—' }
+}
+// The live table replaces the hand-written roster table on the page; the markdown source stays for the roster parser but is hidden.
+const hideSource = on => {
+  for (const t of document.querySelectorAll('.vp-doc table:not(.team-live)')) {
+    if ([...t.querySelectorAll('th')].some(th => th.textContent.trim() === 'Session')) t.style.display = on ? 'none' : ''
+  }
 }
 const hollow = s => s === 'active' || s === 'offline'
 const clip = (text, n) => text.length > n ? text.slice(0, n - 1) + '…' : text
@@ -92,6 +104,8 @@ async function load() {
     const data = await response.json()
     members = data.members
     edges = data.edges ?? []
+    rows.value = members.filter(m => m.session).map(rowOf)
+    hideSource(rows.value.length > 0)
   } catch {
     note.value = 'Live team status needs a running preview.'
     return
@@ -119,7 +133,7 @@ onMounted(() => {
   load()
   timer = setInterval(load, 10000)
 })
-onUnmounted(() => { clearInterval(timer); cy?.destroy() })
+onUnmounted(() => { hideSource(false); clearInterval(timer); cy?.destroy() })
 </script>
 
 <template>
@@ -129,6 +143,16 @@ onUnmounted(() => { clearInterval(timer); cy?.destroy() })
     </div>
     <div ref="host" class="team-graph-canvas"></div>
     <p v-if="note" class="team-graph-note">{{ note }}</p>
+    <table v-if="rows.length" class="team-live">
+      <thead><tr><th>Who</th><th>Status</th><th>Doing</th><th>Machine</th></tr></thead>
+      <tbody>
+        <tr v-for="r in rows" :key="r.key">
+          <td>{{ r.name }}</td>
+          <td class="st"><span class="d" :class="[r.st === 'active' || r.st === 'offline' ? 'ring' : r.st, { off: r.st === 'offline' }]"></span>{{ r.status }}</td>
+          <td>{{ r.doing }}</td><td>{{ r.machine }}</td>
+        </tr>
+      </tbody>
+    </table>
     <p class="team-graph-legend"><span class="d working"></span>working <span class="d waiting"></span>waiting <span class="d asking"></span>asking <span class="d idle"></span>idle <span class="d ring"></span>active <span class="d ring off"></span>offline · dashed lines: messages in the last hour</p>
   </div>
 </template>
@@ -143,4 +167,7 @@ onUnmounted(() => { clearInterval(timer); cy?.destroy() })
 .team-graph-legend { font-size: 12px; color: var(--vp-c-text-2) }
 .d { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin: 0 4px 0 10px; background: #868e96 }
 .d.working { background: #6fb7e8 } .d.waiting { background: #f38ba8 } .d.asking { background: #ffd500 } .d.idle { background: #9ccc65 } .d.ring { background: none; border: 2px solid #9399b2; box-sizing: border-box } .d.ring.off { opacity: .4 }
+.team-live { width: 100%; border-collapse: collapse; font-size: 14px; margin: 14px 0 }
+.team-live th, .team-live td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--vp-c-divider) }
+.team-live td.st { white-space: nowrap } .team-live .d { margin: 0 6px 0 0 }
 </style>
