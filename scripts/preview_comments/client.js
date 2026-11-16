@@ -1004,7 +1004,7 @@
     if (opts.mid) note.dataset.mid = opts.mid;
     if (opts.from) note.dataset.from = opts.from;
     const label = document.createElement("small");
-    label.textContent = `${author}${opts.note ? " · private note" : ""} · ${new Date(at).toLocaleString()}${opts.edited ? " · edited" : ""}`;
+    label.textContent = `${author}${opts.to?.length ? ` → ${opts.to.join(", ")}` : ""}${opts.note ? " · private note" : ""} · ${new Date(at).toLocaleString()}${opts.edited ? " · edited" : ""}`;
     const body = document.createElement("p");
     body.append(inlineMarkdown(text));
     const speak = document.createElement("button");
@@ -1111,7 +1111,7 @@
     const nodes = [];
     if (comment.comment) {
       nodes.push(renderNote(comment.author === "copilot" ? "Copilot" : "You", comment.comment, comment.at, {
-        note: comment.note, edited: comment.commentEdited, mid: comment.id,
+        note: comment.note, edited: comment.commentEdited, mid: comment.id, to: comment.author !== "copilot" ? comment.to : undefined,
         onEdit: text => run({ editComment: text }),
       }));
     }
@@ -1123,7 +1123,7 @@
       const target = reply.inReplyTo;
       const targetAuthor = target && (target.id === comment.id ? comment : comment.replies.find(r => r.id === target.id));
       nodes.push(renderNote(mine ? "You" : sender, target ? reply.comment.replace(/^> [^\n]*\n\n/, "") : reply.comment, reply.at, {
-        note: reply.note, edited: reply.edited, mid: reply.id, from: reply.from,
+        note: reply.note, edited: reply.edited, mid: reply.id, from: reply.from, to: mine ? reply.to : undefined,
         ref: target && { id: target.id, quote: (target.quote || "").slice(0, 140), author: targetAuthor?.author === "copilot" ? targetAuthor.from || "Copilot" : "You" },
         onEdit: mine ? text => run({ editReply: { id: reply.id, text } }) : undefined,
         onDelete: () => run({ removeReply: reply.id }),
