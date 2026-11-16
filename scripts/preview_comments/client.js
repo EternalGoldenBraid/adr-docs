@@ -43,7 +43,7 @@
       .history-head h2{margin:0}.history-head .history-counts{margin-left:auto;margin-right:12px}
       .icon{padding:2px 9px;border-radius:6px;line-height:1.4}
       .help-panel{width:min(640px,94vw)}.help-tabs{display:flex;gap:6px;margin:8px 0;flex-wrap:wrap}.help-tabs button{background:#2a2e36;color:inherit;border:1px solid #59616d;border-radius:6px;padding:3px 10px;cursor:pointer}.help-tabs button[aria-selected=true]{background:#3b4a63;border-color:#8ab4f8}.help-body{white-space:pre-wrap;font:13px/1.5 ui-monospace,monospace;margin:0;max-height:50vh;overflow:auto}
-      .mesh-panel{width:min(640px,94vw)}.mesh-panel.peek{position:fixed;left:auto;top:auto;right:12px;bottom:52px;margin:0;max-height:70vh;overflow:auto;opacity:.97}.mesh-corner{position:fixed;right:0;bottom:0;width:18px;height:18px;z-index:2147483000}.mesh-table td:nth-child(2){white-space:nowrap}.mesh-edges{font-size:12px;color:#aab;margin-top:8px}.mesh-table{width:100%;border-collapse:collapse;font-size:13px}.mesh-table th,.mesh-table td{text-align:left;padding:4px 8px;border-bottom:1px solid #3a404a}
+      .mesh-panel{width:min(640px,94vw)}.mesh-panel.peek{position:fixed;left:auto;top:auto;right:12px;bottom:52px;margin:0;max-height:70vh;overflow:auto;opacity:.97}.mesh-corner{position:fixed;right:0;bottom:130px;padding:10px 3px;z-index:2147483000;background:#1b1d22cc;color:#aab;border:1px solid #3a404a;border-right:0;border-radius:8px 0 0 8px;font:11px/1 ui-monospace,monospace;writing-mode:vertical-rl;cursor:pointer;opacity:.55}.mesh-corner:hover{opacity:1}.mesh-table td:nth-child(2){white-space:nowrap}.mesh-edges{font-size:12px;color:#aab;margin-top:8px}.mesh-table{width:100%;border-collapse:collapse;font-size:13px}.mesh-table th,.mesh-table td{text-align:left;padding:4px 8px;border-bottom:1px solid #3a404a}
       .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:#59616d}.dot.active{background:#51cf66}.dot.idle{background:#fcc419}
       .tabs{display:flex;gap:2px;margin-top:4px!important;margin-bottom:6px!important;border-bottom:1px solid #3a404a}
       .tab{border:0;border-bottom:2px solid transparent;border-radius:0;background:none;padding:6px 10px;color:#b7c1ce}
@@ -753,8 +753,8 @@
   }
   function closeMesh() { find(".mesh-panel").hidden = true; clearInterval(meshTimer); }
   find(".mesh-close").addEventListener("click", closeMesh);
-  // Hot corner: hovering the bottom-right corner peeks at the team; it hides again unless opened with -m / :mesh.
-  const corner = Object.assign(document.createElement("div"), { className: "mesh-corner" });
+  // Edge tab: hovering the small Team tab on the right edge peeks at the team; it hides again unless opened with -m / :mesh.
+  const corner = Object.assign(document.createElement("div"), { className: "mesh-corner", textContent: "Team", title: "Hover to peek at the team; -m pins" });
   find(".mesh-panel").before(corner);
   let peekTimer;
   corner.addEventListener("mouseenter", () => { if (find(".mesh-panel").hidden) { openMesh(true); meshPinned = false; } });
