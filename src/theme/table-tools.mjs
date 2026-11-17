@@ -63,25 +63,25 @@ export function enhanceTables(root = document, path = location.pathname) {
         return a - b;
       });
       const out = [];
-      let current;
-      for (const i of order) {
-        if (state.group >= 0) {
-          const group = cellText(rows[i].cells[state.group]) || "(empty)";
-          if (group !== current) {
-            current = group;
-            const count = order.filter(j => (cellText(rows[j].cells[state.group]) || "(empty)") === group).length;
-            const header = document.createElement("tr");
-            header.className = "adr-group";
-            const cell = document.createElement("td");
-            cell.colSpan = heads.length;
-            cell.textContent = `${collapsed.has(group) ? "▸" : "▾"} ${cellText(heads[state.group])}: ${group} (${count})`;
-            cell.addEventListener("click", () => { collapsed.has(group) ? collapsed.delete(group) : collapsed.add(group); render(); });
-            header.append(cell);
-            out.push(header);
-          }
-          rows[i].hidden = collapsed.has(group);
-        } else rows[i].hidden = false;
-        out.push(rows[i]);
+      if (state.group < 0) for (const i of order) { rows[i].hidden = false; out.push(rows[i]); }
+      else {
+        // Groups are contiguous, in the order they first appear in the sorted rows.
+        const groups = new Map();
+        for (const i of order) {
+          const name = cellText(rows[i].cells[state.group]) || "(empty)";
+          groups.set(name, [...(groups.get(name) ?? []), i]);
+        }
+        for (const [name, members] of groups) {
+          const header = document.createElement("tr");
+          header.className = "adr-group";
+          const cell = document.createElement("td");
+          cell.colSpan = heads.length;
+          cell.textContent = `${collapsed.has(name) ? "▸" : "▾"} ${cellText(heads[state.group])}: ${name} (${members.length})`;
+          cell.addEventListener("click", () => { collapsed.has(name) ? collapsed.delete(name) : collapsed.add(name); render(); });
+          header.append(cell);
+          out.push(header);
+          for (const i of members) { rows[i].hidden = collapsed.has(name); out.push(rows[i]); }
+        }
       }
       body.replaceChildren(...out);
     };
