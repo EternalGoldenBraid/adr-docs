@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.68.1 - 2026-11-17
+
+- Fix: the site data directory is now `<site>/.adr-data/` (was `.adr/`, which a site may already use, e.g. as a symlink to the ADR checkout, so comments and a `.gitignore` were written into that checkout). A data directory that resolves outside the site folder is refused. Existing 0.67/0.68 data in `.adr/` is not migrated; move it by hand if you have any.
+
+## 0.68.0 - 2026-11-17
+
+- Big sites stay light: the overlay first loads open threads and anything touched in the last 14 days (`/history-recent`); older resolved threads load when needed (History tabs All, Resolved or Page history, `:grep`, semantic search, or a link to such a thread). The history header says how many are not loaded.
+
 ## 0.67.3 - 2026-11-17
 
 - `adr` starts only one server per folder. A second launch for the same folder prints the running server's URL and exits (code 0 for the same store, so resume scripts can run it every time; code 1 if a different store was asked for).
@@ -10,11 +18,11 @@
 
 ## 0.67.1 - 2026-11-17
 
-- The folder is the identity: `adr . -d --name NAME` in a site folder finds its store by itself (`.adr/store`, else the store an earlier server for that folder used), so `--store` is no longer needed, including for sites that were first served by an agent session. The id is recorded in `.adr/store`.
+- The folder is the identity: `adr . -d --name NAME` in a site folder finds its store by itself (`.adr-data/store`, else the store an earlier server for that folder used), so `--store` is no longer needed, including for sites that were first served by an agent session. The id is recorded in `.adr-data/store`.
 
 ## 0.67.0 - 2026-11-17
 
-- A standalone server keeps its data with the site: comments, settings, images and audio live in `<site>/.adr/` (self-ignoring via `.adr/.gitignore`), so they follow the folder instead of a session id. A store that lived in `~/.local/state/agent-doc-review/<id>/` is moved there on the next start; runtime files (connection, exit log) stay in the state directory.
+- A standalone server keeps its data with the site: comments, settings, images and audio live in `<site>/.adr-data-data/` (self-ignoring via `.adr-data/.gitignore`), so they follow the folder instead of a session id. A store that lived in `~/.local/state/agent-doc-review/<id>/` is moved there on the next start; runtime files (connection, exit log) stay in the state directory.
 - Agent tools (`store`) accept a server name, e.g. `store="demo"`, or the site directory, as well as the store id; mesh notes now name the server.
 
 ## 0.66.0 - 2026-11-17

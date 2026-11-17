@@ -81,7 +81,7 @@ export async function startDocumentPreview({
     const address = server.httpServer.address();
     listenPort = address.port;
     const origin = `http://127.0.0.1:${address.port}`;
-    bridge = await startCommentBridge({ sessionId, documentRoot, storageRoot, dataDirectory: inSite ? join(documentRoot, ".adr") : undefined, previewOrigin: origin, notify, onError, mesh, ownerViaMesh, name, onRestart });
+    bridge = await startCommentBridge({ sessionId, documentRoot, storageRoot, dataDirectory: inSite ? join(documentRoot, ".adr-data") : undefined, previewOrigin: origin, notify, onError, mesh, ownerViaMesh, name, onRestart });
     const stem = basename(document, ".md");
     const url = origin + (stem === "index" ? "/" : "/" + encodeURIComponent(stem));
     return { url, origin, document, documentRoot, workspace, bridge, close };
