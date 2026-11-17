@@ -110,8 +110,17 @@ function machineOf(m) {
   const peak = Math.max(m.nproc, ...m.history), y = v => (22 - v / peak * 20).toFixed(1)
   const points = m.history.map((v, i) => `${(i / Math.max(1, m.history.length - 1) * 100).toFixed(1)},${y(v)}`).join(' ')
   const gpu = m.gpus.length ? ` · GPU util ${m.gpus.map(g => g.util + ' %').join(' / ')}` : ''
+  const heat = pct => pct < 50 ? '#9ccc65' : pct < 80 ? '#ffd500' : '#f38ba8'
+  const cores = (m.cores ?? []).map((pct, i) => ({ i, pct, color: heat(pct) }))
+  const gpus = m.gpus.map((g, i) => ({
+    label: `GPU ${i}${g.name ? ' · ' + g.name.replace(/^NVIDIA (GeForce )?/, '') : ''}`,
+    util: g.util, utilColor: heat(g.util),
+    vramPct: g.mem_total ? Math.round(g.mem_used / g.mem_total * 100) : 0,
+    vram: g.mem_total ? `${(g.mem_used / 1024).toFixed(1)} / ${(g.mem_total / 1024).toFixed(0)} GB` : '',
+    extra: [g.temp !== undefined ? `${g.temp} °C` : '', g.power !== undefined ? `${Math.round(g.power)} W` : ''].filter(Boolean).join(' · '),
+  }))
   return {
-    name: m.name, points, limit: y(m.nproc), hot: m.loadavg[0] > m.nproc * 0.9, stale: m.stale,
+    name: m.name, cores, gpus, points, limit: y(m.nproc), hot: m.loadavg[0] > m.nproc * 0.9, stale: m.stale,
     text: `${m.loadavg[0].toFixed(0)} load / ${m.nproc} cores (${(m.loadavg[0] / m.nproc).toFixed(1)}×)${m.memUsed !== undefined ? ` · mem ${Math.round(m.memUsed * 100)} %` : ''}${gpu}`,
     limitPct: (Number(y(m.nproc)) / 22 * 100).toFixed(0),
     top: m.top.map(p => `${p.user} ${p.pcpu}% ${p.cmd}`).join('\n'),
@@ -195,6 +204,20 @@ onUnmounted(() => { hideSource(false); clearInterval(timer) })
         <div v-else class="spark"><span class="limit" :style="{ top: m.limitPct + '%' }">all cores busy</span><svg viewBox="0 0 100 22" preserveAspectRatio="none"><line x1="0" x2="100" :y1="m.limit" :y2="m.limit" stroke="#59616d" stroke-dasharray="2 2" /><polyline :points="m.points" fill="none" :stroke="m.hot ? '#f38ba8' : '#6fb7e8'" stroke-width="1.5" vector-effect="non-scaling-stroke" /></svg></div>
         <span :class="{ hot: m.hot }">{{ m.text }}</span>
       </div>
+      <template v-for="m in machines" :key="'d' + m.name">
+        <div v-if="m.cores?.length || m.gpus?.length" class="mach-detail" :class="{ stale: m.stale }">
+          <b>{{ m.name }}</b>
+          <div v-if="m.cores.length" class="cores" :title="'Per-core CPU load, last sample'">
+            <span v-for="c in m.cores" :key="c.i" class="core" :title="`core ${c.i}: ${Math.round(c.pct)} %`"><i :style="{ height: c.pct + '%', background: c.color }"></i></span>
+          </div>
+          <div v-for="g in m.gpus" :key="g.label" class="gpu">
+            <span class="gpu-label">{{ g.label }}</span>
+            <span class="bar" :title="`util ${g.util} %`"><i :style="{ width: g.util + '%', background: g.utilColor }"></i><em>util {{ g.util }} %</em></span>
+            <span class="bar" :title="g.vram"><i :style="{ width: g.vramPct + '%', background: '#6fb7e8' }"></i><em>VRAM {{ g.vram }}</em></span>
+            <span class="gpu-extra">{{ g.extra }}</span>
+          </div>
+        </div>
+      </template>
       <div class="mach axis"><span></span><span class="ticks"><span>−60 min</span><span>now</span></span><span></span></div>
     </div>
     <p class="team-graph-legend"><span class="d working"></span>working <span class="d waiting"></span>waiting <span class="d asking"></span>asking <span class="d idle"></span>idle <span class="d ring"></span>active <span class="d ring off"></span>offline · a pulse travels from sender to receiver for each message in the last hour</p>
@@ -213,6 +236,16 @@ onUnmounted(() => { hideSource(false); clearInterval(timer) })
 .mach .ticks { display: flex; justify-content: space-between }
 .mach .hot { color: #f38ba8 }
 .mach.stale { opacity: .5 }
+.mach-detail { display: grid; gap: 4px; margin: 6px 0 10px; padding: 6px 8px; border: 1px solid var(--vp-c-divider); border-radius: 8px; font-size: 12px }
+.mach-detail.stale { opacity: .5 }
+.cores { display: flex; gap: 2px; height: 40px; align-items: flex-end }
+.core { flex: 1; max-width: 22px; height: 100%; display: flex; align-items: flex-end; background: var(--vp-c-bg-soft); border-radius: 2px; overflow: hidden }
+.core i { display: block; width: 100%; min-height: 1px }
+.gpu { display: grid; grid-template-columns: 170px 1fr 1fr 110px; gap: 8px; align-items: center }
+.gpu-label, .gpu-extra { opacity: .8 }
+.bar { position: relative; height: 16px; background: var(--vp-c-bg-soft); border-radius: 3px; overflow: hidden }
+.bar i { position: absolute; inset: 0 auto 0 0; display: block; opacity: .75 }
+.bar em { position: relative; font-style: normal; padding-left: 6px; line-height: 16px; font-size: 11px }
 .team-graph-tabs { display: flex; gap: 4px; margin-bottom: 6px }
 .team-graph-tabs button { border: 1px solid var(--vp-c-divider); background: var(--vp-c-bg-soft); color: var(--vp-c-text-2); border-radius: 6px; padding: 3px 12px; cursor: pointer }
 .team-graph-tabs button.on { color: var(--vp-c-text-1); border-color: var(--vp-c-brand-1) }

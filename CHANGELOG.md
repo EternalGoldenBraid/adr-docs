@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.75.0 - 2026-11-17
+
+- Team load panel (the `/team` page and the overlay's Team panel): btop-style per-core CPU bars for each machine, and one nvtop-style row per GPU (utilisation, VRAM used/total, temperature, power). Needs the updated `mesh-load-sample` (dotfiles) on each host; hosts running the old sampler keep the single load line.
+
 ## 0.74.0 - 2026-11-17
 
 - The published site (`build:site`) has fuzzy full-text search (VitePress local search). The live preview is unchanged.

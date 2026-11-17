@@ -167,7 +167,7 @@ export async function startCommentBridge({
       name, host: last.host, nproc: last.nproc, at: last.ts, stale: Date.now() / 1000 - last.ts > 300,
       loadavg: last.loadavg, history: rows.map(row => row.loadavg[0]),
       memUsed: last.memory?.total ? 1 - last.memory.available / last.memory.total : undefined,
-      gpus: last.gpus ?? [], top: (last.top ?? []).slice(0, 3),
+      cores: last.cores ?? [], gpus: last.gpus ?? [], top: (last.top ?? []).slice(0, 3),
     };
   }
   function machineLoad(name, remoteHost) {
