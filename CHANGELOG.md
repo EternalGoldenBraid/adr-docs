@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.67.2 - 2026-11-17
+
+- `start_doc_review` no longer starts a second server for a folder that a standalone server already serves (two servers would write the same comments and drift apart). It returns that server's URL and the `store` name to pass to the other tools.
+
 ## 0.67.1 - 2026-11-17
 
 - The folder is the identity: `adr . -d --name NAME` in a site folder finds its store by itself (`.adr/store`, else the store an earlier server for that folder used), so `--store` is no longer needed, including for sites that were first served by an agent session. The id is recorded in `.adr/store`.

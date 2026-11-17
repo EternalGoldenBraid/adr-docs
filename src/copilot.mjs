@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { existsSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { commentAttention } from "../scripts/preview_comments/extension.mjs";
 import { startDocumentPreview } from "./preview.mjs";
 import { remoteBridge } from "./remote-bridge.mjs";
@@ -57,6 +57,18 @@ export async function connectDocumentReview({
       handler: async args => {
         if (active || starting) throw new Error("A document preview is already open or starting. Stop it with stop_doc_review first.");
         const storageRoot = stateRoot();
+        // A standalone server already serves this folder: use it instead of a second one that would write the same comments.
+        const real = path => { try { return realpathSync(path); } catch { return path; } };
+        const folder = dirname(real(args.document_path));
+        const existing = listServers(storageRoot).find(row => row.standalone && row.root && real(row.root) === folder);
+        if (existing) {
+          const stem = basename(args.document_path, ".md");
+          return JSON.stringify({
+            url: existing.url + (stem === "index" ? "/" : "/" + encodeURIComponent(stem)), existing: true,
+            store: existing.name ?? existing.store,
+            feedback: `A standalone server already serves this folder, so none was started. Open the url; pass store="${existing.name ?? existing.store}" to read_doc_review_comments, update_doc_review_comment and add_doc_review_comment.`,
+          });
+        }
         starting = startPreview({
           documentPath: args.document_path, sessionId: session.sessionId,
           storageRoot, port: args.port ?? 0,
