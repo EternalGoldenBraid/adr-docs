@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { resolveLaunch, USAGE } from "../src/launch.mjs";
 import { startDocumentPreview } from "../src/preview.mjs";
 import { spawn } from "node:child_process";
-import { displayUrl, listServers, readHistory, recordExit, recordLaunch, startDetached, waitForExit } from "../src/servers.mjs";
+import { displayUrl, listServers, readHistory, recordExit, recordLaunch, setKeep, startDetached, startKept, waitForExit } from "../src/servers.mjs";
 import { runTui } from "../src/tui.mjs";
 
 const storageRoot = join(process.env.XDG_STATE_HOME || join(homedir(), ".local", "state"), "agent-doc-review");
@@ -31,10 +31,51 @@ if (process.env.ADR_SUPERVISE === "1" && !process.env.ADR_CHILD) {
   }
   process.exit(0);
 }
+if (process.argv[2] === "daemon") {
+  const sub = process.argv[3];
+  if (sub === "install") {
+    const { mkdirSync, writeFileSync } = await import("node:fs");
+    const { execFileSync } = await import("node:child_process");
+    const dir = join(homedir(), ".config", "systemd", "user");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, "adr-daemon.service"), `[Unit]\nDescription=ADR kept servers\n\n[Service]\nExecStart=${process.execPath} ${process.argv[1]} daemon\nRestart=always\nRestartSec=3\n\n[Install]\nWantedBy=default.target\n`);
+    execFileSync("systemctl", ["--user", "daemon-reload"], { stdio: "inherit" });
+    execFileSync("systemctl", ["--user", "enable", "--now", "adr-daemon.service"], { stdio: "inherit" });
+    console.log("adr-daemon installed and running (systemctl --user status adr-daemon). Kept servers now survive reboots and crashes; run `loginctl enable-linger $USER` to also start them before you log in.");
+    process.exit(0);
+  }
+  console.log("adr daemon: keeping servers marked with `adr keep` running (checks every 10 s)");
+  for (;;) {
+    for (const store of startKept(storageRoot)) console.log(`${new Date().toISOString()} started kept server ${store}`);
+    await new Promise(done => setTimeout(done, 10000));
+  }
+}
+if (process.argv[2] === "keep" || process.argv[2] === "unkeep") {
+  const keep = process.argv[2] === "keep";
+  let store;
+  try {
+    const target = process.argv[3];
+    const known = readHistory(storageRoot).find(row => row.store === target || row.name === target);
+    if (known && !keep) store = known.store;
+    else {
+      const launch = resolveLaunch(process.argv.slice(3));
+      store = launch.store;
+      const row = readHistory(storageRoot).find(entry => entry.store === store);
+      if (keep && !row) {
+        if (!launch.port) throw new Error("a kept server needs a fixed port: adr keep <dir> --port N --name NAME");
+        recordLaunch(storageRoot, { store, name: launch.name, document: launch.document, port: launch.port });
+      } else if (keep && launch.port && launch.port !== row.port) recordLaunch(storageRoot, { ...row, port: launch.port });
+    }
+  } catch (error) { console.error(`${error.message}\nusage: adr keep <dir> --port N [--name NAME] [--store UUID]   |   adr unkeep <name|store>`); process.exit(2); }
+  if (!setKeep(storageRoot, store, keep)) { console.error("unknown server (not in launch history)"); process.exit(2); }
+  const started = keep ? startKept(storageRoot) : [];
+  console.log(`${keep ? "kept" : "no longer kept"}: ${store}${started.length ? " (started)" : ""}${keep ? "\n  run `adr daemon install` once so the machine keeps it running" : ""}`);
+  process.exit(0);
+}
 if (process.argv[2] === "list" && process.argv.length === 3) {
   const rows = listServers(storageRoot, { prune: true });
   if (!rows.length) console.log("No ADR servers running.");
-  for (const row of rows) console.log(`${displayUrl(row)}  pid ${row.pid}  store ${row.store}\n    ${row.root ?? ""}`);
+  for (const row of rows) console.log(`${displayUrl(row)}  pid ${row.pid}  store ${row.store}${row.kept ? "  (kept)" : ""}\n    ${row.root ?? ""}`);
   process.exit(0);
 }
 if (process.argv[2] === "tui" && process.argv.length === 3) {
