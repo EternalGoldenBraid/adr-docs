@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.70.0 - 2026-11-17
+
+- Messages render Markdown tables and `>` quotes (nested). Quotes whose table rows were flattened onto one line are cut back into rows.
+- Several quotes in one reply: each `q` appends another `>` quote to the reply box, so you can write between quotes and answer multiple passages in order. A selection inside a table keeps its rows.
+- The reply and comment text boxes grow with their text, up to a maximum height.
+
 ## 0.69.0 - 2026-11-17
 
 - New tool `unanswered_threads(as, store)`: a state check agents run at a natural pause. It lists open threads addressed to the agent whose last word is the user's, with age and a one-line quote, and always states the count ("checked: 0 unanswered"). Read-only: unlike `read_doc_review_comments(include_seen=true)` it leaves read receipts alone. Requested by the PC lead (mesh #1693).
