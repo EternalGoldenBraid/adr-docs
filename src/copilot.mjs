@@ -179,7 +179,14 @@ export async function connectDocumentReview({
       description: "Stop this session's document preview. Saved feedback remains on disk.",
       parameters: { type: "object", properties: {} },
       handler: async () => { await stop(); return "Document preview stopped; saved feedback retained."; },
-    }],
+    }].map(tool => ({
+      ...tool,
+      // The host shows a thrown error only as "Tool execution failed"; hand a bad store back as text.
+      handler: args => {
+        const text = error => { if (error?.storeError) return `Error: ${error.message}`; throw error; };
+        try { const result = tool.handler(args); return result?.then ? result.then(undefined, text) : result; } catch (error) { return text(error); }
+      },
+    })),
   });
   attention = commentAttention(session, () => active?.bridge.pending() ?? { count: 0 }, "read_doc_review_comments");
   session.on("assistant.idle", event => {

@@ -91,7 +91,7 @@ export function resolveStore(storageRoot, given) {
   if (typeof given !== "string" || UUID_RE.test(given)) return given;
   const rows = readHistory(storageRoot);
   const row = rows.find(entry => entry.name === given || entry.document === given || dirname(entry.document) === given);
-  if (!row) throw new Error(`Unknown server "${given}". Use a server name (adr list), a site directory or a store id.`);
+  if (!row) throw Object.assign(new Error(`Unknown store "${given}". Use a server name from \`adr list\` (e.g. "demo"), a site directory or a store id.`), { storeError: true });
   return row.store;
 }
 const UUID_RE = /^[\da-f]{8}(-[\da-f]{4}){3}-[\da-f]{12}$/i;

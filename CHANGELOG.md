@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.68.3 - 2026-11-17
+
+- Fix: mesh comment notifications named the addressed agent where the server name belongs (`store="demo-agent"`); they now give the server name (or store id).
+- An unknown `store` returns a readable error ("Unknown store ..."), not "Tool execution failed".
+
 ## 0.68.2 - 2026-11-17
 
 - Client/server skew no longer hides comments: a client that finds no `/history-recent` (older server) falls back to the full history.

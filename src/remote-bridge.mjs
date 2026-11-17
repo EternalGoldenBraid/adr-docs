@@ -5,7 +5,7 @@ import { ensureServer, resolveStore } from "./servers.mjs";
 // Another agent's preview bridge: loopback port and token live in its connection.json (same user, mode 0600).
 export async function remoteBridge(storageRoot, given, path, init = {}) {
   const store = resolveStore(storageRoot, given);
-  if (!/^[\w-]{8,64}$/.test(store)) throw new Error("Invalid store session id.");
+  if (!/^[\w-]{8,64}$/.test(store)) throw new Error(`Invalid store "${store}". Store names need ADR 0.67 or newer: reload the plugin, or pass the store id.`);
   const call = () => {
     const { port, token } = JSON.parse(readFileSync(join(storageRoot, store, "connection.json"), "utf8"));
     return fetch(`http://127.0.0.1:${port}${path}`, {
