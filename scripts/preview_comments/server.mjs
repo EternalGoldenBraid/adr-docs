@@ -9,6 +9,13 @@ import { homedir, hostname } from "node:os";
 import { execFile } from "node:child_process";
 import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
+const meshCodeDirectory = join(homedir(), ".copilot", "extensions", "agent-mesh");
+// MESH_DIR, else ~/.agent-mesh, else the pre-move location inside the extension.
+function meshDataDirectory() {
+  if (process.env.MESH_DIR) return process.env.MESH_DIR;
+  const moved = join(homedir(), ".agent-mesh");
+  return existsSync(join(moved, "agent-mesh.db")) ? moved : meshCodeDirectory;
+}
 import { readRoster } from "../../src/roster.mjs";
 import { readPageTree } from "../../src/page-tree.mjs";
 
@@ -142,9 +149,8 @@ export async function startCommentBridge({
     if (remoteLoading) return remoteLoading;
     remoteAt = Date.now();
     remoteLoading = (async () => {
-      const dir = join(homedir(), ".copilot", "extensions", "agent-mesh");
-      const { loadMachines, requestPeer } = await import(pathToFileURL(join(dir, "network.mjs")).href);
-      const config = loadMachines(join(dir, "machines.json"));
+      const { loadMachines, requestPeer } = await import(pathToFileURL(join(meshCodeDirectory, "network.mjs")).href);
+      const config = loadMachines(join(meshDataDirectory(), "machines.json"));
       const wanted = new Set(roster().filter(row => row.session && row.machine && config?.peers && Object.hasOwn(config.peers, row.machine)).map(row => row.machine));
       await Promise.all([...wanted].map(async machine => {
         try {
@@ -198,7 +204,7 @@ export async function startCommentBridge({
     const statusLines = new Map();
     const edges = new Map();
     try {
-      const db = new DatabaseSync(process.env.ADR_MESH_DB || join(homedir(), ".copilot", "extensions", "agent-mesh", "agent-mesh.db"), { readOnly: true });
+      const db = new DatabaseSync(process.env.ADR_MESH_DB || join(meshDataDirectory(), "agent-mesh.db"), { readOnly: true });
       try {
         const marks = known.map(() => "?").join(",");
         const columns = db.prepare("PRAGMA table_info(agent_sessions)").all().some(column => column.name === "kind") ? "kind" : "'agent' AS kind";
