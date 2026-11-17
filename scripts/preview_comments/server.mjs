@@ -705,8 +705,13 @@ export async function startCommentBridge({
       const proposal = input.proposal && typeof input.proposal === "object"
         ? { before: String(input.proposal.before ?? "").slice(0, 8000), after: String(input.proposal.after ?? "").slice(0, 8000) } : undefined;
       const refs = Array.isArray(input.refs) ? [...new Set(input.refs.filter(id => comments.has(id)))].slice(0, 20) : [];
+      let from = typeof input.from === "string" && /^[\w .@-]{1,60}$/.test(input.from.trim()) ? input.from.trim() : undefined;
+      if (!from && typeof input.fromSession === "string") {
+        const row = roster().find(member => member.session && member.session === input.fromSession);
+        if (row?.name) from = String(row.name).slice(0, 60);
+      }
       const record = {
-        ...value, ...(proposal ? { proposal } : {}), ...(refs.length ? { refs } : {}), input: value, event: "comment", author: "copilot", at: new Date().toISOString(), seen: true,
+        ...value, ...(from ? { from } : {}), ...(proposal ? { proposal } : {}), ...(refs.length ? { refs } : {}), input: value, event: "comment", author: "copilot", at: new Date().toISOString(), seen: true,
         sourceHash: createHash("sha256").update(readFileSync(value.source)).digest("hex"),
       };
       append(log, record);
