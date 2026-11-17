@@ -1381,6 +1381,11 @@
     const pages = {};
     const colors = {};
     const latest = {};
+    const open = {};
+    for (const comment of historyComments) if (!comment.removed && !comment.resolved && !isNote(comment) && comment.kind !== "session" && !attention(comment)) {
+      const key = pagePath(comment.url);
+      open[key] = (open[key] || 0) + 1;
+    }
     for (const comment of historyComments) if (attention(comment)) {
       const key = comment.kind === "session" ? "*" : pagePath(comment.url);
       pages[key] = (pages[key] || 0) + 1;
@@ -1402,7 +1407,7 @@
     }));
     syncBanners();
     document.title = total ? `(${total}) ${base}` : base;
-    document.dispatchEvent(new CustomEvent("preview-comment-awaiting", { detail: { pages, total, colors, palette: COLORS } }));
+    document.dispatchEvent(new CustomEvent("preview-comment-awaiting", { detail: { pages, open, total, colors, palette: COLORS } }));
   }
   // The history loads open and recent threads only; older resolved ones come in with loadAllHistory() when something needs them.
   let historyAll = false, historyArchived = 0, historyForce = false;
