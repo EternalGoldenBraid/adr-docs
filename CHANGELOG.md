@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.79.0 - 2026-11-17
+
+- Graphs (DocGraph) now open at a readable size: if fitting everything would make node text small, the view starts at 100 % zoom (centred, or at the top-left corner for a tall graph) and the rest is a pan away. `0` or `:fit` still shows all.
+- New **⇤ focus** button (and the `\` key) hides the side columns (index and "On this page") so content and graphs use the full width. The choice is remembered.
+
 ## 0.78.1 - 2026-11-17
 
 - The mesh data directory moved to `~/.agent-mesh`. ADR now reads the mesh database and `machines.json` from `MESH_DIR`, else `~/.agent-mesh`, else the old extension folder.
