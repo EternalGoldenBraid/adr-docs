@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.65.1 - 2026-11-17
+
+- Docs and tool description: agents that need a lasting server should start it with `adr . -d --name <name> --store <session id>` (watchdog, exit log) rather than `start_doc_review`.
+
 ## 0.65.0 - 2026-11-17
 
 - Server exit log: every stop is recorded with its reason (signal, uncaught exception, agent process exit) in `<store>/exit.json` and `~/.local/state/agent-doc-review/<store>.log`.
