@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { commentAttention } from "../scripts/preview_comments/extension.mjs";
 import { startDocumentPreview } from "./preview.mjs";
 import { remoteBridge } from "./remote-bridge.mjs";
-import { listServers } from "./servers.mjs";
+import { listDeadServers, listServers, recordExit } from "./servers.mjs";
 import { readBoard } from "./workstreams.mjs";
 
 const stateRoot = () => join(process.env.XDG_STATE_HOME || join(homedir(), ".local", "state"), "agent-doc-review");
@@ -64,6 +64,8 @@ export async function connectDocumentReview({
         });
         try { active = await starting; }
         finally { starting = undefined; }
+        // A server inside the agent process ends with it; leave the reason for list_doc_review_servers.
+        process.once("exit", code => recordExit(storageRoot, session.sessionId, `agent process exited (code ${code}); this server lives in the agent session, not standalone`));
         return JSON.stringify({ url: active.url, document: active.document, feedback: "Attached to this Copilot session." });
       },
     }, {
@@ -73,9 +75,9 @@ export async function connectDocumentReview({
       handler: args => JSON.stringify(readBoard(args.directory ?? join(process.cwd(), "workstreams"))),
     }, {
       name: "list_doc_review_servers",
-      description: "List the running ADR (document review) servers on this machine: url, folder, pid and comment store. Use a store with read_doc_review_comments(as, store) to join one.",
+      description: "List the running ADR (document review) servers on this machine: url, folder, pid and comment store; `recentlyStopped` lists servers that stopped in the last 48 h with the recorded reason. Use a store with read_doc_review_comments(as, store) to join one.",
       parameters: { type: "object", properties: {} },
-      handler: () => JSON.stringify(listServers(stateRoot())),
+      handler: () => JSON.stringify({ running: listServers(stateRoot()), recentlyStopped: listDeadServers(stateRoot()) }),
     }, {
       name: "read_doc_review_comments",
       description: "Fetch unread document feedback and persist read receipts. Reading does not resolve threads.",
