@@ -112,6 +112,24 @@ export async function connectDocumentReview({
         return JSON.stringify(requirePreview().bridge.read({ includeSeen: args.include_seen === true, ...(args.as ? { as: args.as } : {}) }));
       },
     }, {
+      name: "unanswered_threads",
+      description: "State check for a natural pause (end of a task, before you report): open threads addressed to you whose last word is the user's and which you have not answered since, with age and a one-line quote. Read-only (changes no read receipts). Always states the count, e.g. \"checked: 0 unanswered\". Not an interrupt: call it between tasks, not mid-work.",
+      parameters: {
+        type: "object",
+        properties: {
+          as: { type: "string", description: "Your agent name. Omit when you own the preview." },
+          store: { type: "string", description: "Server name (e.g. demo), site directory or store id of the preview. Requires `as`." },
+        },
+      },
+      handler: args => {
+        const store = remoteStore(args);
+        if (store) {
+          if (!args.as && store !== session.sessionId) throw new Error("`as` (your agent name) is required with `store`.");
+          return remoteBridge(stateRoot(), store, `/unanswered?${new URLSearchParams(args.as ? { as: args.as } : {})}`).then(JSON.stringify, remoteFailure);
+        }
+        return JSON.stringify(requirePreview().bridge.unanswered(args.as ? { as: args.as } : {}));
+      },
+    }, {
       name: "update_doc_review_comment",
       description: "Reply to a document comment and/or explicitly resolve or reopen it. Replies alone preserve its status.",
       parameters: {

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.69.0 - 2026-11-17
+
+- New tool `unanswered_threads(as, store)`: a state check agents run at a natural pause. It lists open threads addressed to the agent whose last word is the user's, with age and a one-line quote, and always states the count ("checked: 0 unanswered"). Read-only: unlike `read_doc_review_comments(include_seen=true)` it leaves read receipts alone. Requested by the PC lead (mesh #1693).
+
 ## 0.68.5 - 2026-11-17
 
 - Fix: comment notes to agents are now sent at `high` priority. At `normal` the mesh shows only a 70-character "not urgent" hint, which busy agents skipped, so Alice's replies went unread for hours even though the notes were delivered to their inbox.
