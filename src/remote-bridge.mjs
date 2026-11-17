@@ -1,9 +1,10 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { ensureServer } from "./servers.mjs";
+import { ensureServer, resolveStore } from "./servers.mjs";
 
 // Another agent's preview bridge: loopback port and token live in its connection.json (same user, mode 0600).
-export async function remoteBridge(storageRoot, store, path, init = {}) {
+export async function remoteBridge(storageRoot, given, path, init = {}) {
+  const store = resolveStore(storageRoot, given);
   if (!/^[\w-]{8,64}$/.test(store)) throw new Error("Invalid store session id.");
   const call = () => {
     const { port, token } = JSON.parse(readFileSync(join(storageRoot, store, "connection.json"), "utf8"));

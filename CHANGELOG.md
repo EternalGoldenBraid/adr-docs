@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.67.0 - 2026-11-17
+
+- A standalone server keeps its data with the site: comments, settings, images and audio live in `<site>/.adr/` (self-ignoring via `.adr/.gitignore`), so they follow the folder instead of a session id. A store that lived in `~/.local/state/agent-doc-review/<id>/` is moved there on the next start; runtime files (connection, exit log) stay in the state directory.
+- Agent tools (`store`) accept a server name, e.g. `store="mokki"`, or the site directory, as well as the store id; mesh notes now name the server.
+
 ## 0.66.0 - 2026-11-17
 
 - Persistent servers: `adr keep <dir> --port N --name NAME` marks a server as kept; `adr daemon` (install it once with `adr daemon install`, a systemd user unit) starts every kept server at login and restarts it within 10 s if it is down; `adr unkeep` and the TUI's `x` stop keeping it. No agent has to own or restart the site.

@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { commentAttention } from "../scripts/preview_comments/extension.mjs";
 import { startDocumentPreview } from "./preview.mjs";
 import { remoteBridge } from "./remote-bridge.mjs";
-import { listDeadServers, listServers, recordExit } from "./servers.mjs";
+import { listDeadServers, listServers, recordExit, resolveStore } from "./servers.mjs";
 import { readBoard } from "./workstreams.mjs";
 
 const stateRoot = () => join(process.env.XDG_STATE_HOME || join(homedir(), ".local", "state"), "agent-doc-review");
@@ -19,6 +19,7 @@ export async function connectDocumentReview({
   let attention;
   // Which standalone `adr` server to talk to: the given store, else this session's own when it has no in-process preview.
   const remoteStore = args => {
+    if (args.store) args = { ...args, store: resolveStore(stateRoot(), args.store) };
     if (args.store && (args.store !== session.sessionId || !active)) return args.store;
     if (!args.store && !active && existsSync(join(stateRoot(), session.sessionId, "connection.json"))) return session.sessionId;
     return undefined;
@@ -86,7 +87,7 @@ export async function connectDocumentReview({
         properties: {
           include_seen: { type: "boolean", description: "Also include previously read threads." },
           as: { type: "string", description: "Your agent name: return only threads addressed to it and mark them read for it. Omit when you own the preview." },
-          store: { type: "string", description: "Session id of the agent whose preview holds the threads. Requires `as`." },
+          store: { type: "string", description: "Server name (e.g. mokki), site directory or store id of the preview that holds the threads. Requires `as`." },
         },
       },
       handler: args => {
@@ -110,7 +111,7 @@ export async function connectDocumentReview({
           proposal: { type: "object", description: "Optional proposed edit shown as a diff card in this thread, with Accept/Reject buttons. Accepting replies to you; apply the edit yourself then.", properties: { before: { type: "string" }, after: { type: "string" } } },
           link_comment_ids: { type: "array", items: { type: "string" }, description: "Link this thread to other threads (ids); the user sees them as jumpable links with backlinks." },
           update_id: { type: "string", description: "UUID reused for an unchanged retry." },
-          store: { type: "string", description: "Session id of the agent whose preview holds the thread, when it is not yours." },
+          store: { type: "string", description: "Server name (e.g. mokki), site directory or store id of the preview that holds the thread, when it is not yours." },
         },
       },
       handler: args => {
@@ -142,7 +143,7 @@ export async function connectDocumentReview({
           refs: { type: "array", items: { type: "string" }, description: "Ids of existing threads this one relates to; shown as links with backlinks." },
           color: { type: "string", enum: ["red", "yellow", "green", "blue", "pink"], description: "Defaults to red (the agent colour)." },
           to: { type: "array", items: { type: "string" }, description: "Agent names that should see this thread; omit for the preview's owner only." },
-          store: { type: "string", description: "Session id of the agent whose preview holds the page; defaults to your own standalone server." },
+          store: { type: "string", description: "Server name (e.g. mokki), site directory or store id of the preview that holds the page; defaults to your own standalone server." },
         },
       },
       handler: args => {
