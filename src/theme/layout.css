@@ -12,3 +12,16 @@
 th.adr-sortable { cursor: pointer; user-select: none }
 th.adr-sortable::after { content: " " attr(data-sort); color: var(--vp-c-brand-1) }
 tr.adr-group td { background: var(--vp-c-bg-soft); font-weight: 600; cursor: pointer }
+
+/* Sidebar toggle: hides the left index so content and graphs use the full width. */
+.adr-sidebar-toggle { position: fixed; left: 8px; top: calc(var(--vp-nav-height, 64px) + 6px); z-index: 30; padding: 2px 9px; font-size: 12px; border: 1px solid var(--vp-c-divider); border-radius: 6px; background: var(--vp-c-bg-soft); color: var(--vp-c-text-2); cursor: pointer; opacity: .6 }
+.adr-sidebar-toggle:hover { opacity: 1 }
+@media (max-width: 959px) { .adr-sidebar-toggle { display: none } }
+html.adr-no-sidebar .VPSidebar { display: none !important; }
+html.adr-no-sidebar .VPContent.has-sidebar { padding-left: 0 !important; padding-right: 0 !important; }
+html.adr-no-sidebar .VPDoc.has-sidebar { padding-left: 32px !important; padding-right: 32px !important; }
+html.adr-no-sidebar .VPDoc .container { max-width: none !important; margin: 0 !important; }
+html.adr-no-sidebar .VPDoc .content { max-width: none !important; padding: 0 0 0 24px !important; }
+html.adr-no-sidebar .VPDoc .content-container { max-width: none !important; }
+html.adr-no-sidebar .VPDoc .aside { display: none !important; }
+html.adr-no-sidebar .VPDoc.has-aside .content-container { max-width: none !important; }

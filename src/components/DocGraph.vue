@@ -232,8 +232,21 @@ function showLayer(id) {
   spreadEdges()
   select(null)
   cy.resize()
-  cy.fit(visible, 40)
+  restView()
   moved = false
+}
+
+// Fit, but never start below a size where node text is readable; a larger graph opens at its top-left corner and the rest is a pan away (0 or :fit shows all).
+function restView() {
+  const shown = cy.nodes().filter(n => n.style('display') !== 'none')
+  if (!shown.length) return
+  cy.fit(shown, 40)
+  const readable = 1
+  if (cy.zoom() >= readable) return
+  const bb = shown.boundingBox()
+  cy.zoom(readable)
+  const x = Math.max(40, (cy.width() - bb.w * readable) / 2)
+  cy.pan({ x: x - bb.x1 * readable, y: 40 - bb.y1 * readable })
 }
 
 function select(n) {
@@ -492,7 +505,7 @@ onMounted(async () => {
   }
   landOnNode()
   addEventListener('hashchange', landOnNode)
-  ro = new ResizeObserver(() => { cy.resize(); if (!moved) { cy.fit(cy.nodes().filter(n => n.style('display') !== 'none'), 40); moved = false } })
+  ro = new ResizeObserver(() => { cy.resize(); if (!moved) { restView(); moved = false } })
   ro.observe(host.value)
 
   cy.on('tap', 'node', e => {
