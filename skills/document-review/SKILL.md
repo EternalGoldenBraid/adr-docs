@@ -5,7 +5,9 @@ description: Review Markdown, mathematical explanations and figures in a live lo
 
 # Document review
 
-1. Call `start_doc_review` with the original absolute Markdown path. Choose a focused
+1. For a review that should outlive this session (a team site, a shared store),
+   start a named standalone server from the shell: `adr . -d --name <name> --store <session id>`.
+   It restarts after a crash and logs why it stopped. Otherwise call `start_doc_review` with the original absolute Markdown path. Choose a focused
    documentation directory: its parent is the served document root.
 2. Open the returned URL in the user's shared browser without replacing or
    closing unrelated tabs. The preview updates when the original source changes.

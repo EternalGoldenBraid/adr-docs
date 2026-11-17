@@ -45,7 +45,7 @@ export async function connectDocumentReview({
     },
     tools: [{
       name: "start_doc_review",
-      description: "Start a loopback-only live Markdown, equation and figure review attached to this session. One preview is active at a time.",
+      description: "Start a loopback-only live Markdown, equation and figure review attached to this session. One preview is active at a time. It ends with this session; for a long-lived, named server that survives crashes and reloads, run `adr <dir> -d --name <name> --store <session id>` from the shell instead.",
       parameters: {
         type: "object", required: ["document_path"],
         properties: {

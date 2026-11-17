@@ -48,7 +48,7 @@ Then ask: `Use the document-review skill to review /absolute/path/to/doc.md`.
 
 | Tool | Purpose |
 | --- | --- |
-| `start_doc_review` | Start the preview for an absolute `document_path`. |
+| `start_doc_review` | Start the preview for an absolute `document_path`. It ends with the session; for a durable named server use `adr . -d --name <name> --store <session id>`. |
 | `read_doc_review_comments` | Fetch unread threads (`include_seen` for all). |
 | `update_doc_review_comment` | Reply and/or resolve a thread; optional `proposal` (before/after) posts a diff card inside the thread. |
 | `stop_doc_review` | Close the preview; comments are kept. |
