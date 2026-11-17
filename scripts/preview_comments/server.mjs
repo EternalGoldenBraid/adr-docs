@@ -241,9 +241,9 @@ export async function startCommentBridge({
   function announce(comment, text) {
     const names = comment.to?.length ? comment.to : ownerViaMesh ? [ownerName()] : [];
     if (!mesh) return;
-    for (const name of names) {
-      const target = agents().find(row => row.slug === name);
-      if (!target || (name === ownerName() && !ownerViaMesh)) continue;
+    for (const who of names) {
+      const target = agents().find(row => row.slug === who);
+      if (!target || (who === ownerName() && !ownerViaMesh)) continue;
       const page = new URL(comment.url).pathname;
       const flat = text.replace(/\s+/g, " ");
       const preview = flat.length > 400 ? `${flat.slice(0, 400)}… [truncated; read the thread for the rest]` : flat;
