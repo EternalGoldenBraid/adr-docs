@@ -1186,15 +1186,22 @@
     }
     return imageUrls.get(id);
   }
-  function thumbnails(ids) {
+  function thumbnails(ids, onRemove) {
     const row = document.createElement("div");
     row.className = "thumbs";
     for (const id of ids) {
       const image = document.createElement("img");
-      image.alt = "Attached region screenshot";
+      image.alt = "Attached image";
       image.addEventListener("click", () => image.src && open_(image.src));
-      imageUrl(id).then(url => { image.src = url; }, () => { image.alt = "Screenshot unavailable"; });
-      row.append(image);
+      imageUrl(id).then(url => { image.src = url; }, () => { image.alt = "Image unavailable"; });
+      if (!onRemove) { row.append(image); continue; }
+      const item = document.createElement("div");
+      item.className = "shot";
+      const remove = document.createElement("button");
+      remove.type = "button"; remove.title = "Delete image"; remove.textContent = "×";
+      remove.addEventListener("click", () => onRemove(id));
+      item.append(image, remove);
+      row.append(item);
     }
     return row;
   }
@@ -1233,7 +1240,7 @@
       }));
     }
     if (comment.proposal) nodes.push(proposalCard(comment.proposal, comment, 0, run));
-    if (comment.images?.length) nodes.push(thumbnails(comment.images));
+    if (comment.images?.length) nodes.push(thumbnails(comment.images, id => run({ removeImages: [id] })));
     for (const reply of comment.replies) {
       const mine = reply.author !== "copilot";
       const sender = reply.from || "Copilot";
@@ -1325,7 +1332,7 @@
     markSeen(comment);
     renderLinks(comment);
     if (find(".to-reply").dataset.for !== comment.id) { setReplyTarget(null); find(".to-reply").dataset.for = comment.id; renderReplyTo(comment); }
-    find(".thread-messages").replaceChildren(...threadNodes(comment, values => updateThread(values)));
+    find(".thread-messages").replaceChildren(...threadNodes(comment, values => updateThread({ id: crypto.randomUUID(), ...values })));
     for (const item of find(".thread-messages").children) item.tabIndex = -1;
   }
   function selectThread(id) {
@@ -1825,6 +1832,34 @@
   }
   branchButton.addEventListener("click", branchThread);
   find(".attach-region").addEventListener("click", regionDraft);
+  // Dropped or pasted images are re-encoded as PNG, the only format the store accepts.
+  async function uploadImage(file) {
+    const bitmap = await createImageBitmap(file);
+    const canvas = document.createElement("canvas");
+    canvas.width = bitmap.width; canvas.height = bitmap.height;
+    canvas.getContext("2d").drawImage(bitmap, 0, 0);
+    const blob = await new Promise(done => canvas.toBlob(done, "image/png"));
+    const response = await fetch("/__preview_comments/attachments", { method: "POST", headers: { "Content-Type": "image/png", "X-Preview-Comment": "1" }, body: blob });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error);
+    imageUrls.set(result.id, Promise.resolve(URL.createObjectURL(blob)));
+    return { id: result.id, url: imageUrls.get(result.id) && await imageUrls.get(result.id) };
+  }
+  function imageFiles(transfer) {
+    return [...(transfer?.files || [])].filter(file => file.type.startsWith("image/"));
+  }
+  function acceptImages(target, onFiles) {
+    const take = async (files, event) => {
+      if (!files.length) return;
+      event.preventDefault();
+      try { await onFiles(await Promise.all(files.slice(0, 4).map(uploadImage))); } catch (error) { message(error.message, true); }
+    };
+    target.addEventListener("paste", event => take(imageFiles(event.clipboardData), event));
+    target.addEventListener("dragover", event => { if (event.dataTransfer?.types.includes("Files")) event.preventDefault(); });
+    target.addEventListener("drop", event => take(imageFiles(event.dataTransfer), event));
+  }
+  acceptImages(find(".panel"), shots => { shots.forEach(addDraftImage); });
+  acceptImages(find(".history"), shots => !selectedThread ? message("Open a thread to attach images to it", true) : updateThread({ id: crypto.randomUUID(), addImages: shots.map(shot => shot.id) }));
   find(".thread-region").addEventListener("click", () => regionThread(ids => updateThread({ id: crypto.randomUUID(), addImages: ids })));
   document.addEventListener("keydown", event => {
     if (history.hidden || !vimEnabled || historySaving || event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;

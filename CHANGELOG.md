@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.72.0 - 2026-11-17
+
+- Drop or paste images into the comment panel or an open thread; they attach like region screenshots. Images in a thread now have a **×** to delete them.
+
 ## 0.71.1 - 2026-11-17
 
 ### Fixed

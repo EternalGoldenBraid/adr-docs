@@ -156,6 +156,11 @@ with the image attached (up to four; **Region** in the panel adds more and
 showing, and no text box focused, `s` (or **Region**) attaches the crop to
 that thread instead. `Esc` cancels the selection.
 
+You can also drop or paste image files into the new-comment panel (they join
+the draft) or into an open thread (they attach to it). Other formats are
+re-encoded as PNG. The **×** on a thread's image deletes it from the thread;
+the file stays in `attachments/`.
+
 Capture uses the browser's screen capture (`getDisplayMedia`): choose **this
 tab** in the one-time sharing prompt; later crops reuse it until sharing
 stops. The overlay is hidden while the frame is taken. Crops are stored as

@@ -320,6 +320,7 @@ export async function startCommentBridge({
         comment.images = [...new Set([...(comment.images || []), ...record.addImages])];
         wake = true;
       }
+      if (record.removeImages) comment.images = (comment.images || []).filter(id => !record.removeImages.includes(id));
       if (record.addRefs) comment.refs = [...new Set([...(comment.refs || []), ...record.addRefs])];
       if (record.removeRefs) comment.refs = (comment.refs || []).filter(id => !record.removeRefs.includes(id));
       if (record.removeReply) comment.replies = comment.replies.filter(item => item.id !== record.removeReply);
@@ -445,6 +446,10 @@ export async function startCommentBridge({
       const ids = imageIds(input.addImages);
       if (ids.length) value.addImages = ids;
     }
+    if (author === "user" && Array.isArray(input.removeImages)) {
+      const ids = input.removeImages.filter(id => typeof id === "string" && IMAGE_ID.test(id)).slice(0, MAX_IMAGES);
+      if (ids.length) value.removeImages = ids;
+    }
     for (const [key, name] of [["addRefs", "addRefs"], ["removeRefs", "removeRefs"]]) {
       if (input[key] === undefined) continue;
       if (!Array.isArray(input[key]) || input[key].length > 20) throw new Error(`${name} must list at most 20 comment IDs.`);
@@ -466,7 +471,7 @@ export async function startCommentBridge({
     if (author === "user" && typeof input.removed === "boolean") value.removed = input.removed;
     if (value.reply === undefined && value.resolved === undefined && value.color === undefined && value.removed === undefined && !value.clear &&
         !value.promote && value.editComment === undefined && !value.editReply && !value.removeReply &&
-        !value.to && !value.addImages && !value.addRefs && !value.removeRefs) {
+        !value.to && !value.addImages && !value.removeImages && !value.addRefs && !value.removeRefs) {
       throw new Error("An update needs a reply, resolved state, colour, image, link, edit or removal.");
     }
     const previous = updates.get(value.id);
