@@ -61,9 +61,9 @@ export function recordLaunch(storageRoot, entry) {
   writeFileSync(historyFile(storageRoot), JSON.stringify(rows, null, 1));
 }
 
-// A folder's own store: <folder>/.adr/store, else the store an earlier server for that folder used.
+// A folder's own store: <folder>/.adr-data/store, else the store an earlier server for that folder used.
 export function siteStore(storageRoot, folder) {
-  try { return readFileSync(join(folder, ".adr", "store"), "utf8").trim(); } catch { /* not served from here yet */ }
+  try { return readFileSync(join(folder, ".adr-data", "store"), "utf8").trim(); } catch { /* not served from here yet */ }
   let best;
   const consider = (store, at) => { if (!best || at > best.at) best = { store, at }; };
   for (const row of readHistory(storageRoot)) if (dirname(row.document) === folder) consider(row.store, row.at ?? "");

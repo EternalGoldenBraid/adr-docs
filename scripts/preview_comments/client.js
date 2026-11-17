@@ -450,6 +450,7 @@
   // :grep [-d N] [-u N] [-s] <regex>. No depth flag searches every page; -d N searches this page plus N
   // levels below it (0 = this page only) and -u N adds N ancestors. Smart-case unless -s.
   async function grep(_first, line = "") {
+    await loadAllHistory();
     const words = line.split(/\s+/).filter(Boolean);
     const query = new URLSearchParams();
     let scoped = false, only, meaning = false;
@@ -517,6 +518,7 @@
   }
   // :grep -m <words>: rank page paragraphs and comment threads by meaning (local embedding model, first use downloads it).
   async function semantic(words) {
+    await loadAllHistory();
     message(`Searching by meaning “${words}” (the first search downloads a small model and can take a minute)…`);
     const threads = historyComments.filter(c => !c.removed).map(c => ({ id: c.id, url: pagePath(c.url), title: c.section || "", text: [c.comment, c.quote, ...c.replies.map(r => r.comment)].filter(Boolean).join(" ") }));
     let result;
@@ -1201,7 +1203,7 @@
     const threads = historyComments.filter(comment => !comment.removed && !isNote(comment));
     const resolved = threads.filter(comment => comment.resolved).length;
     const noteCount = historyComments.filter(comment => !comment.removed && isNote(comment)).length;
-    find(".history-counts").textContent = `${threads.length - resolved} unresolved · ${resolved} resolved · ${noteCount} notes`;
+    find(".history-counts").textContent = `${threads.length - resolved} unresolved · ${resolved} resolved · ${noteCount} notes${historyArchived ? ` · ${historyArchived} older resolved not loaded (open All or Resolved)` : ""}`;
     const list = find(".thread-list");
     const focusedComment = pendingFocus ?? shadow.activeElement?.dataset.commentId;
     pendingFocus = undefined;
@@ -1280,6 +1282,7 @@
   }
   function setFilter(value) {
     historyFilter = value;
+    if (["pagehist", "all", "resolved"].includes(value)) loadAllHistory().catch(historyError);
     selectedThread = undefined;
     renderHistory();
     find(`.tab[data-filter="${value}"]`)?.focus();
@@ -1364,6 +1367,7 @@
   }
   async function openThreadById(id) {
     await openHistory();
+    if (!historyComments.some(c => c.id === id)) await loadAllHistory();
     historyFilter = "all";
     selectedThread = id;
     replyInput.value = replyDrafts.get(id)?.text || "";
@@ -1400,12 +1404,22 @@
     document.title = total ? `(${total}) ${base}` : base;
     document.dispatchEvent(new CustomEvent("preview-comment-awaiting", { detail: { pages, total, colors, palette: COLORS } }));
   }
+  // The history loads open and recent threads only; older resolved ones come in with loadAllHistory() when something needs them.
+  let historyAll = false, historyArchived = 0, historyForce = false;
+  async function loadAllHistory() {
+    if (historyAll) return;
+    historyAll = true;
+    historyForce = true;
+    await refreshHistory();
+  }
   async function refreshHistory() {
-    const result = await api("history");
+    const result = await api(historyAll ? "history" : "history-recent");
     sessionId = result.sessionId;
     serverSeenInit = Boolean(result.seenInit);
-    if (result.revision < historyRevision) return;
-    if (result.revision !== historyRevision) {
+    historyArchived = result.archived ?? 0;
+    if (result.revision < historyRevision && !historyForce) return;
+    if (result.revision !== historyRevision || historyForce) {
+      historyForce = false;
       historyRevision = result.revision;
       historyComments = result.comments;
       renderHistory();
@@ -2757,6 +2771,7 @@
     enhanceVideos();
     try { await refreshHistory(); } catch { /* the bridge may be offline; keep the last marks */ }
     const pendingOpen = sessionStorage.getItem("adr-open-thread");
+    if (pendingOpen && !historyComments.some(c => c.id === pendingOpen)) await loadAllHistory().catch(() => {});
     if (pendingOpen && historyComments.some(c => c.id === pendingOpen)) {
       sessionStorage.removeItem("adr-open-thread");
       openThreadById(pendingOpen);

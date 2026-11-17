@@ -54,11 +54,13 @@ export async function startCommentBridge({
   const root = realpathSync(documentRoot);
   const directory = join(storageRoot, sessionId); // runtime files (connection.json, exit.json)
   mkdirSync(directory, { recursive: true, mode: 0o700 });
-  // Comments, settings, images and audio live with the site (<site>/.adr) when the launcher gives a data directory;
+  // Comments, settings, images and audio live with the site (<site>/.adr-data) when the launcher gives a data directory;
   // a store that so far lived in the state directory is moved there once.
   const data = dataDirectory ?? directory;
   if (data !== directory) {
     mkdirSync(data, { recursive: true, mode: 0o700 });
+    // A symlinked data directory could point anywhere (even into the tool's own checkout); keep it inside the site.
+    if (!realpathSync(data).startsWith(root + "/")) throw new Error(`${data} resolves outside the site folder (${realpathSync(data)}); remove or rename it.`);
     writeFileSync(join(data, ".gitignore"), "*\n");
     writeFileSync(join(data, "store"), sessionId + "\n");
     if (!existsSync(join(data, "comments.jsonl"))) {
@@ -500,6 +502,13 @@ export async function startCommentBridge({
       }
       if (request.method === "GET" && request.url === "/history") {
         return reply(response, 200, { sessionId, revision, seenInit, comments: [...comments.values()] });
+      }
+      // Open threads and anything touched in the last 14 days; the rest is fetched with /history when needed.
+      if (request.method === "GET" && request.url === "/history-recent") {
+        const cutoff = Date.now() - 14 * 86400000;
+        const all = [...comments.values()];
+        const recent = all.filter(c => !c.resolved || Date.parse(c.updatedAt || c.at) >= cutoff);
+        return reply(response, 200, { sessionId, revision, seenInit, comments: recent, archived: all.length - recent.length });
       }
       if (request.method === "GET" && request.url === "/settings") return reply(response, 200, effective());
       if (request.method === "GET" && request.url === "/mesh") return reply(response, 200, { members: await meshStatus(), edges: meshEdges, machines: await machines(), errors: Object.fromEntries(remoteErrors) });
