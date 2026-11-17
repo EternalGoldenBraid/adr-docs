@@ -45,7 +45,7 @@
       .history-head h2{margin:0}.history-head .history-counts{margin-left:auto;margin-right:12px}
       .icon{padding:2px 9px;border-radius:6px;line-height:1.4}
       .help-panel{width:min(640px,94vw)}.help-tabs,.help-tabs-look{display:flex;gap:6px;margin:8px 0;flex-wrap:wrap}.help-tabs button,.help-tabs-look button{background:#2a2e36;color:inherit;border:1px solid #59616d;border-radius:6px;padding:3px 10px;cursor:pointer}.help-tabs button[aria-selected=true],.help-tabs-look button[aria-selected=true]{background:#3b4a63;border-color:#8ab4f8}.help-body{white-space:pre-wrap;font:13px/1.5 ui-monospace,monospace;margin:0;max-height:50vh;overflow:auto}
-      .mesh-machines{margin-top:10px}.mach{display:grid;grid-template-columns:100px 1fr 230px;gap:8px;align-items:center;font-size:12px;padding:2px 0}.mach svg{width:100%;height:22px}.mach .hot{color:#f38ba8}.mach-detail{display:grid;gap:4px;margin:2px 0 8px;font-size:11px}.mach-detail.stale{opacity:.5}.cores{display:flex;gap:2px;height:28px;align-items:flex-end}.core{flex:1;max-width:16px;height:100%;display:flex;align-items:flex-end;background:#252a32;border-radius:2px;overflow:hidden}.core i{display:block;width:100%;min-height:1px}.gpu{display:grid;grid-template-columns:120px 1fr 1fr 80px;gap:6px;align-items:center}.gpu .bar{position:relative;height:14px;background:#252a32;border-radius:3px;overflow:hidden}.gpu .bar i{position:absolute;inset:0 auto 0 0;display:block;opacity:.75}.gpu .bar em{position:relative;font-style:normal;padding-left:4px;line-height:14px;font-size:10px}.mach.stale{opacity:.5}.mesh-panel{width:min(640px,94vw)}.mesh-panel.peek{position:fixed;left:auto;top:auto;right:12px;bottom:52px;margin:0;max-height:70vh;overflow:auto;opacity:.97}.mesh-corner{position:fixed;right:0;bottom:130px;padding:10px 3px;z-index:2147483000;background:#1b1d22cc;color:#aab;border:1px solid #3a404a;border-right:0;border-radius:8px 0 0 8px;font:11px/1 ui-monospace,monospace;writing-mode:vertical-rl;cursor:pointer;opacity:.55}.mesh-corner:hover{opacity:1}.mesh-table td:nth-child(2){white-space:nowrap}.mesh-tabs{margin:0 8px}.mesh-graph[hidden]{display:none}.mesh-graph{width:100%;height:auto;display:block}.mesh-graph text{fill:#d7dde6;font:11px ui-monospace,monospace;text-anchor:middle}.mesh-edges{font-size:12px;color:#aab;margin-top:8px}.mesh-table{width:100%;border-collapse:collapse;font-size:13px}.mesh-table th,.mesh-table td{text-align:left;padding:4px 8px;border-bottom:1px solid #3a404a}
+      .mesh-machines{margin-top:10px}.mach{display:grid;grid-template-columns:100px 1fr 230px;gap:8px;align-items:center;font-size:12px;padding:2px 0}.mach svg{width:100%;height:22px}.mach .hot{color:#f38ba8}.mach-detail{display:grid;gap:4px;margin:2px 0 8px;font-size:11px}.mach-detail.stale{opacity:.5}.cores{display:flex;gap:2px;height:36px;align-items:flex-end;flex:1}.core{flex:1;max-width:16px;height:100%;display:flex;align-items:flex-end;background:#252a32;border-radius:2px;overflow:hidden}.core i{display:block;width:100%;min-height:1px}.gpu{display:grid;grid-template-columns:110px 1fr 54px 1fr 80px 90px;gap:6px;align-items:center}.gpu .bar{position:relative;height:14px;background:#252a32;border-radius:3px;overflow:hidden}.gpu .bar i{position:absolute;inset:0 auto 0 0;display:block}.core{position:relative}.core em{position:absolute;top:0;left:0;right:0;text-align:center;font-style:normal;font-size:8px;opacity:.65}.cores-wrap{display:flex;gap:6px;align-items:stretch}.cores-wrap .scale{display:flex;flex-direction:column;justify-content:space-between;font-size:9px;opacity:.6;text-align:right;min-width:28px}.cores-wrap .avg{align-self:center;white-space:nowrap}.mach.stale{opacity:.5}.mesh-panel{width:min(640px,94vw)}.mesh-panel.peek{position:fixed;left:auto;top:auto;right:12px;bottom:52px;margin:0;max-height:70vh;overflow:auto;opacity:.97}.mesh-corner{position:fixed;right:0;bottom:130px;padding:10px 3px;z-index:2147483000;background:#1b1d22cc;color:#aab;border:1px solid #3a404a;border-right:0;border-radius:8px 0 0 8px;font:11px/1 ui-monospace,monospace;writing-mode:vertical-rl;cursor:pointer;opacity:.55}.mesh-corner:hover{opacity:1}.mesh-table td:nth-child(2){white-space:nowrap}.mesh-tabs{margin:0 8px}.mesh-graph[hidden]{display:none}.mesh-graph{width:100%;height:auto;display:block}.mesh-graph text{fill:#d7dde6;font:11px ui-monospace,monospace;text-anchor:middle}.mesh-edges{font-size:12px;color:#aab;margin-top:8px}.mesh-table{width:100%;border-collapse:collapse;font-size:13px}.mesh-table th,.mesh-table td{text-align:left;padding:4px 8px;border-bottom:1px solid #3a404a}
       .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:#59616d}.dot.active{background:#51cf66}.dot.idle{background:#fcc419}
       .tabs{display:flex;gap:2px;margin-top:4px!important;margin-bottom:6px!important;border-bottom:1px solid #3a404a}
       .tab{border:0;border-bottom:2px solid transparent;border-radius:0;background:none;padding:6px 10px;color:#b7c1ce}
@@ -869,6 +869,9 @@
     const box = document.createElement("div");
     box.className = "mach-detail" + (m.stale ? " stale" : "");
     if (m.cores?.length) {
+      const wrapC = document.createElement("div"); wrapC.className = "cores-wrap";
+      const scale = document.createElement("span"); scale.className = "scale"; scale.append(Object.assign(document.createElement("span"), { textContent: "100 %" }), Object.assign(document.createElement("span"), { textContent: "0" }));
+      const avg = document.createElement("span"); avg.className = "avg"; avg.textContent = `avg ${Math.round(m.cores.reduce((t, c) => t + c, 0) / m.cores.length)} %`;
       const cores = document.createElement("div");
       cores.className = "cores";
       for (const [i, pct] of m.cores.entries()) {
@@ -876,9 +879,11 @@
         core.className = "core"; core.title = `core ${i}: ${Math.round(pct)} %`;
         const fill = document.createElement("i");
         fill.style.height = pct + "%"; fill.style.background = heat(pct);
-        core.append(fill); cores.append(core);
+        const num = document.createElement("em"); num.textContent = Math.round(pct);
+        core.append(fill, num); cores.append(core);
       }
-      box.append(cores);
+      wrapC.append(scale, cores, avg);
+      box.append(wrapC);
     }
     for (const [i, g] of (m.gpus ?? []).entries()) {
       const line = document.createElement("div");
@@ -886,15 +891,15 @@
       const bar = (pct, color, text) => {
         const b = document.createElement("span"); b.className = "bar";
         const f = document.createElement("i"); f.style.width = pct + "%"; f.style.background = color;
-        const t = document.createElement("em"); t.textContent = text;
-        b.append(f, t); return b;
+        b.title = text; b.append(f); return b;
       };
       const label = document.createElement("span");
       label.textContent = `GPU ${i}${g.name ? " · " + g.name.replace(/^NVIDIA (GeForce )?/, "") : ""}`;
       const extra = document.createElement("span");
       extra.textContent = [g.temp !== undefined ? `${g.temp} °C` : "", g.power !== undefined ? `${Math.round(g.power)} W` : ""].filter(Boolean).join(" · ");
       const vramPct = g.mem_total ? Math.round(g.mem_used / g.mem_total * 100) : 0;
-      line.append(label, bar(g.util, heat(g.util), `util ${g.util} %`), bar(vramPct, "#6fb7e8", `VRAM ${(g.mem_used / 1024).toFixed(1)} / ${(g.mem_total / 1024).toFixed(0)} GB`), extra);
+      const txt = t => Object.assign(document.createElement("span"), { textContent: t });
+      line.append(label, bar(g.util, heat(g.util), `util ${g.util} %`), txt(`util ${g.util} %`), bar(vramPct, "#6fb7e8", "VRAM"), txt(`${(g.mem_used / 1024).toFixed(1)}/${(g.mem_total / 1024).toFixed(0)} GB`), extra);
       box.append(line);
     }
     const wrap = document.createElement("div");

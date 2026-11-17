@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.75.1 - 2026-11-17
+
+- Team load panel: the load history and the per-core/GPU detail now sit together per machine (no duplicated rows); per-core bars have a 0–100 % scale, a % number per core and a per-host average; GPU util/VRAM text moved outside the bars for contrast.
+
 ## 0.75.0 - 2026-11-17
 
 - Team load panel (the `/team` page and the overlay's Team panel): btop-style per-core CPU bars for each machine, and one nvtop-style row per GPU (utilisation, VRAM used/total, temperature, power). Needs the updated `mesh-load-sample` (dotfiles) on each host; hosts running the old sampler keep the single load line.

@@ -120,7 +120,7 @@ function machineOf(m) {
     extra: [g.temp !== undefined ? `${g.temp} °C` : '', g.power !== undefined ? `${Math.round(g.power)} W` : ''].filter(Boolean).join(' · '),
   }))
   return {
-    name: m.name, cores, gpus, points, limit: y(m.nproc), hot: m.loadavg[0] > m.nproc * 0.9, stale: m.stale,
+    name: m.name, cores, avg: cores.length ? Math.round(cores.reduce((t, c) => t + c.pct, 0) / cores.length) : 0, gpus, points, limit: y(m.nproc), hot: m.loadavg[0] > m.nproc * 0.9, stale: m.stale,
     text: `${m.loadavg[0].toFixed(0)} load / ${m.nproc} cores (${(m.loadavg[0] / m.nproc).toFixed(1)}×)${m.memUsed !== undefined ? ` · mem ${Math.round(m.memUsed * 100)} %` : ''}${gpu}`,
     limitPct: (Number(y(m.nproc)) / 22 * 100).toFixed(0),
     top: m.top.map(p => `${p.user} ${p.pcpu}% ${p.cmd}`).join('\n'),
@@ -197,27 +197,32 @@ onUnmounted(() => { hideSource(false); clearInterval(timer) })
       </tbody>
     </table>
     <div v-if="machines.length" class="team-machines">
-      <p class="mach-title">CPU load, last hour (1-minute load average vs. number of cores)</p>
-      <div v-for="m in machines" :key="m.name" class="mach" :class="{ stale: m.stale || m.error }" :title="m.top">
-        <span>{{ m.name }}</span>
-        <span v-if="m.error">{{ m.error }}</span>
-        <div v-else class="spark"><span class="limit" :style="{ top: m.limitPct + '%' }">all cores busy</span><svg viewBox="0 0 100 22" preserveAspectRatio="none"><line x1="0" x2="100" :y1="m.limit" :y2="m.limit" stroke="#59616d" stroke-dasharray="2 2" /><polyline :points="m.points" fill="none" :stroke="m.hot ? '#f38ba8' : '#6fb7e8'" stroke-width="1.5" vector-effect="non-scaling-stroke" /></svg></div>
-        <span :class="{ hot: m.hot }">{{ m.text }}</span>
-      </div>
-      <template v-for="m in machines" :key="'d' + m.name">
+      <p class="mach-title">Machines: load average last hour (line), per-core load now (bars), GPUs</p>
+      <div v-for="m in machines" :key="m.name" class="mach-block">
+        <div class="mach" :class="{ stale: m.stale || m.error }" :title="m.top">
+          <span>{{ m.name }}</span>
+          <span v-if="m.error">{{ m.error }}</span>
+          <div v-else class="spark"><span class="limit" :style="{ top: m.limitPct + '%' }">all cores busy</span><svg viewBox="0 0 100 22" preserveAspectRatio="none"><line x1="0" x2="100" :y1="m.limit" :y2="m.limit" stroke="#59616d" stroke-dasharray="2 2" /><polyline :points="m.points" fill="none" :stroke="m.hot ? '#f38ba8' : '#6fb7e8'" stroke-width="1.5" vector-effect="non-scaling-stroke" /></svg></div>
+          <span :class="{ hot: m.hot }">{{ m.text }}</span>
+        </div>
         <div v-if="m.cores?.length || m.gpus?.length" class="mach-detail" :class="{ stale: m.stale }">
-          <b>{{ m.name }}</b>
-          <div v-if="m.cores.length" class="cores" :title="'Per-core CPU load, last sample'">
-            <span v-for="c in m.cores" :key="c.i" class="core" :title="`core ${c.i}: ${Math.round(c.pct)} %`"><i :style="{ height: c.pct + '%', background: c.color }"></i></span>
+          <div v-if="m.cores.length" class="cores-wrap">
+            <span class="scale"><span>100 %</span><span>0</span></span>
+            <div class="cores" title="Per-core CPU load, last sample">
+              <span v-for="c in m.cores" :key="c.i" class="core" :title="`core ${c.i}: ${Math.round(c.pct)} %`"><i :style="{ height: c.pct + '%', background: c.color }"></i><em>{{ Math.round(c.pct) }}</em></span>
+            </div>
+            <span class="avg">avg {{ m.avg }} %</span>
           </div>
           <div v-for="g in m.gpus" :key="g.label" class="gpu">
             <span class="gpu-label">{{ g.label }}</span>
-            <span class="bar" :title="`util ${g.util} %`"><i :style="{ width: g.util + '%', background: g.utilColor }"></i><em>util {{ g.util }} %</em></span>
-            <span class="bar" :title="g.vram"><i :style="{ width: g.vramPct + '%', background: '#6fb7e8' }"></i><em>VRAM {{ g.vram }}</em></span>
+            <span class="bar" :title="`util ${g.util} %`"><i :style="{ width: g.util + '%', background: g.utilColor }"></i></span>
+            <span>util {{ g.util }} %</span>
+            <span class="bar" :title="g.vram"><i :style="{ width: g.vramPct + '%', background: '#6fb7e8' }"></i></span>
+            <span>VRAM {{ g.vram }}</span>
             <span class="gpu-extra">{{ g.extra }}</span>
           </div>
         </div>
-      </template>
+      </div>
       <div class="mach axis"><span></span><span class="ticks"><span>−60 min</span><span>now</span></span><span></span></div>
     </div>
     <p class="team-graph-legend"><span class="d working"></span>working <span class="d waiting"></span>waiting <span class="d asking"></span>asking <span class="d idle"></span>idle <span class="d ring"></span>active <span class="d ring off"></span>offline · a pulse travels from sender to receiver for each message in the last hour</p>
@@ -238,14 +243,18 @@ onUnmounted(() => { hideSource(false); clearInterval(timer) })
 .mach.stale { opacity: .5 }
 .mach-detail { display: grid; gap: 4px; margin: 6px 0 10px; padding: 6px 8px; border: 1px solid var(--vp-c-divider); border-radius: 8px; font-size: 12px }
 .mach-detail.stale { opacity: .5 }
-.cores { display: flex; gap: 2px; height: 40px; align-items: flex-end }
+.cores-wrap { display: flex; gap: 8px; align-items: stretch }
+.scale { display: flex; flex-direction: column; justify-content: space-between; font-size: 10px; opacity: .6; text-align: right; min-width: 34px }
+.avg { align-self: center; opacity: .85; white-space: nowrap }
+.cores { display: flex; gap: 2px; height: 48px; align-items: flex-end; flex: 1 }
 .core { flex: 1; max-width: 22px; height: 100%; display: flex; align-items: flex-end; background: var(--vp-c-bg-soft); border-radius: 2px; overflow: hidden }
+.core { position: relative }
 .core i { display: block; width: 100%; min-height: 1px }
-.gpu { display: grid; grid-template-columns: 170px 1fr 1fr 110px; gap: 8px; align-items: center }
+.core em { position: absolute; top: 0; left: 0; right: 0; text-align: center; font-style: normal; font-size: 9px; opacity: .65 }
+.gpu { display: grid; grid-template-columns: 150px 1fr 70px 1fr 110px 100px; gap: 8px; align-items: center }
 .gpu-label, .gpu-extra { opacity: .8 }
 .bar { position: relative; height: 16px; background: var(--vp-c-bg-soft); border-radius: 3px; overflow: hidden }
-.bar i { position: absolute; inset: 0 auto 0 0; display: block; opacity: .75 }
-.bar em { position: relative; font-style: normal; padding-left: 6px; line-height: 16px; font-size: 11px }
+.bar i { position: absolute; inset: 0 auto 0 0; display: block }
 .team-graph-tabs { display: flex; gap: 4px; margin-bottom: 6px }
 .team-graph-tabs button { border: 1px solid var(--vp-c-divider); background: var(--vp-c-bg-soft); color: var(--vp-c-text-2); border-radius: 6px; padding: 3px 12px; cursor: pointer }
 .team-graph-tabs button.on { color: var(--vp-c-text-1); border-color: var(--vp-c-brand-1) }
