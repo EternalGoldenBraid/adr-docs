@@ -2,7 +2,7 @@
 import { spawn } from "node:child_process";
 import { appendFileSync } from "node:fs";
 import { mkdirSync, openSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const LAUNCHER = fileURLToPath(new URL("../bin/preview.mjs", import.meta.url));
@@ -60,6 +60,16 @@ export function recordLaunch(storageRoot, entry) {
   mkdirSync(storageRoot, { recursive: true });
   writeFileSync(historyFile(storageRoot), JSON.stringify(rows, null, 1));
 }
+
+// A store given as a UUID, or as a server name / site directory from the launch history.
+export function resolveStore(storageRoot, given) {
+  if (typeof given !== "string" || UUID_RE.test(given)) return given;
+  const rows = readHistory(storageRoot);
+  const row = rows.find(entry => entry.name === given || entry.document === given || dirname(entry.document) === given);
+  if (!row) throw new Error(`Unknown server "${given}". Use a server name (adr list), a site directory or a store id.`);
+  return row.store;
+}
+const UUID_RE = /^[\da-f]{8}(-[\da-f]{4}){3}-[\da-f]{12}$/i;
 
 // Persistent servers: the daemon (and any agent that finds one down) starts them again.
 export function setKeep(storageRoot, store, keep) {

@@ -117,6 +117,7 @@ preview = await startDocumentPreview({
   name: launch.name,
   notify: () => {},
   ownerViaMesh: true,
+  inSite: true,
   onRestart: () => {
     startDetached(storageRoot, startArgs(new URL(preview.origin).port), { ADR_WAIT_PID: String(process.pid) });
     stop();

@@ -1,8 +1,8 @@
 import { createHash, randomUUID } from "node:crypto";
 import { createServer } from "node:http";
 import {
-  appendFileSync, closeSync, existsSync, fsyncSync, mkdirSync, openSync,
-  readdirSync, readFileSync, realpathSync, unlinkSync, writeFileSync,
+  appendFileSync, closeSync, cpSync, existsSync, fsyncSync, mkdirSync, openSync,
+  readdirSync, readFileSync, realpathSync, renameSync, rmSync, unlinkSync, writeFileSync,
 } from "node:fs";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { homedir, hostname } from "node:os";
@@ -49,15 +49,28 @@ const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 class CommentConflict extends Error {}
 
 export async function startCommentBridge({
-  sessionId, documentRoot, previewOrigin, storageRoot, notify, onError, mesh, ownerViaMesh = false, name, onRestart,
+  sessionId, documentRoot, previewOrigin, storageRoot, notify, onError, mesh, ownerViaMesh = false, name, onRestart, dataDirectory,
 }) {
   const root = realpathSync(documentRoot);
-  const directory = join(storageRoot, sessionId);
+  const directory = join(storageRoot, sessionId); // runtime files (connection.json, exit.json)
   mkdirSync(directory, { recursive: true, mode: 0o700 });
-  const attachments = join(directory, "attachments");
+  // Comments, settings, images and audio live with the site (<site>/.adr) when the launcher gives a data directory;
+  // a store that so far lived in the state directory is moved there once.
+  const data = dataDirectory ?? directory;
+  if (data !== directory) {
+    mkdirSync(data, { recursive: true, mode: 0o700 });
+    writeFileSync(join(data, ".gitignore"), "*\n");
+    if (!existsSync(join(data, "comments.jsonl"))) {
+      for (const file of ["comments.jsonl", "settings.json", "attachments", "speech"]) {
+        if (!existsSync(join(directory, file))) continue;
+        try { renameSync(join(directory, file), join(data, file)); } catch { cpSync(join(directory, file), join(data, file), { recursive: true }); rmSync(join(directory, file), { recursive: true, force: true }); }
+      }
+    }
+  }
+  const attachments = join(data, "attachments");
   mkdirSync(attachments, { recursive: true, mode: 0o700 });
   const imageFile = id => join(attachments, id + ".png");
-  const speechDir = join(directory, "speech");
+  const speechDir = join(data, "speech");
   mkdirSync(speechDir, { recursive: true, mode: 0o700 });
   // Read aloud: text goes to a local text-to-speech server (ADR_TTS_URL, default via `adr tts` on 127.0.0.1:8765); audio is cached by text.
   const speechUrl = process.env.ADR_TTS_URL || "http://127.0.0.1:8765";
@@ -82,14 +95,14 @@ export async function startCommentBridge({
     await speaking.get(id);
     return id;
   }
-  const log = join(directory, "comments.jsonl");
+  const log = join(data, "comments.jsonl");
   const connectionFile = join(directory, "connection.json");
   const records = existsSync(log)
     ? readFileSync(log, "utf8").split("\n").filter(Boolean).map(line => JSON.parse(line))
     : [];
   const comments = new Map();
   const updates = new Map();
-  const settingsFile = join(directory, "settings.json");
+  const settingsFile = join(data, "settings.json");
   let settings = { owner: "owner", team: [], default: "owner", last: [] };
   try { settings = { ...settings, ...JSON.parse(readFileSync(settingsFile, "utf8")) }; } catch { /* first run: defaults */ }
   const NAME = /^[\w.-]{1,40}$/;
@@ -232,7 +245,7 @@ export async function startCommentBridge({
       const flat = text.replace(/\s+/g, " ");
       const preview = flat.length > 400 ? `${flat.slice(0, 400)}… [truncated; read the thread for the rest]` : flat;
       Promise.resolve(mesh.send(target.session, `ADR comment for you on ${page} (thread ${comment.id.slice(0, 8)}): "${preview}". ` +
-        `Read: read_doc_review_comments(as="${target.slug}", store="${sessionId}"); reply: update_doc_review_comment(store="${sessionId}", comment_id="${comment.id}").`))
+        `Read: read_doc_review_comments(as="${target.slug}", store="${name ?? sessionId}"); reply: update_doc_review_comment(store="${name ?? sessionId}", comment_id="${comment.id}").`))
         .catch(error => onError?.(error));
     }
   }
