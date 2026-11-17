@@ -3,6 +3,7 @@
 // Comments are saved to disk and stay unread until an agent session reads them; online agents,
 // the store's owner included, are told over the mesh.
 import { homedir } from "node:os";
+import { pathToFileURL } from "node:url";
 import { realpathSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { resolveLaunch, USAGE } from "../src/launch.mjs";
@@ -18,6 +19,16 @@ if (process.env.ADR_SUPERVISE === "1" && !process.env.ADR_CHILD) {
   const store = process.argv[process.argv.indexOf("--store") + 1] ?? "adr";
   const deaths = [];
   let child, stopping = false;
+  // The store id is the owning agent's session; tell it over the mesh (best effort, no mesh means no note).
+  const tellOwner = async content => {
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-/.test(store)) return;
+    try {
+      const { joinMesh } = await import(pathToFileURL(join(homedir(), ".copilot", "extensions", "agent-mesh", "node.mjs")).href);
+      const node = joinMesh({ name: "agent-doc-review-site", kind: "site", cwd: process.cwd() });
+      node.send({ recipient_session_id: store, content, priority: "normal" });
+      setTimeout(() => node.close?.(), 2000).unref();
+    } catch { /* no mesh */ }
+  };
   for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) process.on(signal, () => { stopping = true; child?.kill(signal); });
   while (!stopping) {
     child = spawn(process.execPath, process.argv.slice(1), { stdio: "inherit", env: { ...process.env, ADR_CHILD: "1" } });
@@ -25,9 +36,10 @@ if (process.env.ADR_SUPERVISE === "1" && !process.env.ADR_CHILD) {
     if (stopping || (code === 0 && !signal)) break;
     const reason = `server died (${signal ? "signal " + signal : "code " + code}); restarting`;
     recordExit(storageRoot, store, reason);
+    await tellOwner(`ADR server "${store}" died unexpectedly: ${reason}. Details: ${join(storageRoot, store + ".failures.jsonl")}`);
     deaths.push(Date.now());
     while (deaths[0] < Date.now() - 120000) deaths.shift();
-    if (deaths.length >= 5) { recordExit(storageRoot, store, "gave up: 5 deaths in 2 minutes"); break; }
+    if (deaths.length >= 5) { recordExit(storageRoot, store, "gave up: 5 deaths in 2 minutes"); await tellOwner(`ADR server "${store}" gave up after 5 deaths in 2 minutes and is down. Start it again with \`adr . -d --name ...\`.`); break; }
     await new Promise(done => setTimeout(done, 1000));
   }
   process.exit(0);
