@@ -60,6 +60,7 @@ export async function startCommentBridge({
   if (data !== directory) {
     mkdirSync(data, { recursive: true, mode: 0o700 });
     writeFileSync(join(data, ".gitignore"), "*\n");
+    writeFileSync(join(data, "store"), sessionId + "\n");
     if (!existsSync(join(data, "comments.jsonl"))) {
       for (const file of ["comments.jsonl", "settings.json", "attachments", "speech"]) {
         if (!existsSync(join(directory, file))) continue;

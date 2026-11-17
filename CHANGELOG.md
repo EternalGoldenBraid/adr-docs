@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.67.1 - 2026-11-17
+
+- The folder is the identity: `adr . -d --name NAME` in a site folder finds its store by itself (`.adr/store`, else the store an earlier server for that folder used), so `--store` is no longer needed, including for sites that were first served by an agent session. The id is recorded in `.adr/store`.
+
 ## 0.67.0 - 2026-11-17
 
 - A standalone server keeps its data with the site: comments, settings, images and audio live in `<site>/.adr/` (self-ignoring via `.adr/.gitignore`), so they follow the folder instead of a session id. A store that lived in `~/.local/state/agent-doc-review/<id>/` is moved there on the next start; runtime files (connection, exit log) stay in the state directory.

@@ -58,7 +58,7 @@ if (process.argv[2] === "keep" || process.argv[2] === "unkeep") {
     const known = readHistory(storageRoot).find(row => row.store === target || row.name === target);
     if (known && !keep) store = known.store;
     else {
-      const launch = resolveLaunch(process.argv.slice(3));
+      const launch = resolveLaunch(process.argv.slice(3), process.cwd(), storageRoot);
       store = launch.store;
       const row = readHistory(storageRoot).find(entry => entry.store === store);
       if (keep && !row) {
@@ -84,7 +84,7 @@ if (process.argv[2] === "tui" && process.argv.length === 3) {
 } else {
 let launch;
 try {
-  launch = resolveLaunch(process.argv.slice(2));
+  launch = resolveLaunch(process.argv.slice(2), process.cwd(), storageRoot);
 } catch (error) {
   console.error(`${error.message}\n${USAGE}   (or: npm run preview -- ...)`);
   process.exit(2);

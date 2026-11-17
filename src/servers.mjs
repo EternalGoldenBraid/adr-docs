@@ -61,6 +61,23 @@ export function recordLaunch(storageRoot, entry) {
   writeFileSync(historyFile(storageRoot), JSON.stringify(rows, null, 1));
 }
 
+// A folder's own store: <folder>/.adr/store, else the store an earlier server for that folder used.
+export function siteStore(storageRoot, folder) {
+  try { return readFileSync(join(folder, ".adr", "store"), "utf8").trim(); } catch { /* not served from here yet */ }
+  let best;
+  const consider = (store, at) => { if (!best || at > best.at) best = { store, at }; };
+  for (const row of readHistory(storageRoot)) if (dirname(row.document) === folder) consider(row.store, row.at ?? "");
+  let stores = [];
+  try { stores = readdirSync(storageRoot); } catch { /* no state yet */ }
+  for (const store of stores) {
+    try {
+      const info = JSON.parse(readFileSync(join(storageRoot, store, "connection.json"), "utf8"));
+      if (info.documentRoot === folder) consider(store, info.startedAt ?? "");
+    } catch { /* not a store */ }
+  }
+  return best?.store;
+}
+
 // A store given as a UUID, or as a server name / site directory from the launch history.
 export function resolveStore(storageRoot, given) {
   if (typeof given !== "string" || UUID_RE.test(given)) return given;
