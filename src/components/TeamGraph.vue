@@ -110,7 +110,7 @@ function machineOf(m) {
   const peak = Math.max(m.nproc, ...m.history), y = v => (22 - v / peak * 20).toFixed(1)
   const points = m.history.map((v, i) => `${(i / Math.max(1, m.history.length - 1) * 100).toFixed(1)},${y(v)}`).join(' ')
   const gpu = m.gpus.length ? ` · GPU util ${m.gpus.map(g => g.util + ' %').join(' / ')}` : ''
-  const heat = pct => pct < 50 ? '#9ccc65' : pct < 80 ? '#ffd500' : '#f38ba8'
+  const heat = pct => pct < 50 ? '#9ccc65' : pct < 80 ? '#ff8c1a' : '#e5484d'
   const cores = (m.cores ?? []).map((pct, i) => ({ i, pct, color: heat(pct) }))
   const gpus = m.gpus.map((g, i) => ({
     label: `GPU ${i}${g.name ? ' · ' + g.name.replace(/^NVIDIA (GeForce )?/, '') : ''}`,
@@ -197,7 +197,7 @@ onUnmounted(() => { hideSource(false); clearInterval(timer) })
       </tbody>
     </table>
     <div v-if="machines.length" class="team-machines">
-      <p class="mach-title">Machines: load average last hour (line), per-core load now (bars), GPUs</p>
+      <p class="mach-title">Machines: load average last hour (line), per-core load now (bars: green <50 %, orange 50–80 %, red >80 %), GPUs</p>
       <div v-for="m in machines" :key="m.name" class="mach-block">
         <div class="mach" :class="{ stale: m.stale || m.error }" :title="m.top">
           <span>{{ m.name }}</span>
@@ -205,6 +205,7 @@ onUnmounted(() => { hideSource(false); clearInterval(timer) })
           <div v-else class="spark"><span class="limit" :style="{ top: m.limitPct + '%' }">all cores busy</span><svg viewBox="0 0 100 22" preserveAspectRatio="none"><line x1="0" x2="100" :y1="m.limit" :y2="m.limit" stroke="#59616d" stroke-dasharray="2 2" /><polyline :points="m.points" fill="none" :stroke="m.hot ? '#f38ba8' : '#6fb7e8'" stroke-width="1.5" vector-effect="non-scaling-stroke" /></svg></div>
           <span :class="{ hot: m.hot }">{{ m.text }}</span>
         </div>
+        <div class="mach axis"><span></span><span class="ticks"><span>−60 min</span><span>now</span></span><span></span></div>
         <div v-if="m.cores?.length || m.gpus?.length" class="mach-detail" :class="{ stale: m.stale }">
           <div v-if="m.cores.length" class="cores-wrap">
             <span class="scale"><span>100 %</span><span>0</span></span>
@@ -223,7 +224,6 @@ onUnmounted(() => { hideSource(false); clearInterval(timer) })
           </div>
         </div>
       </div>
-      <div class="mach axis"><span></span><span class="ticks"><span>−60 min</span><span>now</span></span><span></span></div>
     </div>
     <p class="team-graph-legend"><span class="d working"></span>working <span class="d waiting"></span>waiting <span class="d asking"></span>asking <span class="d idle"></span>idle <span class="d ring"></span>active <span class="d ring off"></span>offline · a pulse travels from sender to receiver for each message in the last hour</p>
   </div>
