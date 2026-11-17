@@ -160,6 +160,7 @@ export function recordExit(storageRoot, store, reason) {
     mkdirSync(join(storageRoot, store), { recursive: true });
     writeFileSync(join(storageRoot, store, "exit.json"), JSON.stringify(entry));
     appendFileSync(join(storageRoot, `${store}.log`), `${entry.at} pid ${entry.pid} exit: ${reason}\n`);
+    if (!reason.startsWith("stopped by")) appendFileSync(join(storageRoot, `${store}.failures.jsonl`), JSON.stringify({ ...entry, reason: reason.split("\n")[0] }) + "\n");
   } catch { /* the process is ending anyway */ }
 }
 
