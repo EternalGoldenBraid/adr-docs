@@ -52,6 +52,7 @@ Then ask: `Use the document-review skill to review /absolute/path/to/doc.md`.
 | --- | --- |
 | `start_doc_review` | Start the preview for an absolute `document_path`. It ends with the session; for a durable named server use `adr . -d --name <name> --store <session id>`. |
 | `read_doc_review_comments` | Fetch unread threads (`include_seen` for all). |
+| `unanswered_threads` | Read-only check for a natural pause: open threads whose last word is the user's, with age and quote; always prints the count ("checked: 0 unanswered"). |
 | `update_doc_review_comment` | Reply and/or resolve a thread; optional `proposal` (before/after) posts a diff card inside the thread. |
 | `stop_doc_review` | Close the preview; comments are kept. |
 

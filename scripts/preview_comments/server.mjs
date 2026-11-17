@@ -487,6 +487,17 @@ export async function startCommentBridge({
     };
   }
 
+  // Threads whose last word is the user's, with nothing from an agent since. Read-only: leaves read receipts alone.
+  function unansweredFor(as) {
+    const now = Date.now();
+    const rows = [...comments.values()].filter(comment => !comment.removed && !comment.resolved && !comment.note && !comment.highlight && addressed(comment, as)).flatMap(comment => {
+      const last = comment.replies.at(-1) ?? { author: comment.author ?? "user", comment: comment.comment, at: comment.at };
+      if (last.author !== "user") return [];
+      const text = (last.reply ?? last.comment ?? "").replace(/\s+/g, " ");
+      return [{ id: comment.id, page: new URL(comment.url).pathname, ageMinutes: Math.round((now - Date.parse(last.at || comment.at)) / 60000), quote: text.length > 140 ? `${text.slice(0, 140)}…` : text }];
+    }).sort((a, b) => b.ageMinutes - a.ageMinutes);
+    return { checked: `${rows.length} unanswered`, as, threads: rows };
+  }
   function readAs(as, includeSeen = false) {
     const rows = unread(as);
     const result = (includeSeen ? [...comments.values()].filter(comment => addressed(comment, as)) : rows).map(withFiles);
@@ -519,6 +530,12 @@ export async function startCommentBridge({
       }
       if (request.method === "GET" && request.url === "/settings") return reply(response, 200, effective());
       if (request.method === "GET" && request.url === "/mesh") return reply(response, 200, { members: await meshStatus(), edges: meshEdges, machines: await machines(), errors: Object.fromEntries(remoteErrors) });
+      const unansweredRoute = request.method === "GET" && /^\/unanswered\?(.*)$/.exec(request.url);
+      if (unansweredRoute) {
+        const as = nameFor(new URLSearchParams(unansweredRoute[1]).get("as") || ownerName());
+        if (!NAME.test(as)) return reply(response, 400, { error: "Invalid agent name." });
+        return reply(response, 200, unansweredFor(as));
+      }
       const readRoute = request.method === "GET" && /^\/read\?(.*)$/.exec(request.url);
       if (readRoute) {
         const query = new URLSearchParams(readRoute[1]);
@@ -687,6 +704,7 @@ export async function startCommentBridge({
       return { count: rows.length, latestId: rows.length ? latestFeedbackId : undefined };
     },
     read: ({ includeSeen = false, as = ownerName() } = {}) => readAs(as, includeSeen),
+    unanswered: ({ as = ownerName() } = {}) => unansweredFor(as),
     close: async () => {
       unlinkSync(connectionFile);
       await new Promise((accept, reject) => server.close(error => error ? reject(error) : accept()));

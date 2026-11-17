@@ -14,7 +14,7 @@ description: Review Markdown, mathematical explanations and figures in a live lo
 3. Inspect the rendered equations, figures, spacing, contrast and links. A local
    preview is not evidence of GitHub rendering; inspect the publication renderer
    separately before claiming a published visual result.
-4. Fetch feedback with `read_doc_review_comments` when relevant. Count-only
+4. At a natural pause (end of a task, before you report) call `unanswered_threads` (read-only, never an interrupt). Fetch feedback with `read_doc_review_comments` when relevant. Count-only
    attention does not load comment bodies; reading does not resolve threads.
 5. Make scoped edits to the original source and reinspect the rendered result.
    Reply with `update_doc_review_comment`. Resolve explicitly only with the
