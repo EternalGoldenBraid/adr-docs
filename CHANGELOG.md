@@ -2,6 +2,7 @@
 
 ## 0.68.5 - 2026-11-17
 
+- Fix: comment notes to agents are now sent at `high` priority. At `normal` the mesh shows only a 70-character "not urgent" hint, which busy agents skipped, so Alice's replies went unread for hours even though the notes were delivered to their inbox.
 - Monitoring: every unexpected server exit (crash, signal, give-up) is also appended to `<state>/<store>.failures.jsonl` (`{at, pid, reason}`), and the watchdog sends a mesh note to the owning agent (the store's session id). A normal stop is not recorded there.
 - Fix: a comment or reply to an agent that was not on the mesh at that moment ("Recipient is not active") was dropped, so the agent never woke. The server now retries every minute (up to 6 h) until the note is delivered or the agent has read the thread.
 - Fix: the server crashed ("Cannot set properties of undefined (setting 'ready')") when the embedding worker exited while starting.
