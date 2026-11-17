@@ -554,6 +554,18 @@ export async function startCommentBridge({
         return reply(response, 200, { pages: Object.fromEntries(Object.entries(now).flatMap(([link, row]) => seen[link] === undefined ? [[link, "new"]] : seen[link] !== row.hash ? [[link, "changed"]] : [])) });
       }
       if (request.method === "GET" && request.url === "/settings") return reply(response, 200, effective());
+      const faceRoute = request.method === "GET" && /^\/faces(?:\/([\w-]{1,64}))?$/.exec(request.url);
+      if (faceRoute) {
+        try {
+          if (!mesh?.faces) return reply(response, 200, { faces: [] });
+          const faces = await mesh.faces();
+          if (!faceRoute[1]) return reply(response, 200, { self: faces.self, ...faces.status() });
+          const log = faces.log(faceRoute[1]);
+          if (log.error) return reply(response, 404, log);
+          faces.read(faceRoute[1]);
+          return reply(response, 200, { self: faces.self, ...log });
+        } catch (error) { return reply(response, 503, { error: error.message }); }
+      }
       if (request.method === "GET" && request.url === "/mesh") return reply(response, 200, { members: await meshStatus(), edges: meshEdges, machines: await machines(), errors: Object.fromEntries(remoteErrors) });
       const unansweredRoute = request.method === "GET" && /^\/unanswered\?(.*)$/.exec(request.url);
       if (unansweredRoute) {
@@ -583,7 +595,7 @@ export async function startCommentBridge({
         response.writeHead(200, { "Content-Type": "image/png", "Cache-Control": "private, max-age=31536000, immutable" });
         return response.end(readFileSync(imageFile(download[1])));
       }
-      if (request.method !== "POST" || !["/comments", "/updates", "/attachments", "/userseen", "/settings", "/agent-update", "/agent-add", "/agent-status", "/restart", "/tts"].includes(request.url)) {
+      if (request.method !== "POST" || !["/comments", "/updates", "/attachments", "/userseen", "/settings", "/agent-update", "/agent-add", "/agent-status", "/face-open", "/face-post", "/restart", "/tts"].includes(request.url)) {
         return reply(response, 404, { error: "Unknown comment endpoint." });
       }
       if (request.url === "/restart") {
@@ -615,9 +627,17 @@ export async function startCommentBridge({
           return reply(response, 400, { error: error.message });
         }
       }
-      if (["/settings", "/agent-update", "/agent-add", "/agent-status"].includes(request.url)) {
+      if (["/settings", "/agent-update", "/agent-add", "/agent-status", "/face-open", "/face-post"].includes(request.url)) {
         try {
           const body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+          if (request.url.startsWith("/face-")) {
+            if (!mesh?.faces) throw new Error("No mesh available.");
+            const faces = await mesh.faces();
+            const result = request.url === "/face-open" ? faces.open({ members: body.members, topic: body.topic }) : faces.post(body.id, body.content, "high");
+            if (result.error) throw new Error(result.error);
+            revision++;
+            return reply(response, 200, result);
+          }
           if (request.url === "/agent-update") return reply(response, 200, saveUpdate(normalizeUpdate(body, "copilot")));
           if (request.url === "/agent-add") return reply(response, 200, api.add(body));
           if (request.url === "/agent-status") return reply(response, 200, api.setStatus(body));

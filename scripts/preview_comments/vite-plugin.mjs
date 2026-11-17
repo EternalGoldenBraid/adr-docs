@@ -45,8 +45,8 @@ export function previewComments({ connectionFile }) {
           return fail(403, "Only the configured preview may access comments.");
         }
         const path = request.url.slice(base.length);
-        const known = ["/status", "/comments", "/history", "/history-recent", "/viewed", "/updates", "/attachments", "/userseen", "/settings", "/mesh", "/restart", "/tts"].includes(path) ||
-          request.method === "GET" && /^\/(attachments|tts)\/[\da-f]{64}$/.test(path);
+        const known = ["/status", "/comments", "/history", "/history-recent", "/viewed", "/updates", "/attachments", "/userseen", "/settings", "/mesh", "/faces", "/face-open", "/face-post", "/restart", "/tts"].includes(path) ||
+          request.method === "GET" && (/^\/(attachments|tts)\/[\da-f]{64}$/.test(path) || /^\/faces\/[\w-]{1,64}$/.test(path));
         if (!known) return fail(404, "Unknown comment endpoint.");
         const upstream = httpRequest({
           hostname: "127.0.0.1", port: connection.port, path, method: request.method,

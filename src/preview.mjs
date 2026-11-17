@@ -38,14 +38,21 @@ export async function startDocumentPreview({
   let node;
   // Notes to addressed agents go out at high priority: they carry the human's words, and a quiet hint (70 characters, "may postpone") was being ignored.
   // They go out as a non-agent mesh node, joined on first use; absent mesh means no notes.
-  const mesh = { async send(session, content) {
+  const meshNode = async () => {
     if (!node) {
       const module = await import(pathToFileURL(join(homedir(), ".copilot", "extensions", "agent-mesh", "node.mjs")).href);
-      node = module.joinMesh({ name: "agent-doc-review-site", kind: "site", cwd: documentRoot });
+      node = module.joinMesh({ name: "agent-doc-review-site", kind: "site", cwd: documentRoot, databasePath: process.env.ADR_MESH_DB });
     }
-    const result = node.send({ recipient_session_id: session, content, priority: "high" });
-    if (result?.error) throw new Error(result.error);
-  } };
+    return node;
+  };
+  // Faces (shared rooms) live in the mesh database; this node is the human's seat in them.
+  const mesh = {
+    async send(session, content) {
+      const result = (await meshNode()).send({ recipient_session_id: session, content, priority: "high" });
+      if (result?.error) throw new Error(result.error);
+    },
+    async faces() { const n = await meshNode(); return { self: n.sessionId, ...n.faces }; },
+  };
   let closed = false;
   async function close() {
     if (closed) return;
