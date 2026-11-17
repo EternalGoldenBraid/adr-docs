@@ -157,7 +157,7 @@ graph, in every session. Your own messages stay plain.
 ## Full screen
 
 `f` in the history panel (or the ⛶ button) toggles it full screen, with the
-text in a centred column; press it again to go back.
+text spanning the page width; press it again to go back.
 
 ## Region screenshots
 

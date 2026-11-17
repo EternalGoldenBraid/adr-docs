@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.73.1 - 2026-11-17
+
+- Full-screen history/chat now follows the page width instead of a fixed 1000px column.
+
 ## 0.73.0 - 2026-11-17
 
 - Agent names get a colour and icon derived from the name, in chat threads, the Team table and the Team graph.
