@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.78.1 - 2026-11-17
+
+- The mesh data directory moved to `~/.agent-mesh`. ADR now reads the mesh database and `machines.json` from `MESH_DIR`, else `~/.agent-mesh`, else the old extension folder.
+
 ## 0.78.0 - 2026-11-17
 
 - New **Room** tab in the Team panel: shared rooms (faces) between three or more mesh members, you included. Create one with **＋ New room** (topic and member chips) or let an agent call `room_open`. The log shows only posts made into that room; Ctrl+Enter posts as you; an unread dot marks new posts. Needs the agent-mesh extension with room support.
