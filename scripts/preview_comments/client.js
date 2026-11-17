@@ -36,7 +36,7 @@
       .toolbar{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;max-width:calc(100vw - 48px)}
       .history{width:min(var(--pw,720px),calc(100vw - 48px));max-height:min(var(--ph,100vh),calc(100vh - 120px));overflow:auto}
       .history.full{position:fixed;inset:0;width:auto;max-height:none;height:100vh;margin:0;border-radius:0;z-index:5}
-      .history.full>*{max-width:1000px;margin-left:auto;margin-right:auto}.history.full .history-head{max-width:none;padding-left:max(20px,calc((100% - 1000px)/2));padding-right:max(20px,calc((100% - 1000px)/2))}
+      .history.full{padding:0 4vw}.history.full>*{margin-left:0;margin-right:0}.history.full .history-head{padding-left:0;padding-right:0}.history.full .note{margin-right:0}.history.full .note.mine{margin-left:12vw}.history.full .note.copilot{margin-right:12vw}
       .history-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
       select{font:inherit;padding:6px;background:#292d35;color:#eee;border:1px solid #59616d;border-radius:6px}
       .history{padding:0}.history>*{margin-left:20px;margin-right:20px}
