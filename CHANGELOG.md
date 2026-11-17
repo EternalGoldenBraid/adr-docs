@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.68.4 - 2026-11-17
+
+- The page tree shows a hollow ring with a count for pages that have open threads waiting on the agent. Before, only threads with something new for you got a ball, so an unresolved thread you had just replied to showed nothing.
+
 ## 0.68.3 - 2026-11-17
 
 - Fix: mesh comment notifications named the addressed agent where the server name belongs (`store="demo-agent"`); they now give the server name (or store id).
