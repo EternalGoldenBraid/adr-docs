@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.72.1 - 2026-11-17
+
+- `f` (or ⛶) toggles the comment history and chat panel full screen.
+
 ## 0.72.0 - 2026-11-17
 
 - Drop or paste images into the comment panel or an open thread; they attach like region screenshots. Images in a thread now have a **×** to delete them.

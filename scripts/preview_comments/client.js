@@ -35,6 +35,8 @@
       .vim-caret{position:fixed;width:2px;background:#74c0fc;pointer-events:none}
       .toolbar{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;max-width:calc(100vw - 48px)}
       .history{width:min(var(--pw,720px),calc(100vw - 48px));max-height:min(var(--ph,100vh),calc(100vh - 120px));overflow:auto}
+      .history.full{position:fixed;inset:0;width:auto;max-height:none;height:100vh;margin:0;border-radius:0;z-index:5}
+      .history.full>*{max-width:1000px;margin-left:auto;margin-right:auto}.history.full .history-head{max-width:none;padding-left:max(20px,calc((100% - 1000px)/2));padding-right:max(20px,calc((100% - 1000px)/2))}
       .history-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
       select{font:inherit;padding:6px;background:#292d35;color:#eee;border:1px solid #59616d;border-radius:6px}
       .history{padding:0}.history>*{margin-left:20px;margin-right:20px}
@@ -116,6 +118,7 @@
       <div class="history-head"><h2 id="history-title">Comment history</h2><small class="history-counts"></small>
       <button class="history-team" type="button" title="Team status (:mesh)">Team</button>
       <button class="history-refresh icon" type="button" title="Refresh">↻</button>
+      <button class="history-full icon" type="button" title="Toggle full screen (f)" aria-label="Full screen">⛶</button>
       <button class="history-close icon" type="button" title="Close (Esc)" aria-label="Close">✕</button></div>
       <div class="tabs" role="tablist"></div>
       <div class="thread-list" role="listbox"></div>
@@ -264,7 +267,7 @@
     ["History", [
       "j/k move · l or Enter open · r resolve · p read aloud · o go to page · g/G ends",
       "Tabs: [ ] switch · A all · P this page · O open · C chat · R resolved · N notes · P then A page history",
-      "In a thread: j/k messages · J/K next/previous thread · r resolve · p read aloud (p pause · < > skip) · q reply to a message or selection · u jump to the quoted message · i reply · n new child thread · s attach region · h back",
+      "f toggles the history panel full screen · In a thread: j/k messages · J/K next/previous thread · r resolve · p read aloud (p pause · < > skip) · q reply to a message or selection · u jump to the quoted message · i reply · n new child thread · s attach region · h back",
     ]],
     ["Graph", [
       ":present (or ▶ Present on a graph) shows a DocGraph full screen, one node at a time",
@@ -1831,6 +1834,7 @@
     branchOf = parent.id;
   }
   branchButton.addEventListener("click", branchThread);
+  find(".history-full").addEventListener("click", () => history.classList.toggle("full"));
   find(".attach-region").addEventListener("click", regionDraft);
   // Dropped or pasted images are re-encoded as PNG, the only format the store accepts.
   async function uploadImage(file) {
@@ -1876,6 +1880,7 @@
     const key = event.key;
     let handled = true;
     const values = FILTERS.map(([value]) => value);
+    if (key === "f") { event.preventDefault(); find(".history-full").click(); return; }
     const tabKey = { A: "all", P: "page", O: "unresolved", C: "chat", R: "resolved", N: "notes" }[key];
     if (!selectedThread && tabKey && !event.ctrlKey && !event.metaKey && !event.altKey) {
       // Capitals pick a tab; P with A (either order, within a moment) is the page's whole history.
