@@ -323,3 +323,7 @@ Comments can be spoken with F5-TTS, cloned from a short reference clip. Start th
 ## Sorting and grouping tables
 
 Content tables with more than two rows get a **Group by** selector above them. Click a header to sort by it (click again to reverse, a third time to clear); Shift+click adds further sort keys, shown as ▲1 ▲2. Numbers and ISO dates sort by value, other text naturally. Groups collapse by clicking their row. **Reset** clears both. The choice is remembered per page and table in the browser's local storage; the page content is unchanged.
+
+## Rooms
+
+The Team panel's **Room** tab (`-` then `m`) lists the rooms you are in. A room is a shared conversation among three or more mesh members, and its posts are visible only inside it, never as direct messages. **＋ New room** asks for a topic and members; agents can open one with `room_open`. Posting as you uses Ctrl+Enter. Rooms live in the mesh database, so any harness with the room tools sees the same room.

@@ -45,7 +45,7 @@
       .history-head h2{margin:0}.history-head .history-counts{margin-left:auto;margin-right:12px}
       .icon{padding:2px 9px;border-radius:6px;line-height:1.4}
       .help-panel{width:min(640px,94vw)}.help-tabs,.help-tabs-look{display:flex;gap:6px;margin:8px 0;flex-wrap:wrap}.help-tabs button,.help-tabs-look button{background:#2a2e36;color:inherit;border:1px solid #59616d;border-radius:6px;padding:3px 10px;cursor:pointer}.help-tabs button[aria-selected=true],.help-tabs-look button[aria-selected=true]{background:#3b4a63;border-color:#8ab4f8}.help-body{white-space:pre-wrap;font:13px/1.5 ui-monospace,monospace;margin:0;max-height:50vh;overflow:auto}
-      .mesh-machines{margin-top:10px}.mach{display:grid;grid-template-columns:100px 1fr 230px;gap:8px;align-items:center;font-size:12px;padding:2px 0}.mach svg{width:100%;height:22px}.mach .hot{color:#f38ba8}.mach-detail{display:grid;gap:4px;margin:2px 0 8px;font-size:11px}.mach-detail.stale{opacity:.5}.cores{display:flex;gap:2px;height:36px;align-items:flex-end;flex:1}.core{flex:1;max-width:16px;height:100%;display:flex;align-items:flex-end;background:#252a32;border-radius:2px;overflow:hidden}.core i{display:block;width:100%;min-height:1px}.gpu{display:grid;grid-template-columns:110px 1fr 54px 1fr 80px 90px;gap:6px;align-items:center}.gpu .bar{position:relative;height:14px;background:#252a32;border-radius:3px;overflow:hidden}.gpu .bar i{position:absolute;inset:0 auto 0 0;display:block}.core{position:relative}.core em{position:absolute;top:0;left:0;right:0;text-align:center;font-style:normal;font-size:8px;opacity:.65}.cores-wrap{display:flex;gap:6px;align-items:stretch}.cores-wrap .scale{display:flex;flex-direction:column;justify-content:space-between;font-size:9px;opacity:.6;text-align:right;min-width:28px}.cores-wrap .avg{align-self:center;white-space:nowrap}.mach.stale{opacity:.5}.mesh-panel{width:min(640px,94vw)}.mesh-panel.peek{position:fixed;left:auto;top:auto;right:12px;bottom:52px;margin:0;max-height:70vh;overflow:auto;opacity:.97}.mesh-corner{position:fixed;right:0;bottom:130px;padding:10px 3px;z-index:2147483000;background:#1b1d22cc;color:#aab;border:1px solid #3a404a;border-right:0;border-radius:8px 0 0 8px;font:11px/1 ui-monospace,monospace;writing-mode:vertical-rl;cursor:pointer;opacity:.55}.mesh-corner:hover{opacity:1}.mesh-table td:nth-child(2){white-space:nowrap}.mesh-tabs{margin:0 8px}.mesh-graph[hidden]{display:none}.mesh-graph{width:100%;height:auto;display:block}.mesh-graph text{fill:#d7dde6;font:11px ui-monospace,monospace;text-anchor:middle}.mesh-edges{font-size:12px;color:#aab;margin-top:8px}.mesh-table{width:100%;border-collapse:collapse;font-size:13px}.mesh-table th,.mesh-table td{text-align:left;padding:4px 8px;border-bottom:1px solid #3a404a}
+      .mesh-machines{margin-top:10px}.mach{display:grid;grid-template-columns:100px 1fr 230px;gap:8px;align-items:center;font-size:12px;padding:2px 0}.mach svg{width:100%;height:22px}.mach .hot{color:#f38ba8}.mach-detail{display:grid;gap:4px;margin:2px 0 8px;font-size:11px}.mach-detail.stale{opacity:.5}.cores{display:flex;gap:2px;height:36px;align-items:flex-end;flex:1}.core{flex:1;max-width:16px;height:100%;display:flex;align-items:flex-end;background:#252a32;border-radius:2px;overflow:hidden}.core i{display:block;width:100%;min-height:1px}.gpu{display:grid;grid-template-columns:110px 1fr 54px 1fr 80px 90px;gap:6px;align-items:center}.gpu .bar{position:relative;height:14px;background:#252a32;border-radius:3px;overflow:hidden}.gpu .bar i{position:absolute;inset:0 auto 0 0;display:block}.core{position:relative}.core em{position:absolute;top:0;left:0;right:0;text-align:center;font-style:normal;font-size:8px;opacity:.65}.cores-wrap{display:flex;gap:6px;align-items:stretch}.cores-wrap .scale{display:flex;flex-direction:column;justify-content:space-between;font-size:9px;opacity:.6;text-align:right;min-width:28px}.cores-wrap .avg{align-self:center;white-space:nowrap}.mach.stale{opacity:.5}.mesh-panel{width:min(640px,94vw)}.mesh-panel.peek{position:fixed;left:auto;top:auto;right:12px;bottom:52px;margin:0;max-height:70vh;overflow:auto;opacity:.97}.mesh-corner{position:fixed;right:0;bottom:130px;padding:10px 3px;z-index:2147483000;background:#1b1d22cc;color:#aab;border:1px solid #3a404a;border-right:0;border-radius:8px 0 0 8px;font:11px/1 ui-monospace,monospace;writing-mode:vertical-rl;cursor:pointer;opacity:.55}.mesh-corner:hover{opacity:1}.mesh-table td:nth-child(2){white-space:nowrap}.mesh-tabs{margin:0 8px}.mesh-graph[hidden],.mesh-room[hidden]{display:none}.mesh-room{margin:8px;font-size:13px}.room-list{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}.room-list button,.room-new button,.room-send button{padding:2px 10px;border:1px solid #59616d;border-radius:999px;background:transparent;color:inherit;font:inherit;cursor:pointer}.room-list button.on,.room-new button.on{border-color:#74c0fc;background:rgba(116,192,252,.18)}.room-log{max-height:46vh;overflow:auto;display:grid;gap:6px;padding:4px 0}.room-post{padding:5px 9px;border-left:3px solid #59616d;background:#20242b;border-radius:0 6px 6px 0;white-space:pre-wrap}.room-post.me{border-color:#74c0fc}.room-post b{display:block;font-size:11px;margin-bottom:2px}.room-send{display:flex;gap:6px;margin-top:6px}.room-send textarea{flex:1;min-height:44px;background:#14171c;color:inherit;border:1px solid #3a404a;border-radius:6px;padding:5px;font:inherit}.room-new{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px}.room-new input{background:#14171c;color:inherit;border:1px solid #3a404a;border-radius:6px;padding:2px 6px;font:inherit}.mesh-graph{width:100%;height:auto;display:block}.mesh-graph text{fill:#d7dde6;font:11px ui-monospace,monospace;text-anchor:middle}.mesh-edges{font-size:12px;color:#aab;margin-top:8px}.mesh-table{width:100%;border-collapse:collapse;font-size:13px}.mesh-table th,.mesh-table td{text-align:left;padding:4px 8px;border-bottom:1px solid #3a404a}
       .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:#59616d}.dot.active{background:#51cf66}.dot.idle{background:#fcc419}
       .tabs{display:flex;gap:2px;margin-top:4px!important;margin-bottom:6px!important;border-bottom:1px solid #3a404a}
       .tab{border:0;border-bottom:2px solid transparent;border-radius:0;background:none;padding:6px 10px;color:#b7c1ce}
@@ -138,8 +138,8 @@
       </section>
     </section>
     <section class="panel mesh-panel" hidden aria-label="Team status">
-      <div class="history-head"><h2>Team</h2><span class="mesh-tabs help-tabs-look"><button type="button" data-tab="table">Table</button><button type="button" data-tab="graph">Graph</button></span><small class="mesh-note"></small><button class="mesh-close icon" type="button" aria-label="Close">✕</button></div>
-      <table class="mesh-table"><thead><tr><th>Who</th><th>Status</th><th>Doing</th><th>Machine</th></tr></thead><tbody></tbody></table><svg class="mesh-graph" viewBox="0 0 600 320" hidden></svg><div class="mesh-machines"></div><div class="mesh-machines"></div><div class="mesh-edges"></div>
+      <div class="history-head"><h2>Team</h2><span class="mesh-tabs help-tabs-look"><button type="button" data-tab="table">Table</button><button type="button" data-tab="graph">Graph</button><button type="button" data-tab="room">Room</button></span><small class="mesh-note"></small><button class="mesh-close icon" type="button" aria-label="Close">✕</button></div>
+      <table class="mesh-table"><thead><tr><th>Who</th><th>Status</th><th>Doing</th><th>Machine</th></tr></thead><tbody></tbody></table><svg class="mesh-graph" viewBox="0 0 600 320" hidden></svg><div class="mesh-room" hidden></div><div class="mesh-machines"></div><div class="mesh-machines"></div><div class="mesh-edges"></div>
     </section>
     <section class="panel help-panel" hidden aria-label="Help">
       <div class="history-head"><h2>Help</h2><small>[ ] or h/l switch tab · Esc closes</small><button class="help-close icon" type="button" aria-label="Close">✕</button></div>
@@ -805,6 +805,9 @@
     localStorage.setItem("preview-comments-mesh-tab", tab);
     find(".mesh-table").hidden = tab !== "table";
     find(".mesh-graph").toggleAttribute("hidden", tab !== "graph");
+    find(".mesh-room").toggleAttribute("hidden", tab !== "room");
+    for (const el of shadow.querySelectorAll(".mesh-machines,.mesh-edges")) el.toggleAttribute("hidden", tab === "room");
+    if (tab === "room") loadRooms();
     for (const b of find(".mesh-tabs").children) b.setAttribute("aria-selected", String(b.dataset.tab === tab));
   }
   find(".mesh-tabs").addEventListener("click", event => { const t = event.target.dataset?.tab; if (t) showMeshTab(t); });
@@ -905,6 +908,83 @@
     const wrap = document.createElement("div");
     wrap.append(row, box);
     return wrap;
+  }
+  // A face is a room shared by three or more members; it lives in the mesh database and this panel is the human's seat in it.
+  let roomId = null, roomSelf = null, roomTimer = null, roomSeen = "";
+  const roomName = (id, members) => id === roomSelf ? "You" : members.find(m => m.session === id)?.name ?? id.slice(0, 8);
+  async function loadRooms() {
+    const holder = find(".mesh-room");
+    clearTimeout(roomTimer);
+    if (meshTab !== "room") return;
+    try {
+      const [{ self, faces = [] }, { members = [] }] = await Promise.all([api("faces"), api("mesh")]);
+      roomSelf = self;
+      const active = members.filter(m => m.session && meshState(m) !== "offline");
+      const names = ids => ids.map(id => roomName(id, members)).join(", ");
+      const detail = roomId ? await api(`faces/${roomId}`).catch(() => null) : null;
+      const signature = JSON.stringify([faces.map(f => [f.face_id, f.unread]), detail?.posts.length, [...holder.querySelectorAll(".room-new button.on")].length]);
+      if (signature !== roomSeen || !holder.firstChild) {
+        roomSeen = signature;
+        const typing = holder.querySelector("textarea")?.value ?? "";
+        const list = document.createElement("div");
+        list.className = "room-list";
+        for (const face of faces) {
+          const b = document.createElement("button");
+          b.textContent = `${face.unread && face.face_id !== roomId ? "● " : ""}${face.topic || "(no topic)"} · ${names(face.members.filter(id => id !== roomSelf))}`;
+          b.classList.toggle("on", face.face_id === roomId);
+          b.addEventListener("click", () => { roomId = face.face_id; roomSeen = ""; loadRooms(); });
+          list.append(b);
+        }
+        const add = document.createElement("button");
+        add.textContent = "＋ New room";
+        add.addEventListener("click", () => { roomId = null; roomSeen = ""; holder.dataset.new = "1"; loadRooms(); });
+        list.append(add);
+        holder.replaceChildren(list);
+        if (!faces.length && !holder.dataset.new) holder.append(Object.assign(document.createElement("p"), { textContent: "No rooms yet. A room is a shared log for three or more members; agents can open one with room_open, or press New room." }));
+        if (holder.dataset.new && !roomId) {
+          const form = document.createElement("div");
+          form.className = "room-new";
+          const picked = new Set();
+          const topic = Object.assign(document.createElement("input"), { placeholder: "Topic", size: 24 });
+          form.append(topic);
+          for (const m of active) {
+            const b = document.createElement("button");
+            b.type = "button"; b.textContent = `${agentLook(m.name).icon} ${m.name}`;
+            b.addEventListener("click", () => { picked.has(m.session) ? picked.delete(m.session) : picked.add(m.session); b.classList.toggle("on", picked.has(m.session)); });
+            form.append(b);
+          }
+          const open = Object.assign(document.createElement("button"), { type: "button", textContent: "Open" });
+          open.addEventListener("click", () => api("face-open", { members: [...picked], topic: topic.value }).then(r => { roomId = r.faceId; delete holder.dataset.new; roomSeen = ""; loadRooms(); }).catch(e => message(e.message, true)));
+          form.append(open);
+          holder.append(form);
+        }
+        if (detail) {
+          const log = document.createElement("div");
+          log.className = "room-log";
+          for (const post of detail.posts) {
+            const who = roomName(post.sender_session_id, members), look = agentLook(who);
+            const el = document.createElement("div");
+            el.className = "room-post" + (post.sender_session_id === roomSelf ? " me" : "");
+            const label = document.createElement("b");
+            label.textContent = `${who === "You" ? "" : look.icon + " "}${who} · ${new Date(post.created_at).toLocaleTimeString()}`;
+            if (who !== "You") { label.style.color = look.color; el.style.borderColor = look.color; }
+            el.append(label, post.content);
+            log.append(el);
+          }
+          const send = document.createElement("div");
+          send.className = "room-send";
+          const input = Object.assign(document.createElement("textarea"), { placeholder: "Post to the room · Ctrl+Enter sends", value: typing });
+          const go = Object.assign(document.createElement("button"), { type: "button", textContent: "Post" });
+          const post = () => { const content = input.value.trim(); if (content) api("face-post", { id: roomId, content }).then(() => { input.value = ""; roomSeen = ""; loadRooms(); }).catch(e => message(e.message, true)); };
+          go.addEventListener("click", post);
+          input.addEventListener("keydown", e => { e.stopPropagation(); if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); post(); } });
+          send.append(input, go);
+          holder.append(log, send);
+          log.scrollTop = log.scrollHeight;
+        }
+      }
+    } catch (error) { holder.textContent = error.message; }
+    roomTimer = setTimeout(loadRooms, 4000);
   }
   function openMesh(peek = false) {
     showMeshTab(meshTab);
