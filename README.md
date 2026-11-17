@@ -31,9 +31,8 @@ Open the printed `127.0.0.1` link. Viewing needs no agent. Comments are saved
 to disk and wait until an agent reads them. Comments addressed to agents that are
 online reach them over the agent mesh without an agent hosting the preview.
 
-Each served page or folder has its own comment store, printed at startup. To keep
-one store for a site whoever launches it, put its UUID in `<folder>/.adr-store`,
-or pass `--store UUID`. The data itself lives in `<folder>/.adr/` (gitignored). Agents read it with `read_doc_review_comments(store=...)`, where the store may be the server name (`demo`), the folder, or the UUID.
+Each served page or folder has its own comment store, printed at startup. A folder keeps its store
+whoever launches it (recorded in `<folder>/.adr/store`; an earlier server for the folder is adopted automatically). To force one, pass `--store UUID` or put it in `<folder>/.adr-store`. The data itself lives in `<folder>/.adr/` (gitignored). Agents read it with `read_doc_review_comments(store=...)`, where the store may be the server name (`demo`), the folder, or the UUID.
 
 `adr list` shows every running server and its store, and clears stale entries. Browsers
 refuse some ports (for example 6666, the IRC range); `adr` rejects those with a message.
