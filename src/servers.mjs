@@ -20,6 +20,8 @@ function alive(pid) {
   try { process.kill(pid, 0); return true; } catch (error) { return error.code === "EPERM"; }
 }
 
+const keptStores = storageRoot => new Set(readHistory(storageRoot).filter(row => row.keep).map(row => row.store));
+
 // Servers whose process is gone leave a stale connection.json; `prune` removes it.
 export function listServers(storageRoot, { prune = false } = {}) {
   const rows = [];
@@ -34,7 +36,7 @@ export function listServers(storageRoot, { prune = false } = {}) {
       if (prune) try { unlinkSync(file); } catch { /* already gone */ }
       continue;
     }
-    rows.push({ store, url: info.previewOrigin, pid: info.pid, root: info.documentRoot, startedAt: info.startedAt, name: info.name, standalone: isStandalone(info.pid) });
+    rows.push({ store, url: info.previewOrigin, pid: info.pid, root: info.documentRoot, startedAt: info.startedAt, name: info.name, standalone: isStandalone(info.pid), kept: keptStores(storageRoot).has(store) });
   }
   return rows.sort((a, b) => String(a.url).localeCompare(String(b.url)));
 }
@@ -53,9 +55,46 @@ export function readHistory(storageRoot) {
 }
 // What `adr` was asked to serve, newest first, so a stopped server can be started again.
 export function recordLaunch(storageRoot, entry) {
-  const rows = [{ ...entry, at: new Date().toISOString() }, ...readHistory(storageRoot).filter(row => row.store !== entry.store)].slice(0, 30);
+  const keep = readHistory(storageRoot).find(row => row.store === entry.store)?.keep;
+  const rows = [{ ...entry, ...(keep ? { keep } : {}), at: new Date().toISOString() }, ...readHistory(storageRoot).filter(row => row.store !== entry.store)].slice(0, 30);
   mkdirSync(storageRoot, { recursive: true });
   writeFileSync(historyFile(storageRoot), JSON.stringify(rows, null, 1));
+}
+
+// Persistent servers: the daemon (and any agent that finds one down) starts them again.
+export function setKeep(storageRoot, store, keep) {
+  const rows = readHistory(storageRoot);
+  const row = rows.find(entry => entry.store === store);
+  if (!row) return false;
+  if (keep) row.keep = true; else delete row.keep;
+  writeFileSync(historyFile(storageRoot), JSON.stringify(rows, null, 1));
+  return true;
+}
+
+// Starts every kept server that is not running. Returns the stores it started.
+export function startKept(storageRoot) {
+  const running = new Set(listServers(storageRoot).map(row => row.store));
+  const started = [];
+  for (const entry of readHistory(storageRoot)) {
+    if (!entry.keep || running.has(entry.store)) continue;
+    startDetached(storageRoot, launchArgs(entry));
+    started.push(entry.store);
+  }
+  return started;
+}
+
+// Wake-on-demand: if `store` is a kept server that is down, start it and wait until it answers.
+export async function ensureServer(storageRoot, store, ms = 20000) {
+  if (listServers(storageRoot).some(row => row.store === store)) return true;
+  const entry = readHistory(storageRoot).find(row => row.store === store && row.keep);
+  if (!entry) return false;
+  startDetached(storageRoot, launchArgs(entry));
+  const end = Date.now() + ms;
+  while (Date.now() < end) {
+    if (listServers(storageRoot).some(row => row.store === store)) return true;
+    await new Promise(done => setTimeout(done, 300));
+  }
+  return false;
 }
 
 export function launchArgs(entry) {

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.66.0 - 2026-11-17
+
+- Persistent servers: `adr keep <dir> --port N --name NAME` marks a server as kept; `adr daemon` (install it once with `adr daemon install`, a systemd user unit) starts every kept server at login and restarts it within 10 s if it is down; `adr unkeep` and the TUI's `x` stop keeping it. No agent has to own or restart the site.
+- Wake-on-demand: when an agent tool (`read_doc_review_comments`, `update_doc_review_comment`, ...) targets a kept store whose server is down, the server is started and the call retried.
+- `adr list` marks kept servers; `list_doc_review_servers` rows carry `kept`.
+
 ## 0.65.1 - 2026-11-17
 
 - Docs and tool description: agents that need a lasting server should start it with `adr . -d --name <name> --store <session id>` (watchdog, exit log) rather than `start_doc_review`.

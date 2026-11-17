@@ -1,7 +1,7 @@
 // `adr tui`: a dark, minimal list of running ADR servers and recent ones. j/k move, r restarts or starts,
 // x stops, o opens, q quits. Only servers started with `adr` can be stopped or restarted here.
 import { spawn } from "node:child_process";
-import { displayUrl, launchArgs, listServers, readHistory, startDetached, waitForExit } from "./servers.mjs";
+import { displayUrl, launchArgs, listServers, readHistory, setKeep, startDetached, waitForExit } from "./servers.mjs";
 
 const BG = "\x1b[48;5;234m\x1b[38;5;252m";
 const DIM = "\x1b[38;5;244m";
@@ -77,7 +77,7 @@ export function runTui(storageRoot) {
     if (confirm) {
       confirm = false;
       if (key === "y" && item) {
-        try { process.kill(item.pid, "SIGTERM"); note = `stopped pid ${item.pid}`; } catch (error) { note = error.message; }
+        try { setKeep(storageRoot, item.store, false); process.kill(item.pid, "SIGTERM"); note = `stopped pid ${item.pid}`; } catch (error) { note = error.message; }
         setTimeout(refresh, 600);
       } else note = "";
     } else if (key === "q" || key === "\x03" || key === "\x1b") quit();

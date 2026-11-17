@@ -19,6 +19,9 @@ adr path/to/doc.md 5190              # same, from anywhere (ln -s $PWD/bin/previ
 adr path/to/site --port 5174         # a whole folder of pages, from its index.md
 adr path/to/site -d                  # run in the background (log in the state dir)
 adr list                             # running ADR servers: url, pid, store, folder
+adr keep <dir> --port N --name NAME  # mark a server persistent (start it now, restart it whenever it is down)
+adr unkeep <name|store>              # stop keeping it
+adr daemon install                   # once: systemd --user unit that starts kept servers at login and after crashes
 adr tui                              # dark terminal list: j/k, r restart/start, x stop, o open, q quit
 adr <folder> --name demo            # reachable as http://demo.localhost:PORT; `:restart` in the page restarts it
 npm run example:paper                # fetch an arXiv paper for the example
