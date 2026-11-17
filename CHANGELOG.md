@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.67.3 - 2026-11-17
+
+- `adr` starts only one server per folder. A second launch for the same folder prints the running server's URL and exits (code 0 for the same store, so resume scripts can run it every time; code 1 if a different store was asked for).
+
 ## 0.67.2 - 2026-11-17
 
 - `start_doc_review` no longer starts a second server for a folder that a standalone server already serves (two servers would write the same comments and drift apart). It returns that server's URL and the `store` name to pass to the other tools.

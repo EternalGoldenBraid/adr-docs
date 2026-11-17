@@ -3,7 +3,8 @@
 // Comments are saved to disk and stay unread until an agent session reads them; online agents,
 // the store's owner included, are told over the mesh.
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { realpathSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { resolveLaunch, USAGE } from "../src/launch.mjs";
 import { startDocumentPreview } from "../src/preview.mjs";
 import { spawn } from "node:child_process";
@@ -90,6 +91,12 @@ try {
   process.exit(2);
 }
 if (process.env.ADR_WAIT_PID) await waitForExit(Number(process.env.ADR_WAIT_PID)); // a restart: let the old server free its port
+// One server per folder: a second one would write the same comments from its own in-memory copy.
+const running = listServers(storageRoot).find(row => row.store === launch.store || (row.standalone && row.root && realpathSync(row.root) === dirname(realpathSync(launch.document))));
+if (running) {
+  console.log(`${displayUrl(running)}  already running (pid ${running.pid}, store ${running.store}); adr tui to restart or stop`);
+  process.exit(running.store === launch.store ? 0 : 1);
+}
 launch.name ??= readHistory(storageRoot).find(row => row.store === launch.store)?.name;
 const shown = url => launch.name ? url.replace("127.0.0.1", `${launch.name}.localhost`) : url;
 const startArgs = port => [launch.document, "--port", String(port), "--store", launch.store, ...(launch.name ? ["--name", launch.name] : [])];
