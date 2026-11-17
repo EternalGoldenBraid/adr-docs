@@ -142,5 +142,8 @@ export function classificationConfig(documentRoot) {
 
 export function treeThemeConfig(documentRoot, options) {
   const pages = readPageTree(documentRoot, options);
-  return { nav: topBar(pages), pageTree: pages, workstreams: workstreamSummary(documentRoot), classification: classificationConfig(documentRoot) };
+  // The static build gets VitePress's built-in fuzzy search. The live preview keeps `/` for its own :grep.
+  const search = options?.publishedOnly && process.argv.includes("build")
+    ? { search: { provider: "local", options: { miniSearch: { searchOptions: { fuzzy: 0.2, prefix: true } } } } } : {};
+  return { nav: topBar(pages), pageTree: pages, workstreams: workstreamSummary(documentRoot), classification: classificationConfig(documentRoot), ...search };
 }
