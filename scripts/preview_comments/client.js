@@ -69,11 +69,11 @@
       .thread-links select{width:auto;max-width:180px;border-radius:999px;padding:2px 8px;font-size:12px}
       details.quote-box{margin-bottom:8px}details.quote-box summary{cursor:pointer;color:#b7c1ce;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
       .reply-form{position:sticky;bottom:0;margin:0!important;padding:10px 20px 14px;background:#1b1d22;border-top:1px solid #3a404a}
-      .reply-form textarea{min-height:56px}.reply-form .actions{margin-top:8px}
+      textarea{field-sizing:content}.reply-form textarea{min-height:56px;max-height:240px}.reply-form .actions{margin-top:8px}
       .thread-messages{padding-bottom:6px}
       .note{margin:8px 0;padding:8px 12px;background:#252a32;border-radius:10px}.note.copilot{background:#1e2a3a;margin-right:36px}.note.mine{margin-left:36px}
       .note .tools{opacity:0;transition:opacity .1s}.note:hover .tools,.note:focus-within .tools{opacity:1}
-      .note p{margin:6px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}.note .speak{background:none;border:0;padding:0 2px;cursor:pointer;opacity:.5;font-size:12px}.note .speak:hover{opacity:1}.reader{display:flex;align-items:center;gap:6px;max-width:390px;margin:8px 0;padding:6px 10px;border:1px solid #74c0fc;border-radius:8px;background:#1b1d22}.reader[hidden]{display:none}.reader button{background:#2a2f38;border:1px solid #3a404a;border-radius:6px;color:inherit;padding:2px 8px;cursor:pointer}.reader button:focus-visible{outline:2px solid #74c0fc}.reader .reader-pos{margin-left:auto;font-size:12px;opacity:.8}.reply-target{display:flex;gap:8px;align-items:baseline;margin:0 0 6px;padding:4px 8px;border-left:3px solid #74c0fc;background:#23272e;font-size:12px}.reply-target[hidden]{display:none}.reply-target span{flex:1;overflow-wrap:anywhere}.reply-target button,.note .quote-ref{background:none;border:0;color:inherit;cursor:pointer;padding:0}.note .quote-ref{display:block;text-align:left;margin-top:6px;padding:2px 8px;border-left:3px solid #74c0fc;opacity:.8;font-size:12px;overflow-wrap:anywhere}.note .quote-ref:hover{opacity:1}.note a{color:#74c0fc}.note p img{display:block;max-width:100%;border-radius:6px;margin:6px 0}.note code{background:#2a2f38;padding:0 4px;border-radius:3px;font:12px ui-monospace,monospace}
+      .note p{margin:6px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}.note blockquote{margin:6px 0 0;padding:0 0 0 10px;border-left:3px solid #4a5260;color:#b7c1ce}.note .table-wrap{overflow-x:auto;margin:6px 0 0}.note table{border-collapse:collapse;font-size:12px}.note th,.note td{border:1px solid #3a404a;padding:3px 8px;text-align:left;white-space:nowrap}.note th{background:#1b1f27}.note .speak{background:none;border:0;padding:0 2px;cursor:pointer;opacity:.5;font-size:12px}.note .speak:hover{opacity:1}.reader{display:flex;align-items:center;gap:6px;max-width:390px;margin:8px 0;padding:6px 10px;border:1px solid #74c0fc;border-radius:8px;background:#1b1d22}.reader[hidden]{display:none}.reader button{background:#2a2f38;border:1px solid #3a404a;border-radius:6px;color:inherit;padding:2px 8px;cursor:pointer}.reader button:focus-visible{outline:2px solid #74c0fc}.reader .reader-pos{margin-left:auto;font-size:12px;opacity:.8}.reply-target{display:flex;gap:8px;align-items:baseline;margin:0 0 6px;padding:4px 8px;border-left:3px solid #74c0fc;background:#23272e;font-size:12px}.reply-target[hidden]{display:none}.reply-target span{flex:1;overflow-wrap:anywhere}.reply-target button,.note .quote-ref{background:none;border:0;color:inherit;cursor:pointer;padding:0}.note .quote-ref{display:block;text-align:left;margin-top:6px;padding:2px 8px;border-left:3px solid #74c0fc;opacity:.8;font-size:12px;overflow-wrap:anywhere}.note .quote-ref:hover{opacity:1}.note a{color:#74c0fc}.note p img{display:block;max-width:100%;border-radius:6px;margin:6px 0}.note code{background:#2a2f38;padding:0 4px;border-radius:3px;font:12px ui-monospace,monospace}
       a{color:#74c0fc}
       .contextual{display:flex;gap:6px;align-items:center;padding:6px;background:#1b1d22;border:1px solid #59616d;border-radius:10px;box-shadow:0 8px 24px #0008}
       .contextual button{padding:5px 10px;border-radius:7px}
@@ -1061,6 +1061,61 @@
     if (last < text.length) fragment.append(text.slice(last));
     return fragment;
   }
+  // Block Markdown for messages: tables and "> " quotes (nested), the rest stays pre-wrapped text. Built from DOM nodes only.
+  const tableCells = line => line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map(cell => cell.trim());
+  const isRule = line => /^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?$/.test(line.trim());
+  // A table whose rows were flattened onto one line (older quotes) is cut back into rows by its column count.
+  function unflattenTable(line) {
+    const parts = line.split("|").map(cell => cell.trim());
+    const rule = parts.filter(cell => /^:?-{3,}:?$/.test(cell)).length;
+    if (!rule || line.includes("\n")) return [line];
+    const cells = parts.filter(cell => cell !== "");
+    const rows = [];
+    for (let i = 0; i < cells.length; i += rule) rows.push(`| ${cells.slice(i, i + rule).join(" | ")} |`);
+    return rows;
+  }
+  function blockMarkdown(text) {
+    const root = document.createElement("div");
+    root.className = "body";
+    const lines = text.split("\n").flatMap(line => /^\s*\|.*\|\s*:?-{3,}:?\s*\|/.test(line) ? unflattenTable(line) : [line]);
+    let paragraph = [];
+    const flush = () => {
+      if (!paragraph.length) return;
+      const p = document.createElement("p");
+      p.append(inlineMarkdown(paragraph.join("\n")));
+      root.append(p);
+      paragraph = [];
+    };
+    for (let i = 0; i < lines.length;) {
+      if (/^>/.test(lines[i])) {
+        flush();
+        const quoted = [];
+        while (i < lines.length && /^>/.test(lines[i])) quoted.push(lines[i++].replace(/^> ?/, ""));
+        const quote = document.createElement("blockquote");
+        quote.append(...blockMarkdown(quoted.join("\n")).childNodes);
+        root.append(quote);
+      } else if (/^\s*\|/.test(lines[i]) && i + 1 < lines.length && isRule(lines[i + 1])) {
+        flush();
+        const table = document.createElement("table");
+        const head = tableCells(lines[i]);
+        const tr = document.createElement("tr");
+        for (const cell of head) { const th = document.createElement("th"); th.append(inlineMarkdown(cell)); tr.append(th); }
+        table.append(tr);
+        i += 2;
+        while (i < lines.length && /^\s*\|/.test(lines[i])) {
+          const row = document.createElement("tr");
+          for (const cell of tableCells(lines[i++])) { const td = document.createElement("td"); td.append(inlineMarkdown(cell)); row.append(td); }
+          table.append(row);
+        }
+        const wrap = document.createElement("div");
+        wrap.className = "table-wrap";
+        wrap.append(table);
+        root.append(wrap);
+      } else paragraph.push(lines[i++]);
+    }
+    flush();
+    return root;
+  }
   function renderNote(author, text, at, opts = {}) {
     const note = document.createElement("article");
     note.className = `${opts.note ? "note private" : "note"} ${author !== "You" ? "copilot" : "mine"}`;
@@ -1068,8 +1123,7 @@
     if (opts.from) note.dataset.from = opts.from;
     const label = document.createElement("small");
     label.textContent = `${author}${opts.to?.length ? ` → ${opts.to.join(", ")}` : ""}${opts.note ? " · private note" : ""} · ${new Date(at).toLocaleString()}${opts.edited ? " · edited" : ""}`;
-    const body = document.createElement("p");
-    body.append(inlineMarkdown(text));
+    const body = blockMarkdown(text);
     const speak = document.createElement("button");
     speak.type = "button"; speak.className = "speak"; speak.textContent = "🔊"; speak.title = "Read aloud (:read)";
     speak.addEventListener("click", () => readAloud([text]));
@@ -1479,6 +1533,7 @@
       if (values.reply !== undefined) {
         replyDrafts.delete(commentId);
         replyInput.value = "";
+        fitReply();
         setReplyTarget(null);
         host.dataset.replyDrafts = String([...replyDrafts.values()].filter(draft => draft.text.trim()).length);
         message("Reply saved");
@@ -1532,14 +1587,41 @@
     if (target) row.firstElementChild.textContent = `↩ ${target.author}: “${target.quote.slice(0, 160)}${target.quote.length > 160 ? "…" : ""}”`;
   }
   find(".reply-target button").addEventListener("click", () => setReplyTarget(null));
+  // The selection as Markdown: table rows keep their cells (| a | b |), other text its line breaks.
+  function selectedMarkdown(range) {
+    const holder = document.createElement("div");
+    holder.append(range.cloneContents());
+    let rows = [...holder.querySelectorAll("tr")];
+    // A selection inside one row has no <tr> in the clone, only its cells.
+    if (!rows.length && holder.querySelector("th, td")) { const row = document.createElement("tr"); row.append(...holder.querySelectorAll("th, td")); rows = [row]; }
+    if (!rows.length) return holder.textContent.trim();
+    return rows.map((row, i) => {
+      const line = `| ${[...row.children].map(cell => cell.textContent.trim()).join(" | ")} |`;
+      return i === 0 ? `${line}\n|${" --- |".repeat(row.children.length)}` : line;
+    }).join("\n");
+  }
+  const autoSized = CSS.supports("field-sizing", "content");
+  function fitReply() {
+    if (autoSized) return;
+    replyInput.style.height = "auto";
+    replyInput.style.height = `${Math.min(replyInput.scrollHeight + 2, 240)}px`;
+  }
+  replyInput.addEventListener("input", fitReply);
+  textarea.addEventListener("input", () => { if (!autoSized) { textarea.style.height = "auto"; textarea.style.height = `${Math.min(textarea.scrollHeight + 2, 240)}px`; } });
   function replyToMessage(item) {
     const note = item?.closest?.(".note");
     if (!note?.dataset.mid) { message("Focus a message (j/k), optionally select text in it, then q", true); return; }
     const picked = shadow.getSelection?.() ?? getSelection();
-    let quote = picked.rangeCount && note.contains(picked.getRangeAt(0).commonAncestorContainer) ? picked.toString().trim() : "";
-    quote ||= (note.querySelector("p")?.textContent || "").trim();
+    let quote = picked.rangeCount && note.contains(picked.getRangeAt(0).commonAncestorContainer) ? selectedMarkdown(picked.getRangeAt(0)) : "";
+    quote ||= (note.querySelector(".body p")?.textContent || "").trim();
     const author = note.classList.contains("copilot") ? note.dataset.from || "Copilot" : "You";
-    setReplyTarget({ id: note.dataset.mid, author, quote: quote.slice(0, 600) });
+    quote = quote.slice(0, 600);
+    // Each q adds another quote to the draft, so a reply can answer several passages in the order they are placed.
+    const draft = replyInput.value;
+    replyInput.value = `${draft}${draft && !draft.endsWith("\n\n") ? (draft.endsWith("\n") ? "\n" : "\n\n") : ""}${quote.split("\n").map(line => `> ${line}`).join("\n")}\n\n`;
+    replyInput.setSelectionRange(replyInput.value.length, replyInput.value.length);
+    fitReply();
+    if (!replyTarget) setReplyTarget({ id: note.dataset.mid, author, quote });
     // Address the reply like the quoted message. Agent replies don't record which agent wrote them, so use whoever the message before it was sent to.
     const thread = currentThread(), items = thread ? [thread, ...thread.replies] : [], at = items.findIndex(m => m.id === note.dataset.mid);
     let to = items[at]?.from ? [items[at].from] : undefined;
@@ -1555,8 +1637,7 @@
     draft.submitted = replyInput.value;
     replyDrafts.set(selectedThread, draft);
     const target = replyTarget;
-    const quoted = target ? "> " + target.quote.replace(/\s+/g, " ").slice(0, 300) + "\n\n" : "";
-    updateThread({ id: draft.id, reply: quoted + replyInput.value, ...(target ? { inReplyTo: { id: target.id, quote: target.quote } } : {}), ...toValue(replyTo, !find(".to-reply").hidden) });
+    updateThread({ id: draft.id, reply: replyInput.value, ...(target ? { inReplyTo: { id: target.id, quote: target.quote } } : {}), ...toValue(replyTo, !find(".to-reply").hidden) });
     rememberTo(replyTo);
   });
   find(".thread-resolve").addEventListener("click", () => {

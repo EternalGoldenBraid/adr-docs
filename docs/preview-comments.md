@@ -287,7 +287,7 @@ With a team configured, the **To:** recipients in a comment box form a grid; pre
 
 ## Replying to one message
 
-In a thread, focus a message (`j`/`k`), optionally select a passage in it, and press `q`: the reply box shows what you are answering. The reply is stored with a link to that message (`inReplyTo`), shows the quote above it, and carries the quote as a `>` line so agents see it. `u` on a reply jumps to the quoted message; clicking the quote does too.
+In a thread, focus a message (`j`/`k`), optionally select a passage in it, and press `q`: the quote is added to the reply box as `>` lines. Press `q` again on another passage (or another message) and the next quote is appended, so you can write between the quotes and answer several passages in one reply, in the order you place them. A selection inside a table keeps its rows. The first quote also links the reply to that message. The reply is stored with a link to that message (`inReplyTo`), shows that quote above it, and carries the quotes as `>` lines so agents see them. Messages render `>` quotes and Markdown tables; the reply and comment boxes grow with the text, up to a maximum height. `u` on a reply jumps to the quoted message; clicking the quote does too.
 
 ## Read aloud (local only)
 
