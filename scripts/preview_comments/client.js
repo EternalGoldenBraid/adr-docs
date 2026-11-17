@@ -1227,8 +1227,8 @@
   function threadNodes(comment, run) {
     const nodes = [];
     if (comment.comment) {
-      nodes.push(renderNote(comment.author === "copilot" ? "Copilot" : "You", comment.comment, comment.at, {
-        note: comment.note, edited: comment.commentEdited, mid: comment.id, to: comment.author !== "copilot" ? comment.to : undefined,
+      nodes.push(renderNote(comment.author === "copilot" ? comment.from || "Copilot" : "You", comment.comment, comment.at, {
+        note: comment.note, edited: comment.commentEdited, mid: comment.id, from: comment.from, to: comment.author !== "copilot" ? comment.to : undefined,
         onEdit: text => run({ editComment: text }),
       }));
     }

@@ -173,11 +173,14 @@ export async function connectDocumentReview({
           refs: { type: "array", items: { type: "string" }, description: "Ids of existing threads this one relates to; shown as links with backlinks." },
           color: { type: "string", enum: ["red", "yellow", "green", "blue", "pink"], description: "Defaults to red (the agent colour)." },
           to: { type: "array", items: { type: "string" }, description: "Agent names that should see this thread; omit for the preview's owner only." },
+          as: { type: "string", description: "Your agent name, shown as the sender and used as the reply address." },
           store: { type: "string", description: "Server name (e.g. demo), site directory or store id of the preview that holds the page; defaults to your own standalone server." },
         },
       },
       handler: args => {
-        const { store: given, ...input } = args;
+        const { store: given, as, ...input } = args;
+        if (as) input.from = as;
+        input.fromSession = session.sessionId;
         const store = remoteStore({ store: given });
         if (store) return remoteBridge(stateRoot(), store, "/agent-add", { method: "POST", body: JSON.stringify(input) }).then(JSON.stringify, remoteFailure);
         return JSON.stringify(requirePreview().bridge.add(input));
