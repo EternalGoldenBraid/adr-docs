@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.79.1 - 2026-11-17
+
+- Graphs open fitted again (the 0.79.0 start-zoomed behaviour is removed).
+- The index (left sidebar and "On this page") is hidden by default. A **+ Show index** / **− Hide index** button, or `\`, toggles it; the choice is remembered.
+
 ## 0.79.0 - 2026-11-17
 
 - Graphs (DocGraph) now open at a readable size: if fitting everything would make node text small, the view starts at 100 % zoom (centred, or at the top-left corner for a tall graph) and the rest is a pan away. `0` or `:fit` still shows all.

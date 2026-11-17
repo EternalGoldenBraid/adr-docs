@@ -328,6 +328,6 @@ Content tables with more than two rows get a **Group by** selector above them. C
 
 The Team panel's **Room** tab (`-` then `m`) lists the rooms you are in. A room is a shared conversation among three or more mesh members, and its posts are visible only inside it, never as direct messages. **＋ New room** asks for a topic and members; agents can open one with `room_open`. Posting as you uses Ctrl+Enter. Rooms live in the mesh database, so any harness with the room tools sees the same room.
 
-## Focus mode
+## Index toggle
 
-The **⇤ focus** button under the top bar, or `\` outside text fields, hides the side columns (index and "On this page") so the page and its graphs use the full width. It is remembered. Graphs open at a readable zoom; `0` or `:fit` shows the whole graph.
+The index (side columns: the sidebar and "On this page") is hidden so the page and its graphs use the full width. **+ Show index** under the top bar, or `\` outside text fields, shows it again (**− Hide index** hides it); the choice is remembered. Graphs open fitted; `+ - 0` zoom and `:fit` refits.
