@@ -832,7 +832,7 @@
         arc.append(mk("animateTransform", { attributeName: "transform", type: "rotate", from: `0 ${p.x} ${p.y}`, to: `360 ${p.x} ${p.y}`, dur: "3.1s", repeatCount: "indefinite" }));
         out.push(arc);
       }
-      out.push(mk("text", { x: p.x, y: p.y + 26 }, m.name));
+      out.push(mk("text", { x: p.x, y: p.y + 26, ...(m.session ? { style: `fill:${agentLook(m.name).color}` } : {}) }, m.session ? `${agentLook(m.name).icon} ${m.name}` : m.name));
       const doing = m.statusLine?.doing || "";
       if (doing) out.push(mk("text", { x: p.x, y: p.y + 38, opacity: ".7" }, doing.length > 30 ? doing.slice(0, 29) + "…" : doing));
     }
@@ -874,7 +874,8 @@
         const cell = (text, dot) => { const td = document.createElement("td"); if (dot) { const d = document.createElement("span"); d.className = "dot " + dot; td.append(d); } td.append(text); row.append(td); };
         const l = m.statusLine;
         const st = meshState(m);
-        cell(m.name);
+        cell(m.session ? `${agentLook(m.name).icon} ${m.name}` : m.name);
+        if (m.session) row.lastChild.style.color = agentLook(m.name).color;
         cell(st === "offline" ? m.status : st === "active" ? "active" : st, st);
         const d = row.lastChild.querySelector(".dot");
         if (d) { d.style.background = ["active", "offline"].includes(st) ? "none" : MESH_COLOURS[st]; if (["active", "offline"].includes(st)) d.style.boxShadow = `inset 0 0 0 2px ${MESH_COLOURS[st]}`; if (st === "offline") d.style.opacity = ".4"; }
@@ -1119,13 +1120,27 @@
     flush();
     return root;
   }
+  // Colour and icon come from the name alone, so a member looks the same in chats, the roster and the graph.
+  const AGENT_ICONS = ["🦊", "🐙", "🦉", "🐢", "🦄", "🐝", "🦋", "🐳", "🦔", "🐧", "🦜", "🐞", "🦀", "🐺", "🦎", "🐘", "🦅", "🐬", "🦒", "🐿️", "🦓", "🐌", "🦈", "🐸"];
+  function agentLook(name) {
+    let hash = 0;
+    for (const ch of String(name)) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+    return { color: `hsl(${hash % 360} 70% 68%)`, icon: AGENT_ICONS[(hash >>> 9) % AGENT_ICONS.length] };
+  }
   function renderNote(author, text, at, opts = {}) {
     const note = document.createElement("article");
     note.className = `${opts.note ? "note private" : "note"} ${author !== "You" ? "copilot" : "mine"}`;
     if (opts.mid) note.dataset.mid = opts.mid;
     if (opts.from) note.dataset.from = opts.from;
     const label = document.createElement("small");
-    label.textContent = `${author}${opts.to?.length ? ` → ${opts.to.join(", ")}` : ""}${opts.note ? " · private note" : ""} · ${new Date(at).toLocaleString()}${opts.edited ? " · edited" : ""}`;
+    const who = document.createElement("b");
+    who.className = "who";
+    if (author !== "You" && author !== "Copilot") {
+      const look = agentLook(author);
+      who.textContent = `${look.icon} ${author}`;
+      who.style.color = look.color;
+    } else who.textContent = author;
+    label.append(who, `${opts.to?.length ? ` → ${opts.to.join(", ")}` : ""}${opts.note ? " · private note" : ""} · ${new Date(at).toLocaleString()}${opts.edited ? " · edited" : ""}`);
     const body = blockMarkdown(text);
     const speak = document.createElement("button");
     speak.type = "button"; speak.className = "speak"; speak.textContent = "🔊"; speak.title = "Read aloud (:read)";

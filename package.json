@@ -1,6 +1,6 @@
 {
   "name": "agent-doc-review",
-  "version": "0.72.1",
+  "version": "0.73.0",
   "private": true,
   "license": "MIT",
   "type": "module",
