@@ -862,7 +862,7 @@
       return detailRows(m, row);
     })];
   }
-  const heat = pct => pct < 50 ? "#9ccc65" : pct < 80 ? "#ffd500" : "#f38ba8";
+  const heat = pct => pct < 50 ? "#9ccc65" : pct < 80 ? "#ff8c1a" : "#e5484d";
   // btop/nvtop-style detail under a machine's load row: one bar per core, one line per GPU.
   function detailRows(m, row) {
     if (!m.cores?.length && !m.gpus?.length) return row;

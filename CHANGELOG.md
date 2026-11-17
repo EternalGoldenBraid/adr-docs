@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.75.2 - 2026-11-17
+
+- Team load panel: load colours are now green/orange/red (distinct from the agent-status legend) with a key, and the −60 min/now axis sits under each machine's sparkline.
+
 ## 0.75.1 - 2026-11-17
 
 - Team load panel: the load history and the per-core/GPU detail now sit together per machine (no duplicated rows); per-core bars have a 0–100 % scale, a % number per core and a per-host average; GPU util/VRAM text moved outside the bars for contrast.
