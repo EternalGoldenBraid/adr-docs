@@ -1,5 +1,6 @@
 // Running ADR servers, found through the connection.json each comment bridge writes into its store.
 import { spawn } from "node:child_process";
+import { appendFileSync } from "node:fs";
 import { mkdirSync, openSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -66,7 +67,7 @@ export function startDetached(storageRoot, argv, env = {}) {
   const store = argv[argv.indexOf("--store") + 1] ?? "adr";
   const log = openSync(join(storageRoot, `${store}.log`), "a");
   const child = spawn(process.execPath, [LAUNCHER, ...argv.filter(arg => arg !== "-d" && arg !== "--detach")], {
-    detached: true, stdio: ["ignore", log, log], env: { ...process.env, ...env },
+    detached: true, stdio: ["ignore", log, log], env: { ...process.env, ADR_SUPERVISE: "1", ...env },
   });
   child.unref();
   return child;
@@ -76,4 +77,30 @@ export async function waitForExit(pid, ms = 10000) {
   const end = Date.now() + ms;
   while (Date.now() < end && alive(pid)) await new Promise(done => setTimeout(done, 100));
   return !alive(pid);
+}
+
+// Why a server stopped: written to <store>/exit.json and appended to <store>.log so a silent death can be explained.
+export function recordExit(storageRoot, store, reason) {
+  const entry = { at: new Date().toISOString(), pid: process.pid, reason };
+  try {
+    mkdirSync(join(storageRoot, store), { recursive: true });
+    writeFileSync(join(storageRoot, store, "exit.json"), JSON.stringify(entry));
+    appendFileSync(join(storageRoot, `${store}.log`), `${entry.at} pid ${entry.pid} exit: ${reason}\n`);
+  } catch { /* the process is ending anyway */ }
+}
+
+// Servers that stopped within `hours` and are not running now, with the recorded reason.
+export function listDeadServers(storageRoot, hours = 48) {
+  const running = new Set(listServers(storageRoot).map(row => row.store));
+  const rows = [];
+  let stores = [];
+  try { stores = readdirSync(storageRoot); } catch { return rows; }
+  for (const store of stores) {
+    if (running.has(store)) continue;
+    try {
+      const exit = JSON.parse(readFileSync(join(storageRoot, store, "exit.json"), "utf8"));
+      if (Date.now() - Date.parse(exit.at) < hours * 3600e3) rows.push({ store, ...exit });
+    } catch { /* never recorded */ }
+  }
+  return rows.sort((a, b) => b.at.localeCompare(a.at));
 }

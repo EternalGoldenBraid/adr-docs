@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.65.0 - 2026-11-17
+
+- Server exit log: every stop is recorded with its reason (signal, uncaught exception, agent process exit) in `<store>/exit.json` and `~/.local/state/agent-doc-review/<store>.log`.
+- Watchdog: servers started with `adr -d` (or the TUI) now run under a supervisor that restarts them on the same port and store if they die without a clean stop (gives up after 5 deaths in 2 minutes). A server attached to an agent session (`start_doc_review`) still ends with that session.
+- `list_doc_review_servers` returns `{running, recentlyStopped}` with the exit reasons of the last 48 h.
+
 ## 0.64.0 - 2026-11-16
 
 - `:grep -m <words>` is a semantic search over page paragraphs and comment threads, run locally on CPU (bge-small through an isolated `uv run --with fastembed` worker, started on demand and stopped after 10 idle minutes). Embeddings are cached on disk.
