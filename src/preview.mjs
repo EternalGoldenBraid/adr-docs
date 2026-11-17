@@ -36,13 +36,14 @@ export async function startDocumentPreview({
   let server;
   let bridge;
   let node;
-  // Quiet notes to addressed agents go out as a non-agent mesh node, joined on first use; absent mesh means no notes.
+  // Notes to addressed agents go out at high priority: they carry the human's words, and a quiet hint (70 characters, "may postpone") was being ignored.
+  // They go out as a non-agent mesh node, joined on first use; absent mesh means no notes.
   const mesh = { async send(session, content) {
     if (!node) {
       const module = await import(pathToFileURL(join(homedir(), ".copilot", "extensions", "agent-mesh", "node.mjs")).href);
       node = module.joinMesh({ name: "agent-doc-review-site", kind: "site", cwd: documentRoot });
     }
-    const result = node.send({ recipient_session_id: session, content, priority: "normal" });
+    const result = node.send({ recipient_session_id: session, content, priority: "high" });
     if (result?.error) throw new Error(result.error);
   } };
   let closed = false;
