@@ -10,6 +10,7 @@ import { execFile } from "node:child_process";
 import { pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import { readRoster } from "../../src/roster.mjs";
+import { readPageTree } from "../../src/page-tree.mjs";
 
 function append(file, record) {
   const fd = openSync(file, "a", 0o600);
@@ -527,6 +528,25 @@ export async function startCommentBridge({
         const all = [...comments.values()];
         const recent = all.filter(c => !c.resolved || Date.parse(c.updatedAt || c.at) >= cutoff);
         return reply(response, 200, { sessionId, revision, seenInit, comments: recent, archived: all.length - recent.length });
+      }
+      if (request.url === "/viewed" && (request.method === "GET" || request.method === "POST")) {
+        const pages = readPageTree(root, { grouped: false });
+        const now = Object.fromEntries(pages.map(page => [page.link, { slug: page.slug, hash: createHash("sha1").update(readFileSync(join(root, page.slug + ".md"))).digest("hex") }]));
+        const file = join(data, "viewed.json");
+        let seen = {};
+        try { seen = JSON.parse(readFileSync(file, "utf8")); } catch { /* first use: everything now counts as viewed */ }
+        const save = () => writeFileSync(file, JSON.stringify(seen), { mode: 0o600 });
+        if (!existsSync(file)) { seen = Object.fromEntries(Object.entries(now).map(([link, row]) => [link, row.hash])); save(); }
+        if (request.method === "POST") {
+          const body = [];
+          for await (const chunk of request) { body.push(chunk); if (body.length > 64) break; }
+          let link;
+          try { link = JSON.parse(Buffer.concat(body).toString("utf8")).path; } catch { return reply(response, 400, { error: "Invalid JSON." }); }
+          const key = typeof link === "string" ? link.replace(/\.html$/, "").replace(/\/index$/, "/") || "/" : "";
+          const hit = now[key] ? key : now[key + "/"] ? key + "/" : undefined;
+          if (hit) { seen[hit] = now[hit].hash; save(); }
+        }
+        return reply(response, 200, { pages: Object.fromEntries(Object.entries(now).flatMap(([link, row]) => seen[link] === undefined ? [[link, "new"]] : seen[link] !== row.hash ? [[link, "changed"]] : [])) });
       }
       if (request.method === "GET" && request.url === "/settings") return reply(response, 200, effective());
       if (request.method === "GET" && request.url === "/mesh") return reply(response, 200, { members: await meshStatus(), edges: meshEdges, machines: await machines(), errors: Object.fromEntries(remoteErrors) });

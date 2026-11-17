@@ -22,6 +22,10 @@ const awaiting = ref({})
 const waits = slug => awaiting.value[slug === 'index' ? '/' : '/' + slug] || 0
 const openBy = ref({})
 const opens = slug => openBy.value[slug === 'index' ? '/' : '/' + slug] || 0
+const viewed = ref({})
+const newTitle = slug => changed(slug) === 'new' ? 'New page since your last visit' : 'Changed since your last visit'
+const changed = slug => viewed.value[bySlug.value[slug]?.link]
+const onViewed = e => { viewed.value = e.detail?.pages || {} }
 const tints = ref({})
 const hidden = slug => descendants(slug).reduce((n, d) => n + waits(d), 0)
 const hiddenTint = slug => { const d = descendants(slug).find(x => waits(x)); return d ? tint(d) : undefined }
@@ -130,22 +134,24 @@ onMounted(() => {
   window.addEventListener('keydown', onKey, true)
   document.addEventListener('preview-comment-mode', onMode)
   document.addEventListener('preview-comment-awaiting', onAwait)
+  document.addEventListener('preview-comment-viewed', onViewed)
 })
 onUnmounted(() => {
   window.removeEventListener('keydown', onKey, true)
   document.removeEventListener('preview-comment-mode', onMode)
   document.removeEventListener('preview-comment-awaiting', onAwait)
+  document.removeEventListener('preview-comment-viewed', onViewed)
 })
 </script>
 
 <template>
 <div v-if="hasTree && bySlug[current]" class="pt-bar" :class="{ pad }">
   <nav v-if="trail.length" class="pt-crumbs" aria-label="Breadcrumb">
-    <template v-for="p in trail" :key="p.slug"><a :href="withBase(p.link)">{{ p.title }}</a><b v-if="waits(p.slug)" class="pt-dot" :style="tint(p.slug)" title="Threads with something new for you">{{ waits(p.slug) }}</b><span>›</span></template>
-    <strong>{{ bySlug[current].title }}</strong><b v-if="waits(current)" class="pt-dot" :style="tint(current)" title="Threads with something new for you">{{ waits(current) }}</b>
+    <template v-for="p in trail" :key="p.slug"><a :href="withBase(p.link)">{{ p.title }}</a><b v-if="waits(p.slug)" class="pt-dot" :style="tint(p.slug)" title="Threads with something new for you">{{ waits(p.slug) }}</b><i v-if="changed(p.slug)" class="pt-new" :title="newTitle(p.slug)"></i><span>›</span></template>
+    <strong>{{ bySlug[current].title }}</strong><b v-if="waits(current)" class="pt-dot" :style="tint(current)" title="Threads with something new for you">{{ waits(current) }}</b><i v-if="changed(current)" class="pt-new" :title="newTitle(current)"></i>
   </nav>
   <span v-if="children.length" class="pt-children">
-    Pages below: <a v-for="c in children" :key="c.slug" :href="withBase(c.link)">{{ c.title }}<b v-if="waits(c.slug)" class="pt-dot" :style="tint(c.slug)">{{ waits(c.slug) }}</b></a>
+    Pages below: <a v-for="c in children" :key="c.slug" :href="withBase(c.link)">{{ c.title }}<b v-if="waits(c.slug)" class="pt-dot" :style="tint(c.slug)">{{ waits(c.slug) }}</b><i v-if="changed(c.slug)" class="pt-new" :title="newTitle(c.slug)"></i></a>
   </span>
   <button class="pt-open" title="Page tree (t)" @click="open ? (open = false) : show()">☰ Tree<b v-if="Object.keys(awaiting).length" class="pt-dot" :style="tintAll" title="Threads with something new for you">{{ Object.values(awaiting).reduce((a, b) => a + b, 0) }}</b></button>
   <div v-if="open" class="pt-pop" ref="list" tabindex="0" role="tree">
@@ -158,7 +164,7 @@ onUnmounted(() => {
     <div v-for="(r, i) in rows" :key="r.slug" class="pt-row" :class="{ cur: r.slug === current, at: i === cursor }"
       :style="{ paddingLeft: 10 + r.depth * 18 + 'px' }" role="treeitem" @click="go(r.link)">
       <button v-if="r.kids" class="pt-fold" tabindex="-1" @click.stop="fold(r, !collapsed.has(r.slug))">{{ collapsed.has(r.slug) ? '▸' : '▾' }}</button>
-      <span v-else class="pt-fold"></span><input v-if="selecting" type="checkbox" class="pt-check" tabindex="-1" :checked="picked.has(r.slug)" title="Select this page for export" @click.stop="pick(r)">{{ r.title }}<button v-if="selecting && r.kids" class="pt-kids" tabindex="-1" title="Select or clear this page and all pages below it" @click.stop="pick(r, true)">+ below</button><b v-if="waits(r.slug)" class="pt-dot" :style="tint(r.slug)" title="Threads with something new for you">{{ waits(r.slug) }}</b><b v-if="opens(r.slug)" class="pt-ring" title="Open threads waiting on the agent">{{ opens(r.slug) }}</b><b v-if="collapsed.has(r.slug) && hidden(r.slug)" class="pt-dot" :style="hiddenTint(r.slug)" title="Something new on pages folded below">↓{{ hidden(r.slug) }}</b>
+      <span v-else class="pt-fold"></span><input v-if="selecting" type="checkbox" class="pt-check" tabindex="-1" :checked="picked.has(r.slug)" title="Select this page for export" @click.stop="pick(r)">{{ r.title }}<button v-if="selecting && r.kids" class="pt-kids" tabindex="-1" title="Select or clear this page and all pages below it" @click.stop="pick(r, true)">+ below</button><b v-if="waits(r.slug)" class="pt-dot" :style="tint(r.slug)" title="Threads with something new for you">{{ waits(r.slug) }}</b><i v-if="changed(r.slug)" class="pt-new" :title="newTitle(r.slug)"></i><b v-if="opens(r.slug)" class="pt-ring" title="Open threads waiting on the agent">{{ opens(r.slug) }}</b><b v-if="collapsed.has(r.slug) && hidden(r.slug)" class="pt-dot" :style="hiddenTint(r.slug)" title="Something new on pages folded below">↓{{ hidden(r.slug) }}</b>
     </div>
     <div v-if="selecting" class="pt-export">
       <button :disabled="!picked.size" @click="runExport">Export {{ picked.size || '' }} selected</button>
@@ -184,6 +190,7 @@ onUnmounted(() => {
 .pt-row { display: flex; gap: 4px; align-items: center; padding: 4px 12px; cursor: pointer; }
 .pt-row.cur { font-weight: 700; color: var(--vp-c-brand-1); }
 .pt-row.at { background: var(--vp-c-default-soft); }
+.pt-new { display: inline-block; width: 8px; height: 8px; margin-left: 6px; border-radius: 50%; background: #4dabf7; vertical-align: middle; }
 .pt-ring { margin-left: 6px; padding: 0 5px; border-radius: 999px; border: 1px solid var(--vp-c-text-2); color: var(--vp-c-text-2); font-size: 11px; }
 .pt-dot { margin-left: 6px; padding: 0 6px; border-radius: 999px; background: #e03131; color: #1b1b1f; font-size: 11px; }
 .pt-fold { width: 16px; font-size: 11px; opacity: .7; }

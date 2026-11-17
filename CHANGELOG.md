@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.71.0 - 2026-11-17
+
+- Viewed marks: a blue dot in the page tree, breadcrumb and "Pages below" marks pages that changed or are new since you last left them. A page counts as viewed when you navigate away or close the tab; existing pages count as viewed on first use. State is a hash per page in `<site>/.adr-data/viewed.json` (`/viewed` endpoint).
+
 ## 0.70.0 - 2026-11-17
 
 - Messages render Markdown tables and `>` quotes (nested). Quotes whose table rows were flattened onto one line are cut back into rows.
