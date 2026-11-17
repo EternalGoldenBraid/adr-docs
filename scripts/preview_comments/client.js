@@ -950,23 +950,37 @@
   const loadSettings = () => api("settings").then(value => { settings = value; }).catch(() => {});
   const recipients = () => [...new Set([settings.owner, ...settings.team])];
   const defaultTo = () => settings.default === "last" && settings.last.length ? settings.last : [settings.owner];
+  // Mesh status next to each recipient, so a busy agent is visible before you send.
+  const STATUS_ICONS = { working: "🔨", waiting: "⏳", asking: "❓", idle: "💤", active: "👀", offline: "🌙" };
+  const STATUS_HINT = { working: "busy: mid-task", waiting: "waiting on something", asking: "waiting for an answer", idle: "free", active: "online, state unknown", offline: "offline" };
+  let meshRoster = [], meshRosterAt = 0;
+  const rosterEntry = name => meshRoster.find(m => m.session && [m.name, m.slug].some(n => n && n.toLowerCase() === name.toLowerCase()));
+  function refreshRoster(redraw) {
+    if (Date.now() - meshRosterAt < 15000) return;
+    meshRosterAt = Date.now();
+    api("mesh").then(({ members }) => { meshRoster = members; redraw(); }).catch(() => {});
+  }
   // Chips choose who a message is for. Hidden until a team is configured (:team), so single-agent use is unchanged.
   function chipRow(holder, selected, onChange) {
     holder.hidden = recipients().length < 2;
     if (holder.hidden) return;
+    refreshRoster(() => chipRow(holder, selected, onChange));
     const label = document.createElement("small");
     label.textContent = "To:";
     holder.replaceChildren(label, ...recipients().map(name => {
       const chip = document.createElement("button");
       chip.type = "button";
-      chip.textContent = name;
+      chip.dataset.name = name;
+      const entry = rosterEntry(name), state = entry && meshState(entry);
+      chip.textContent = state ? `${STATUS_ICONS[state]} ${name}` : name;
+      if (state) chip.title = `${state} · ${STATUS_HINT[state]}${entry.statusLine?.doing ? " · " + entry.statusLine.doing : ""}`;
       chip.classList.toggle("on", selected.has(name));
       chip.addEventListener("click", () => {
         if (selected.has(name)) selected.delete(name); else selected.add(name);
         if (!selected.size) selected.add(settings.owner);
         onChange?.();
         chipRow(holder, selected, onChange);
-        [...holder.querySelectorAll("button")].find(button => button.textContent === name)?.focus();
+        [...holder.querySelectorAll("button")].find(button => button.dataset.name === name)?.focus();
       });
       return chip;
     }));
