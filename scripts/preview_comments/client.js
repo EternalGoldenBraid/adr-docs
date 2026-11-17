@@ -1413,7 +1413,13 @@
     await refreshHistory();
   }
   async function refreshHistory() {
-    const result = await api(historyAll ? "history" : "history-recent");
+    // A server older than this client has no /history-recent: fall back to the full history instead of showing nothing.
+    let result;
+    try { result = await api(historyAll ? "history" : "history-recent"); } catch (error) {
+      if (historyAll) throw error;
+      historyAll = true;
+      result = await api("history");
+    }
     sessionId = result.sessionId;
     serverSeenInit = Boolean(result.seenInit);
     historyArchived = result.archived ?? 0;

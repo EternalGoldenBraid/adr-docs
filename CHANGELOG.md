@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.68.2 - 2026-11-17
+
+- Client/server skew no longer hides comments: a client that finds no `/history-recent` (older server) falls back to the full history.
+- `adr list` and tools no longer call a live server dead (and delete its `connection.json`) when its pid is not visible, e.g. from an agent sandbox with its own pid namespace; a server whose port still answers counts as running.
+
 ## 0.68.1 - 2026-11-17
 
 - Fix: the site data directory is now `<site>/.adr-data/` (was `.adr/`, which a site may already use, e.g. as a symlink to the ADR checkout, so comments and a `.gitignore` were written into that checkout). A data directory that resolves outside the site folder is refused. Existing 0.67/0.68 data in `.adr/` is not migrated; move it by hand if you have any.
