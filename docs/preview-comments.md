@@ -318,3 +318,8 @@ In a thread, focus a message (`j`/`k`), optionally select a passage in it, and p
 ## Read aloud (local only)
 
 Comments can be spoken with F5-TTS, cloned from a short reference clip. Start the synthesis server with `node tools/tts.mjs start` (`stop`, `status`). It runs on a GPU host over ssh and is reached through a localhost tunnel. Settings: `ADR_TTS_HOST`, `ADR_TTS_GPU`, `ADR_TTS_VENV`, `ADR_TTS_REF` (reference wav), `ADR_TTS_PORT`, and `ADR_TTS_URL` for the bridge. Audio is cached in `<store>/speech`. The F5-TTS weights are CC-BY-NC: personal use only.
+
+
+## Sorting and grouping tables
+
+Content tables with more than two rows get a **Group by** selector above them. Click a header to sort by it (click again to reverse, a third time to clear); Shift+click adds further sort keys, shown as ▲1 ▲2. Numbers and ISO dates sort by value, other text naturally. Groups collapse by clicking their row. **Reset** clears both. The choice is remembered per page and table in the browser's local storage; the page content is unchanged.

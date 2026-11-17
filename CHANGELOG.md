@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.77.0 - 2026-11-17
+
+- Published site and preview: every content table with more than two rows can be sorted by several keys and grouped. Click a header to sort (again to reverse, a third time to clear), Shift+click adds a further key; **Group by** adds collapsible group rows. The choice is remembered per page and table in the browser. Numbers and ISO dates sort by value.
+
 ## 0.76.0 - 2026-11-17
 
 - To: recipient chips show each agent's mesh status as an icon (🔨 working, ⏳ waiting, ❓ asking, 💤 idle, 👀 online, 🌙 offline) with the current task on hover, so you can see who is busy before sending.

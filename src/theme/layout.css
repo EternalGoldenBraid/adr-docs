@@ -4,3 +4,11 @@
 .VPDoc.has-aside .content-container, .VPDoc .content-container { max-width: 1040px !important; }
 .VPDoc:not(.has-sidebar) .content { max-width: none !important; }
 @media (min-width: 1440px) { .VPDoc .content-container { max-width: 1160px !important; } }
+
+.adr-table-bar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; font-size: 13px; margin: 8px 0 4px; color: var(--vp-c-text-2) }
+.adr-table-bar select, .adr-table-bar button { background: var(--vp-c-bg-soft); color: var(--vp-c-text-1); border: 1px solid var(--vp-c-divider); border-radius: 6px; padding: 2px 8px; font: inherit }
+.adr-table-bar button { cursor: pointer }
+.adr-table-hint { opacity: .7 }
+th.adr-sortable { cursor: pointer; user-select: none }
+th.adr-sortable::after { content: " " attr(data-sort); color: var(--vp-c-brand-1) }
+tr.adr-group td { background: var(--vp-c-bg-soft); font-weight: 600; cursor: pointer }
