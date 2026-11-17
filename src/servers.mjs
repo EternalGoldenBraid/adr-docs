@@ -1,5 +1,5 @@
 // Running ADR servers, found through the connection.json each comment bridge writes into its store.
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { appendFileSync } from "node:fs";
 import { mkdirSync, openSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -22,6 +22,14 @@ function alive(pid) {
 
 const keptStores = storageRoot => new Set(readHistory(storageRoot).filter(row => row.keep).map(row => row.store));
 
+// An agent in its own pid namespace (a sandbox) cannot see the server's pid and would wrongly call it dead and prune it,
+// so a server whose port still accepts connections counts as running.
+function listening(port) {
+  if (!port) return false;
+  const probe = `require("net").connect(${Number(port)},"127.0.0.1").on("connect",()=>process.exit(0)).on("error",()=>process.exit(1))`;
+  return spawnSync(process.execPath, ["-e", probe], { timeout: 1500 }).status === 0;
+}
+
 // Servers whose process is gone leave a stale connection.json; `prune` removes it.
 export function listServers(storageRoot, { prune = false } = {}) {
   const rows = [];
@@ -32,7 +40,7 @@ export function listServers(storageRoot, { prune = false } = {}) {
     let info;
     try { info = JSON.parse(readFileSync(file, "utf8")); } catch { continue; }
     if (!info.pid) continue; // written by an older version, cannot tell if it is running
-    if (!alive(info.pid)) {
+    if (!alive(info.pid) && !listening(new URL(info.previewOrigin ?? "http://x").port)) {
       if (prune) try { unlinkSync(file); } catch { /* already gone */ }
       continue;
     }
