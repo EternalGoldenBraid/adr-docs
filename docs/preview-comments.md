@@ -148,6 +148,12 @@ In the tree popup: `j`/`k` move, `Enter` opens, `h`/`l` fold one row, `zc`/`zo` 
 
 Grouping: put `group-by: status` in an index page's front matter and its child pages that have a `status:` field appear under virtual group nodes (Active, Queued, Proposed, Blocked, Done, Declined; empty groups are hidden). Changing a page's `status` moves it; no `parent:` edits. Group nodes link to `#<status>` on the index page.
 
+## Member colours and icons
+
+Each agent's name is shown with a colour and an animal icon derived from the
+name alone, so it looks the same in chat threads, the Team table and the Team
+graph, in every session. Your own messages stay plain.
+
 ## Full screen
 
 `f` in the history panel (or the ⛶ button) toggles it full screen, with the

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.73.0 - 2026-11-17
+
+- Agent names get a colour and icon derived from the name, in chat threads, the Team table and the Team graph.
+
 ## 0.72.1 - 2026-11-17
 
 - `f` (or ⛶) toggles the comment history and chat panel full screen.
