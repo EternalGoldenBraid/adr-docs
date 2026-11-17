@@ -285,6 +285,10 @@ Links to `/workstreams/<id>` pages show a status chip (status, owner, progress) 
 
 With a team configured, the **To:** recipients in a comment box form a grid; press `Esc` twice in the text box, then `h j k l` to move, `Space` to toggle. The box opens beside or above/below the commented element so it does not cover it when there is room.
 
+## Viewed marks
+
+Like a pull request's "viewed" state: a blue dot in the page tree, the breadcrumb and the "Pages below" row marks pages that changed, or are new, since you last left them. It sits beside the comment marks (red dot: something new for you; ring: open thread waiting on the agent), so one glance covers both kinds of change. A page counts as viewed when you navigate away from it or close the tab; on a first visit all existing pages count as viewed. The state is a hash of each page's source, kept in `<site>/.adr-data/viewed.json` (`GET`/`POST /viewed` on the comment server), so it belongs to the site, not the browser.
+
 ## Replying to one message
 
 In a thread, focus a message (`j`/`k`), optionally select a passage in it, and press `q`: the quote is added to the reply box as `>` lines. Press `q` again on another passage (or another message) and the next quote is appended, so you can write between the quotes and answer several passages in one reply, in the order you place them. A selection inside a table keeps its rows. The first quote also links the reply to that message. The reply is stored with a link to that message (`inReplyTo`), shows that quote above it, and carries the quotes as `>` lines so agents see them. Messages render `>` quotes and Markdown tables; the reply and comment boxes grow with the text, up to a maximum height. `u` on a reply jumps to the quoted message; clicking the quote does too.

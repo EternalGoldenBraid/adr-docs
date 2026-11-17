@@ -279,7 +279,7 @@
       ":export downloads this page for offline use: one .html, or a .zip when videos or large files are included. The Export button does the same.",
       ":export single makes one self-contained .html file (images and videos inlined, so it can be large). Open it directly in a browser; type : and then present for the presenter.",
       ":export compress is :export single with videos re-encoded smaller (lossy, ffmpeg; originals are untouched).",
-      "Several pages: open the tree (t), press v for select mode, Space/x ticks a page, X adds descendants, a/A all/none, e exports a .zip with working links between pages.",
+      "Several pages: open the tree (t; a blue dot marks pages changed since your last visit), press v for select mode, Space/x ticks a page, X adds descendants, a/A all/none, e exports a .zip with working links between pages.",
       "From a terminal: npm run export -- doc.md --page /p --out deck.html [--single] [--compress] [--zip]",
     ]],
     ["Search & commands", [
@@ -2859,6 +2859,23 @@
   }
   checkVersion();
   setInterval(checkVersion, 60000);
+  // "Viewed" state like a PR review: pages changed (or new) since your last visit get a mark in the tree. A page counts as viewed when you leave it.
+  const pathNow = () => pagePath(location.href) || "/";
+  let viewedPath = pathNow(), viewedFirst = true;
+  async function viewedSync(leaving) {
+    try {
+      const result = await api("viewed", leaving ? { path: leaving } : undefined);
+      document.dispatchEvent(new CustomEvent("preview-comment-viewed", { detail: { pages: result.pages } }));
+      if (viewedFirst) { viewedFirst = false; if (result.pages[viewedPath]) message(`This page ${result.pages[viewedPath] === "new" ? "is new" : "changed"} since your last visit`); }
+    } catch { /* old server or static export */ }
+  }
+  viewedSync();
+  setInterval(() => {
+    const here = pathNow();
+    if (here !== viewedPath) { const left = viewedPath; viewedPath = here; viewedSync(left); } else viewedSync();
+  }, 5000);
+  const leave = () => fetch("/__preview_comments/viewed", { method: "POST", keepalive: true, headers: { "Content-Type": "application/json", "X-Preview-Comment": "1" }, body: JSON.stringify({ path: viewedPath }) }).catch(() => {});
+  addEventListener("pagehide", leave);
   async function syncMarks() {
     enhanceVideos();
     try { await refreshHistory(); } catch { /* the bridge may be offline; keep the last marks */ }
