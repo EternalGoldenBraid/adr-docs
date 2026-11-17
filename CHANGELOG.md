@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.76.0 - 2026-11-17
+
+- To: recipient chips show each agent's mesh status as an icon (🔨 working, ⏳ waiting, ❓ asking, 💤 idle, 👀 online, 🌙 offline) with the current task on hover, so you can see who is busy before sending.
+
 ## 0.75.2 - 2026-11-17
 
 - Team load panel: load colours are now green/orange/red (distinct from the agent-status legend) with a key, and the −60 min/now axis sits under each machine's sparkline.
