@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.68.5 - 2026-11-17
+
+- Fix: a comment or reply to an agent that was not on the mesh at that moment ("Recipient is not active") was dropped, so the agent never woke. The server now retries every minute (up to 6 h) until the note is delivered or the agent has read the thread.
+- Fix: the server crashed ("Cannot set properties of undefined (setting 'ready')") when the embedding worker exited while starting.
+
 ## 0.68.4 - 2026-11-17
 
 - The page tree shows a hollow ring with a count for pages that have open threads waiting on the agent. Before, only threads with something new for you got a ball, so an unresolved thread you had just replied to showed nothing.

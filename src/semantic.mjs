@@ -40,7 +40,12 @@ function start() {
   child.on("error", gone);
   return child;
 }
-const ready = () => new Promise(resolve => { if (child && child.ready) return resolve(); start(); waiting.set("ready", () => { child.ready = true; resolve(); }); });
+const ready = () => new Promise((resolve, reject) => {
+  if (child && child.ready) return resolve();
+  const worker = start();
+  waiting.set("ready", () => { worker.ready = true; resolve(); });
+  worker.once("exit", () => reject(new Error("The embedding worker stopped.")));
+});
 async function embedRaw(texts) {
   await ready();
   clearTimeout(idle);

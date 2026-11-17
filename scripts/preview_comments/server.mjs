@@ -247,9 +247,16 @@ export async function startCommentBridge({
       const page = new URL(comment.url).pathname;
       const flat = text.replace(/\s+/g, " ");
       const preview = flat.length > 400 ? `${flat.slice(0, 400)}… [truncated; read the thread for the rest]` : flat;
-      Promise.resolve(mesh.send(target.session, `ADR comment for you on ${page} (thread ${comment.id.slice(0, 8)}): "${preview}". ` +
-        `Read: read_doc_review_comments(as="${target.slug}", store="${name ?? sessionId}"); reply: update_doc_review_comment(store="${name ?? sessionId}", comment_id="${comment.id}").`))
-        .catch(error => onError?.(error));
+      const note = `ADR comment for you on ${page} (thread ${comment.id.slice(0, 8)}): "${preview}". ` +
+        `Read: read_doc_review_comments(as="${target.slug}", store="${name ?? sessionId}"); reply: update_doc_review_comment(store="${name ?? sessionId}", comment_id="${comment.id}").`;
+      // A recipient that is not on the mesh right now would otherwise never hear of it: retry until it is, or it has read the thread.
+      const attempt = async tries => {
+        try { await mesh.send(target.session, note); } catch (error) {
+          if (!tries) onError?.(error);
+          if (tries < 360) setTimeout(() => { const live = comments.get(comment.id); if (live && !live.resolved && !readBy(live, target.slug)) attempt(tries + 1); }, 60_000).unref();
+        }
+      };
+      attempt(0);
     }
   }
   let api;
