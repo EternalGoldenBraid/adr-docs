@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.74.0 - 2026-11-17
+
+- The published site (`build:site`) has fuzzy full-text search (VitePress local search). The live preview is unchanged.
+
 ## 0.73.1 - 2026-11-17
 
 - Full-screen history/chat now follows the page width instead of a fixed 1000px column.

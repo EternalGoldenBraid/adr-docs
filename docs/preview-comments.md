@@ -148,6 +148,12 @@ In the tree popup: `j`/`k` move, `Enter` opens, `h`/`l` fold one row, `zc`/`zo` 
 
 Grouping: put `group-by: status` in an index page's front matter and its child pages that have a `status:` field appear under virtual group nodes (Active, Queued, Proposed, Blocked, Done, Declined; empty groups are hidden). Changing a page's `status` moves it; no `parent:` edits. Group nodes link to `#<status>` on the index page.
 
+## Search in the published site
+
+`npm run build:site` adds VitePress's local search (`Ctrl+K` or `/` on the
+built site). It is fuzzy and prefix-matching, so typos like "revew" still
+find "review". The live preview keeps `/` for its own `:grep`.
+
 ## Member colours and icons
 
 Each agent's name is shown with a colour and an animal icon derived from the
