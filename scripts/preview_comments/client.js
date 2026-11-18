@@ -1959,6 +1959,7 @@
     open(text || context(element, "figure", "Region screenshot"), text ? undefined : element);
     addDraftImage(shot);
   }
+  document.addEventListener("preview-comment-region", () => regionComment());
   async function regionDraft() {
     const shot = await captureRegion();
     if (!shot) return;
