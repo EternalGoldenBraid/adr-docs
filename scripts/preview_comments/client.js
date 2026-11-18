@@ -1182,7 +1182,7 @@
   // Inline Markdown for messages (bold, italic, code), built from DOM nodes so message text is never parsed as HTML.
   function inlineMarkdown(text) {
     const fragment = document.createDocumentFragment();
-    const pattern = /(!?)\[([^\]\n]*)\]\(((?:https?:\/\/|\/(?!\/))[^\s)]+)\)|\*\*([^*\n]+?)\*\*|`([^`\n]+)`|(?<![\w*])\*([^*\s][^*\n]*?)\*(?![\w*])/g;
+    const pattern = /(!?)\[([^\]\n]*)\]\(((?:https?:\/\/|\.{1,2}\/|\/(?!\/))[^\s)]+)\)|\*\*([^*\n]+?)\*\*|`([^`\n]+)`|(?<![\w*])\*([^*\s][^*\n]*?)\*(?![\w*])/g;
     let last = 0, match;
     while ((match = pattern.exec(text))) {
       if (match.index > last) fragment.append(text.slice(last, match.index));
