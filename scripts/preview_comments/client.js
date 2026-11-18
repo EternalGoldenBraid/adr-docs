@@ -2706,8 +2706,10 @@
   // Browser zoom shrinks fixed UI with the page; counter-scale so it stays readable when zoomed out.
   const uiScale = () => {
     // devicePixelRatio tracks browser zoom; the largest ratio seen is the 100% baseline (HiDPI screens).
-    const base = Math.max(1, Number(localStorage.getItem("preview-comments-dpr")) || 1, devicePixelRatio);
-    localStorage.setItem("preview-comments-dpr", base);
+    // Keyed by physical screen size (constant under zoom) so a ratio seen on another monitor can't over-scale this one.
+    const key = `preview-comments-dpr-${Math.round(screen.width * devicePixelRatio / 200)}x${Math.round(screen.height * devicePixelRatio / 200)}`;
+    const base = Math.max(1, Number(localStorage.getItem(key)) || 1, devicePixelRatio);
+    localStorage.setItem(key, base);
     const zoom = devicePixelRatio / base;
     return zoom < 0.95 ? Math.min(3, 1 / zoom) : 1;
   };

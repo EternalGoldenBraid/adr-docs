@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.83.2 - 2026-11-18
+
+- Fix: the interface scale (used by bubbles and the thread popup when the browser is zoomed out) remembered the largest pixel ratio ever seen on the site, so a ratio from another monitor made the popup oversized at 100% zoom. The baseline is now stored per screen size.
+
 ## 0.83.1 - 2026-11-18
 
 - `--serve --exclude <glob>` (repeatable) leaves matching files out of the served bundle; globs are relative to the site root, so `public/data/v0/**` is `data/v0/**`.
