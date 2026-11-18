@@ -355,3 +355,7 @@ npm run export -- site/index.md --serve --out talk.zip
 ```
 
 The zip holds the whole built site (all of `public/` included) and `serve.py`. On the viewing machine: unzip, `python3 serve.py [port]`, and it opens `http://127.0.0.1:8000/`. Everything works as on the live site except the comment overlay and anything that needs a live server (for example a catalog server). `--page /x` (repeatable) builds only those pages. All of `public/` is included, so leave out unrelated large files with `--exclude 'data/v0/**'` (repeatable; globs relative to the site root).
+
+## Editable tables
+
+Under a table, leave a blank line and write `{editable}` (every column) or `{editable: Value, Notes}` (those columns only). On the live preview, double-click one of those cells, edit its markdown, and press Enter to write it into the page's source file (Esc cancels). Only the marked table and columns can be written, a `|` in the text is escaped for you, and ADR refuses a save if the file changed since you started editing. The marker line is not shown on the page. Exports and published copies are read-only for now.
