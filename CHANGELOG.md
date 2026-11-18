@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.80.1 - 2026-11-18
+
+- Clicking a button or form field on a page no longer pops up the comment offer. Controls are comment targets only while choosing one with `c`.
+
 ## 0.80.0 - 2026-11-18
 
 - A site can add its own dev-server plugins to the preview: `<site>/.vitepress/preview-plugins.mjs` default-exports an array of Vite plugins, or a function of the document root returning one. Preview only; exports and the published site ignore it. (Lets a page start a local helper process through an endpoint the site defines.)
