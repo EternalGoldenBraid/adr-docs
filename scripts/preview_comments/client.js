@@ -2650,7 +2650,7 @@
       if (!sessionId) sessionId = (await api("status")).sessionId;
       const asNote = noteRequested;
       noteRequested = false;
-      await api("comments", { ...target, id: draftId, sessionId, comment: submittedText, ...(draftImages.length ? { images: draftImages.map(shot => shot.id) } : {}), ...(draftImages[0]?.region && !draftId ? { region: draftImages[0].region } : {}), ...(asNote ? { note: true } : {}), ...(branchOf ? { refs: [branchOf] } : {}), ...toValue(composeTo, !find(".to-new").hidden) });
+      await api("comments", { ...target, id: draftId, sessionId, comment: submittedText, ...(draftImages.length ? { images: draftImages.map(shot => shot.id) } : {}), ...(draftImages[0]?.region ? { region: draftImages[0].region } : {}), ...(asNote ? { note: true } : {}), ...(branchOf ? { refs: [branchOf] } : {}), ...toValue(composeTo, !find(".to-new").hidden) });
       branchOf = undefined;
       rememberTo(composeTo);
       message(asNote ? "Saved as private note" : "Saved · awaiting review");
@@ -2827,7 +2827,7 @@
     const taken = [];
     const size = 24 * uiScale();
     const total = Math.max(document.documentElement.scrollHeight, 1);
-    const draftRegion = !panel.hidden && !draftId && draftImages[0]?.region;
+    const draftRegion = !panel.hidden && draftImages[0]?.region;
     const draftBox = draftRegion && regionRect(document.querySelector(".vp-doc"), draftRegion);
     if (draftBox && Number.isFinite(draftBox.top)) {
       const outline = document.createElement("div");
