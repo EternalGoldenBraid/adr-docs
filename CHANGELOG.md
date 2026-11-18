@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.83.0 - 2026-11-18
+
+- `npm run export -- site/index.md --serve` writes a served bundle: the whole built site (every page, plus everything under `public/` such as wasm viewers and data files) and `serve.py`, a tiny local web server (`python3 serve.py [port]`). For sites whose components fetch files at run time, which cannot work from `file://`. Pages route normally (including `/page` without `.html`). Add `--page /x` (repeatable) to limit the pages. The normal single-file and zip exports are unchanged.
+
 ## 0.82.1 - 2026-11-18
 
 - The thread popup opened from a page bubble now stacks above region rectangles, and its size is limited to the window when the interface is scaled up for a zoomed-out browser, so it can no longer outgrow the screen.
