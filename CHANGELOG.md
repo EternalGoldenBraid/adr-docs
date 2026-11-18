@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.79.2 - 2026-11-18
+
+- A page can start region-comment capture (as the `s` key does) with `document.dispatchEvent(new CustomEvent("preview-comment-region"))`, so embedded canvas or iframe content (such as the Rerun viewer, whose text cannot be selected) can offer a "comment on a region" button.
+
 ## 0.79.1 - 2026-11-17
 
 - Graphs open fitted again (the 0.79.0 start-zoomed behaviour is removed).

@@ -331,3 +331,5 @@ The Team panel's **Room** tab (`-` then `m`) lists the rooms you are in. A room 
 ## Index toggle
 
 The index (side columns: the sidebar and "On this page") is hidden so the page and its graphs use the full width. **+ Show index** under the top bar, or `\` outside text fields, shows it again (**− Hide index** hides it); the choice is remembered. Graphs open fitted; `+ - 0` zoom and `:fit` refits.
+
+A page component can also start the region capture by dispatching a `preview-comment-region` event on `document`; use it for a button beside content whose text cannot be selected (iframes, canvases).
