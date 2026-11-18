@@ -1949,7 +1949,9 @@
   // Where a region was drawn, as child indices from .vp-doc to the element under it and fractions of that element's box, so the outline follows layout changes.
   function regionOf(element, rect) {
     const doc = document.querySelector(".vp-doc");
-    if (!element || !doc?.contains(element) || element === doc) return null;
+    if (!element || !doc?.contains(element)) return null;
+    const holds = node => { const b = node.getBoundingClientRect(); return b.left <= rect.x + 1 && b.top <= rect.y + 1 && b.right >= rect.x + rect.width - 1 && b.bottom >= rect.y + rect.height - 1; };
+    while (element !== doc && !holds(element)) element = element.parentElement;
     const path = [];
     for (let node = element; node !== doc; node = node.parentElement) path.unshift([...node.parentElement.children].indexOf(node));
     const box = element.getBoundingClientRect();

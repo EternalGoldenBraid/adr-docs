@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.81.4 - 2026-11-18
+
+- Region rectangles are anchored to the smallest element that contains the whole drawn area, so they stay put when small elements reflow.
+
 ## 0.81.3 - 2026-11-18
 
 - Fixed: the region rectangle vanished once the comment was sent, because the region was dropped from the saved comment. It is now saved and stays while the thread is unresolved or has unseen replies.
