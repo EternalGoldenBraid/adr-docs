@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.81.2 - 2026-11-18
+
+- Fixed stacking: the region rectangle and bubbles now sit below the comment box and the Comment popup, not on top of them.
+
 ## 0.81.1 - 2026-11-18
 
 - The region rectangle now appears (dashed) as soon as the region is captured, before the comment is sent, and goes away on cancel.
