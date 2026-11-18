@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.83.1 - 2026-11-18
+
+- `--serve --exclude <glob>` (repeatable) leaves matching files out of the served bundle; globs are relative to the site root, so `public/data/v0/**` is `data/v0/**`.
+- A single-page export that needs a zip no longer writes a zip to a path ending in `.html`; the file is named `.zip` instead.
+- Known: the zip export's `media/` links are relative, so it is meant for `file://` (unzipped); to serve over http use `--serve`.
+
 ## 0.83.0 - 2026-11-18
 
 - `npm run export -- site/index.md --serve` writes a served bundle: the whole built site (every page, plus everything under `public/` such as wasm viewers and data files) and `serve.py`, a tiny local web server (`python3 serve.py [port]`). For sites whose components fetch files at run time, which cannot work from `file://`. Pages route normally (including `/page` without `.html`). Add `--page /x` (repeatable) to limit the pages. The normal single-file and zip exports are unchanged.
