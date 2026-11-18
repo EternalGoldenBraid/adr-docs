@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.88.1 - 2026-11-18
+
+- company theme now follows the company deck: pure black background, white text, lilac (#C2B1FF) accent in dark; white with black rules in light. Replaces the navy first guess.
+
 ## 0.88.0 - 2026-11-18
 
 - Theme picker button next to the light/dark toggle: π (default style) or N (company theme). Choice is remembered.
