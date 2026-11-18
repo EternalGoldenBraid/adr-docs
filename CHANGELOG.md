@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.85.0 - 2026-11-18
+
+- Published sites get a build badge (live commit and time, "New version live", and with a token the live build steps) and table editing: `{editable}` cells can be edited on the published page, queued, and published as one commit to the branch with Saved, Building, Deploying, Live or Failed progress. Needs `editableTables` and `buildEnd: buildInfo` in the site's config; see `docs/preview-comments.md`.
+- The cell read and write logic moved to `src/table-cells.mjs`, shared by the preview server and the published site.
+
 ## 0.84.1 - 2026-11-18
 
 - DocGraph node titles and bodies show `code` in backticks as inline code (monospace on a tinted background), so topic and node names stand out.

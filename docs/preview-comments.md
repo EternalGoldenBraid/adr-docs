@@ -358,4 +358,10 @@ The zip holds the whole built site (all of `public/` included) and `serve.py`. O
 
 ## Editable tables
 
-Under a table, leave a blank line and write `{editable}` (every column) or `{editable: Value, Notes}` (those columns only). On the live preview, double-click one of those cells, edit its markdown, and press Enter to write it into the page's source file (Esc cancels). Only the marked table and columns can be written, a `|` in the text is escaped for you, and ADR refuses a save if the file changed since you started editing. The marker line is not shown on the page. Exports and published copies are read-only for now.
+Under a table, leave a blank line and write `{editable}` (every column) or `{editable: Value, Notes}` (those columns only). On the live preview, double-click one of those cells, edit its markdown, and press Enter to write it into the page's source file (Esc cancels). Only the marked table and columns can be written, a `|` in the text is escaped for you, and ADR refuses a save if the file changed since you started editing. The marker line is not shown on the page. Exports are read-only.
+
+### Published site: build badge and Publish
+
+A site built in GitHub Actions can show a build badge and accept the same edits. In the site's `.vitepress/config.mjs` add `.use(editableTables)` to the markdown config (`src/editable-tables.mjs`) and `buildEnd: buildInfo` (`src/build-info.mjs`, which writes `build.json` with the commit, time and repository). The badge in the bottom-left corner shows the live commit and time, and "New version live, reload" when a later deploy appears.
+
+Paste a fine-grained token for the repository (Contents: write, Actions: read) into the badge once; it stays in that browser. Then double-click a marked cell, edit, and Enter to queue the edit (the cell turns amber). Edits are not sent until you press **Publish** in the badge panel, which makes one commit to the branch (409 if the file changed on the branch since you started: discard and retry) and follows the build as Saved, Building, Deploying, Live or Failed. With a token the badge also shows builds started by anyone. One file can be queued at a time.

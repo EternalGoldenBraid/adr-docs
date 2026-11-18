@@ -10,6 +10,7 @@ import WorkstreamNow from "../components/WorkstreamNow.vue";
 import PageTree from "../components/PageTree.vue";
 import { installSidebarToggle } from "./sidebar-toggle.mjs";
 import { enhanceTables } from "./table-tools.mjs";
+import { installPublishing } from "./publish.mjs";
 import "./task-lists.css";
 import "./layout.css";
 
@@ -25,6 +26,7 @@ export default {
       router.onAfterRouteChange = run;
       window.addEventListener("load", run);
       installSidebarToggle();
+      installPublishing();
     }
     app.component("DocGraph", DocGraph); app.component("TeamGraph", TeamGraph); app.component("RerunViewer", RerunViewer); app.component("WorkstreamBoard", WorkstreamBoard); app.component("WorkstreamNow", WorkstreamNow); },
 };
