@@ -70,6 +70,8 @@ const rows = computed(() => {
 })
 
 function go(link) { open.value = false; router.go(withBase(link)) }
+function goNewTab(link) { window.open(withBase(link), '_blank', 'noopener') }
+const rowClick = (e, link) => (e.ctrlKey || e.metaKey ? goNewTab(link) : go(link))
 function show() {
   open.value = true
   cursor.value = Math.max(0, rows.value.findIndex(r => r.slug === current.value))
@@ -114,6 +116,7 @@ function onKey(e) {
     else if (k === 'j' || k === 'ArrowDown') cursor.value = Math.min(rows.value.length - 1, cursor.value + 1)
     else if (k === 'k' || k === 'ArrowUp') cursor.value = Math.max(0, cursor.value - 1)
     else if (k === 'Enter' && row) go(row.link)
+    else if (k === 'o' && row) goNewTab(row.link)
     else if (k === 'h' && row && row.kids) fold(row, true)
     else if (k === 'l' && row && row.kids) fold(row, false)
     else if (k === 'H') foldAll(true)
@@ -162,14 +165,14 @@ onUnmounted(() => {
       <span v-if="selecting" class="pt-mode">-- SELECT --</span>
     </div>
     <div v-for="(r, i) in rows" :key="r.slug" class="pt-row" :class="{ cur: r.slug === current, at: i === cursor }"
-      :style="{ paddingLeft: 10 + r.depth * 18 + 'px' }" role="treeitem" @click="go(r.link)">
+      :style="{ paddingLeft: 10 + r.depth * 18 + 'px' }" role="treeitem" @click="rowClick($event, r.link)" @auxclick.middle.prevent="goNewTab(r.link)">
       <button v-if="r.kids" class="pt-fold" tabindex="-1" @click.stop="fold(r, !collapsed.has(r.slug))">{{ collapsed.has(r.slug) ? '▸' : '▾' }}</button>
       <span v-else class="pt-fold"></span><input v-if="selecting" type="checkbox" class="pt-check" tabindex="-1" :checked="picked.has(r.slug)" title="Select this page for export" @click.stop="pick(r)">{{ r.title }}<button v-if="selecting && r.kids" class="pt-kids" tabindex="-1" title="Select or clear this page and all pages below it" @click.stop="pick(r, true)">+ below</button><b v-if="waits(r.slug)" class="pt-dot" :style="tint(r.slug)" title="Threads with something new for you">{{ waits(r.slug) }}</b><i v-if="changed(r.slug)" class="pt-new" :title="newTitle(r.slug)"></i><b v-if="opens(r.slug)" class="pt-ring" title="Open threads waiting on the agent">{{ opens(r.slug) }}</b><b v-if="collapsed.has(r.slug) && hidden(r.slug)" class="pt-dot" :style="hiddenTint(r.slug)" title="Something new on pages folded below">↓{{ hidden(r.slug) }}</b>
     </div>
     <div v-if="selecting" class="pt-export">
       <button :disabled="!picked.size" @click="runExport">Export {{ picked.size || '' }} selected</button>
     </div>
-    <div class="pt-hint">{{ selecting ? 'Space tick · X tick with pages below · a/A all/none · e export · v/Esc stop selecting' : `j/k move · Enter open · h/l fold · zc/zo fold below · H/L all${canExport ? ' · v select' : ''} · t/Esc close` }}</div>
+    <div class="pt-hint">{{ selecting ? 'Space tick · X tick with pages below · a/A all/none · e export · v/Esc stop selecting' : `j/k move · Enter open · o new tab · h/l fold · zc/zo fold below · H/L all${canExport ? ' · v select' : ''} · t/Esc close` }}</div>
   </div>
 </div>
 </template>
