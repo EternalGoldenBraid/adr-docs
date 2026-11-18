@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.88.2 - 2026-11-19
+
+- Comments and replies now render relative links (`[x](./page)`, `../page`) as links; before only `http(s)` and `/path` links did.
+
 ## 0.88.1 - 2026-11-18
 
 - company theme now follows the company deck: pure black background, white text, lilac (#C2B1FF) accent in dark; white with black rules in light. Replaces the navy first guess.
