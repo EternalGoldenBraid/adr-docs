@@ -158,7 +158,7 @@ export function previewConfig({ documentRoot, connectionFile, workspace, package
       ["link", { rel: "icon", href: "data:," }],
       ["style", {}, '.vp-doc mjx-container[display="true"] { overflow-y: hidden; }'],
     ],
-    appearance: "force-dark",
+    appearance: "dark",
     markdown: { config: md => md.use(mathjax, { tex: { tags: "ams" } }).use(taskLists).use(editableTables) },
     vue: { template: { compilerOptions: { isCustomElement: tag => tag.startsWith("mjx-") } } },
     themeConfig: { outline: "deep", ...treeThemeConfig(documentRoot) },

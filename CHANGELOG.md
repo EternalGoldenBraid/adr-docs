@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.86.0 - 2026-11-18
+
+- Light/dark theme toggle in the nav bar (default dark, choice remembered). Sites that set `appearance: "force-dark"` in their own config keep it; change it to `"dark"` to enable the toggle.
+
 ## 0.85.1 - 2026-11-18
 
 - Page tree: `o` opens the selected page in a new tab; Ctrl/Cmd-click or middle-click on a row does too. (Shift+L was already "expand all".)
