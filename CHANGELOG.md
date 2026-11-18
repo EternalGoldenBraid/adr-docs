@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.84.1 - 2026-11-18
+
+- DocGraph node titles and bodies show `code` in backticks as inline code (monospace on a tinted background), so topic and node names stand out.
+
 ## 0.84.0 - 2026-11-18
 
 - Editable tables in the live preview: put a blank line and `{editable}` (all columns) or `{editable: Col A, Col B}` under a table, then double-click a cell, type, and press Enter to write it into the page's markdown file (Esc cancels). Only the marked table and columns are writable, and a save is refused if the file changed since you started editing. The marker line is not shown. Not available in exports or on the published site yet.

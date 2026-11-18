@@ -53,6 +53,17 @@ function nodeLabel(n) {
   return n.data('kind') === 'node' ? '' : (n.data('title') || '') + (n.data('status') ? '  ' + n.data('status') : '') + (n.data('badge') || '')
 }
 
+// `code` in node text shows as inline code; built from DOM nodes, never as HTML.
+function setRich(el, text) {
+  if (el.dataset.raw === text) return
+  el.dataset.raw = text
+  el.replaceChildren(...text.split(/`([^`\n]+)`/).map((part, i) => {
+    if (i % 2 === 0) return document.createTextNode(part)
+    const code = document.createElement('code')
+    code.textContent = part
+    return code
+  }))
+}
 // Nodes show a bold title over a regular body, which canvas labels cannot mix.
 function drawLabels() {
   labelFrame = 0
@@ -79,10 +90,10 @@ function drawLabels() {
     if (img.dataset.src !== src) { img.dataset.src = src; if (src) img.src = src; else img.removeAttribute('src') }
     img.style.display = src ? 'block' : 'none'
     if (d.shape === 'ellipse') el.style.borderRadius = '50%'
-    el.children[1].textContent = (d.title || '') + (d.status ? '  ' + d.status : '') + (d.badge || '')
+    setRich(el.children[1], (d.title || '') + (d.status ? '  ' + d.status : '') + (d.badge || ''))
     const body = el.lastChild
     if (src) img.style.maxHeight = `${Math.max(0, d.h - 34) * z}px`
-    body.textContent = d.body || ''
+    setRich(body, d.body || '')
     body.style.display = d.body && z >= SHOW_BODY_ZOOM && lines > 0 ? '-webkit-box' : 'none'
     body.style.webkitLineClamp = String(lines)
   })
@@ -729,6 +740,7 @@ onUnmounted(() => { removeEventListener('hashchange', landOnNode); document.remo
 .xp-label { position: absolute; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; overflow: hidden; line-height: 1.25; }
 .xp-label img { flex: 0 1 auto; min-height: 0; max-width: 100%; object-fit: contain; border-radius: 4px; margin-bottom: 3px; }
 .xp-label b { font-weight: 700; }
+.xp-label code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.95em; background: #ffffff1f; border-radius: 3px; padding: 0 3px; }
 .xp-label span { white-space: pre-line; font-weight: 400; font-size: 0.92em; opacity: .9; overflow: hidden; -webkit-box-orient: vertical; }
 .xp-back { font-size: 13px; text-decoration: none; padding: 5px 10px; border: 1px solid var(--vp-c-divider); border-radius: 8px; }
 .xp-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
