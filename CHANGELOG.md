@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.83.3 - 2026-11-18
+
+- Read aloud starts the text-to-speech server itself when it is down (the first read then takes about a minute). `:tts on|off` turns that off; `:settings` shows it.
+- Fix: `tools/tts.mjs start` could skip launching the server because its own ssh command matched the "already running" check.
+
 ## 0.83.2 - 2026-11-18
 
 - Fix: the interface scale (used by bubbles and the thread popup when the browser is zoomed out) remembered the largest pixel ratio ever seen on the site, so a ratio from another monitor made the popup oversized at 100% zoom. The baseline is now stored per screen size.

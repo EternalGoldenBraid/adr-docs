@@ -30,7 +30,7 @@ if (command === "status") {
   if (!existsSync(ref)) { console.error(`No reference voice at ${ref}. Put a 5-15 s mono clip of the voice there (or set ADR_TTS_REF).`); process.exit(1); }
   ssh("mkdir -p adr-tts");
   for (const file of [server, ref]) if (spawnSync("scp", ["-q", "-o", "BatchMode=yes", file, `${host}:adr-tts/${file === ref ? "ref.wav" : "tts_server.py"}`]).status) { console.error("Could not copy files to " + host); process.exit(1); }
-  const launch = `cd adr-tts && (pgrep -f "[t]ts_server.py" >/dev/null || (CUDA_VISIBLE_DEVICES=${gpu} nohup ${venv}/bin/python tts_server.py --ref ref.wav --port ${port} > log.txt 2>&1 &))`;
+  const launch = `cd adr-tts && (pgrep -f "^[^ ]*/bin/python tts_server.py" >/dev/null || (CUDA_VISIBLE_DEVICES=${gpu} nohup ${venv}/bin/python tts_server.py --ref ref.wav --port ${port} > log.txt 2>&1 &))`;
   if (ssh(launch).status) { console.error("Could not start the server on " + host); process.exit(1); }
   mkdirSync(state, { recursive: true });
   const tunnel = spawn("ssh", ["-N", "-o", "ExitOnForwardFailure=yes", "-o", "ForwardX11=no", "-L", `${port}:127.0.0.1:${port}`, host], { detached: true, stdio: "ignore" });

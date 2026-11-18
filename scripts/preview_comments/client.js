@@ -322,7 +322,7 @@
     comment: () => commentSelection(),
     present: () => document.dispatchEvent(new CustomEvent("adr-present")),
     tree: () => document.dispatchEvent(new KeyboardEvent("keydown", { key: "t", bubbles: true })),
-    settings: () => loadSettings().then(() => message(`owner: ${settings.owner}\nteam: ${settings.team.join(", ") || "(none)"}\ndefault recipients: ${settings.default}\n:owner NAME · :team A B C · :default owner|last`)),
+    settings: () => loadSettings().then(() => message(`owner: ${settings.owner}\nteam: ${settings.team.join(", ") || "(none)"}\ndefault recipients: ${settings.default}\nread aloud auto-start: ${settings.tts === false ? "off" : "on"}\n:owner NAME · :team A B C · :default owner|last · :tts on|off`)),
     mesh: () => openMesh(),
     read: arg => {
       if (arg === "stop") { stopReading(); return message("Stopped reading"); }
@@ -333,6 +333,7 @@
     },
     owner: name => name ? api("settings", { owner: name }).then(v => { settings = v; message("Owner: " + name); }).catch(e => message(e.message, true)) : message("Usage: :owner NAME (this preview's agent)", true),
     team: (_first, line = "") => api("settings", { team: line.trim().split(/[\s,]+/).filter(Boolean) }).then(v => { settings = v; message("Team: " + (v.team.join(", ") || "(none)")); }).catch(e => message(e.message, true)),
+    tts: arg => ["on", "off"].includes(arg) ? api("settings", { tts: arg === "on" }).then(v => { settings = v; message("Read aloud auto-start: " + arg); }).catch(e => message(e.message, true)) : message("Read-aloud auto-start is " + (settings.tts === false ? "off" : "on") + ". Usage: :tts on|off", true),
     default: arg => ["owner", "last"].includes(arg) ? api("settings", { default: arg }).then(v => { settings = v; message("Default recipients: " + arg); }).catch(e => message(e.message, true)) : message("Usage: :default owner|last", true),
     vim: arg => { if ((arg === "off") === vimEnabled) vimButton.click(); },
   };
