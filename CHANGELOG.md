@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.87.0 - 2026-11-18
+
+- company brand theme (Brand Guide colours, Funnel Sans), opt in with `?theme=company` (remembered; `?theme=default` turns it off). Works with the light/dark toggle.
+
 ## 0.86.0 - 2026-11-18
 
 - Light/dark theme toggle in the nav bar (default dark, choice remembered). Sites that set `appearance: "force-dark"` in their own config keep it; change it to `"dark"` to enable the toggle.
