@@ -144,11 +144,11 @@ async function sitePlugins(documentRoot) {
   return typeof exported === "function" ? await exported(documentRoot) : exported ?? [];
 }
 
-export function previewConfig({ documentRoot, connectionFile, workspace, packageRoot, exportMode = false, onlyPages }) {
+export function previewConfig({ documentRoot, connectionFile, workspace, packageRoot, exportMode = false, served = false, onlyPages }) {
   return {
     // An export renders chosen pages only, so unrelated pages (even with broken front matter) cannot break it.
     ...(onlyPages ? { srcExclude: markdownFiles(documentRoot).filter(file => !onlyPages.includes(file)).map(file => file.replace(/[\\*?[\]{}()!]/g, "\\$&")) } : {}),
-    ...(exportMode ? { base: "./", ignoreDeadLinks: true } : {}),
+    ...(exportMode ? { base: served ? "/" : "./", ignoreDeadLinks: true } : {}),
     srcDir: `${workspace}/source`,
     cacheDir: `${workspace}/cache`,
     outDir: `${workspace}/dist`,

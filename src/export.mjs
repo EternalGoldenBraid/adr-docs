@@ -2,7 +2,7 @@ import { build as esbuild } from "esbuild";
 import { build } from "vitepress";
 import { execFileSync } from "node:child_process";
 import {
-  copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync,
+  copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync,
   symlinkSync, writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -27,7 +27,7 @@ function pageFiles(page) {
   return { html: `${trimmed}.html`, key: `${trimmed.replaceAll("/", "_")}.md` };
 }
 
-async function buildSite(documentRoot, onlyPages) {
+async function buildSite(documentRoot, onlyPages, served = false) {
   const workspace = mkdtempSync(join(tmpdir(), "adr-export-"));
   mkdirSync(join(workspace, ".vitepress", "theme"), { recursive: true });
   symlinkSync(documentRoot, join(workspace, "source"), "junction");
@@ -36,7 +36,7 @@ async function buildSite(documentRoot, onlyPages) {
     `export { default } from ${JSON.stringify(join(packageRoot, "src/theme/index.mjs"))};\n`);
   writeFileSync(join(workspace, ".vitepress", "config.mjs"),
     `import { previewConfig } from ${JSON.stringify(pathToFileURL(join(packageRoot, "src/vitepress-config.mjs")).href)};\n` +
-    `export default previewConfig(${JSON.stringify({ documentRoot, connectionFile: "", workspace, packageRoot, exportMode: true, onlyPages })});\n`);
+    `export default previewConfig(${JSON.stringify({ documentRoot, connectionFile: "", workspace, packageRoot, exportMode: true, served, onlyPages })});\n`);
   // vite build sets NODE_ENV=production process-wide, which breaks the live preview server.
   const hadEnv = Object.prototype.hasOwnProperty.call(process.env, "NODE_ENV");
   const savedEnv = process.env.NODE_ENV;
@@ -187,8 +187,59 @@ async function renderPage(dist, page, inlineLimit, mediaPrefix, warnings, links 
   return { html, media, htmlName };
 }
 
+const sources0 = (root, pages) => pages.map(item => {
+  const source = sourceFor(root, item);
+  if (!source) throw new Error(`Page ${item} not found under ${root}.`);
+  return source;
+});
+
+const SERVE_PY = `#!/usr/bin/env python3
+# Serves this folder at http://127.0.0.1:PORT and opens it. The site needs http (not file://) for its scripts and viewers.
+import http.server, os, sys, threading, webbrowser
+os.chdir(os.path.dirname(os.path.abspath(__file__)) + "/site")
+class Handler(http.server.SimpleHTTPRequestHandler):
+    extensions_map = {**http.server.SimpleHTTPRequestHandler.extensions_map, ".wasm": "application/wasm", ".js": "text/javascript", ".mjs": "text/javascript"}
+    def translate_path(self, path):
+        full = super().translate_path(path)
+        if not os.path.exists(full) and os.path.exists(full + ".html"):
+            return full + ".html"
+        return full
+    def log_message(self, *args):
+        pass
+port = int(sys.argv[1]) if len(sys.argv) > 1 else 8000
+server = http.server.ThreadingHTTPServer(("127.0.0.1", port), Handler)
+print(f"Serving on http://127.0.0.1:{port}  (Ctrl+C to stop)")
+threading.Timer(0.5, lambda: webbrowser.open(f"http://127.0.0.1:{port}/")).start()
+try:
+    server.serve_forever()
+except KeyboardInterrupt:
+    pass
+`;
+
+// The whole built site (every page, plus public/ assets such as wasm and data files) with a tiny local server, for sites whose
+// components fetch files at runtime and so cannot work from file://. Needs python3 (or any static server) on the viewing machine.
+async function exportServed({ documentRoot, sources, outFile, stem, onProgress }) {
+  onProgress({ stage: "Building site", done: 0, total: 3 });
+  const workspace = await buildSite(documentRoot, sources, true);
+  try {
+    const staging = join(workspace, "bundle");
+    mkdirSync(staging, { recursive: true });
+    cpSync(join(workspace, "dist"), join(staging, "site"), { recursive: true, dereference: true });
+    writeFileSync(join(staging, "serve.py"), SERVE_PY, { mode: 0o755 });
+    writeFileSync(join(staging, "README.txt"), "Run:  python3 serve.py   (optionally a port: python3 serve.py 8080)\nThen open http://127.0.0.1:8000/ . The site needs a local web server; it will not work by opening the files directly.\n");
+    const target = resolve(outFile ?? `${stem}-site.zip`);
+    onProgress({ stage: "Zipping", done: 2, total: 3 });
+    rmSync(target, { force: true });
+    execFileSync("zip", ["-qr", target, "."], { cwd: staging });
+    onProgress({ stage: "Done", done: 3, total: 3 });
+    return { file: target, kind: "zip", warnings: [], bytes: statSync(target).size };
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+  }
+}
+
 // `pages` (several) or `page` (one). onProgress({ stage, done, total }) reports coarse steps.
-export async function exportPage({ documentPath, documentRoot, page, pages, outFile, inlineLimit = 2 * 1024 * 1024, zip, single, compress, onProgress = () => {} } = {}) {
+export async function exportPage({ documentPath, documentRoot, page, pages, outFile, inlineLimit = 2 * 1024 * 1024, zip, single, compress, serve, onProgress = () => {} } = {}) {
   let stem = "index";
   if (documentPath) {
     const document = realpathSync(documentPath);
@@ -197,6 +248,7 @@ export async function exportPage({ documentPath, documentRoot, page, pages, outF
     stem = basename(document, ".md");
   }
   if (!documentRoot) throw new Error("Export needs a document or a document root.");
+  const explicit = Boolean(pages?.length || page);
   pages = [...new Set(pages?.length ? pages : [page ?? (stem === "index" ? "/" : `/${stem}`)])];
   // The document may be the page itself (or any file in the site): climb to the directory the page path is relative to.
   if (documentPath) {
@@ -205,6 +257,7 @@ export async function exportPage({ documentPath, documentRoot, page, pages, outF
       if (dirname(root) === root) break;
     }
   }
+  if (serve) return exportServed({ documentRoot, sources: explicit ? sources0(documentRoot, pages) : undefined, outFile, stem, onProgress });
   const sources = pages.map(item => {
     const source = sourceFor(documentRoot, item);
     if (!source) throw new Error(`Page ${item} not found under ${documentRoot}. Pass any .md file in the site root, e.g. its index.md, or the page's own file.`);

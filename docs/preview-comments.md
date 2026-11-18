@@ -345,3 +345,13 @@ A thread started with a region screenshot (`s`) keeps the drawn area: the page s
 ## Queued send
 
 `Ctrl+Enter` sends a comment or reply immediately. `Ctrl+Shift+Enter` queues it: it is saved and addressed as usual, but nothing wakes or messages the agent while it is busy. The hosting agent picks it up the next time it goes idle; an addressed mesh agent is messaged once its status is no longer "working". Use it to leave feedback without interrupting.
+
+## Served bundle (offline with runtime-fetched assets)
+
+The normal export packages only what the page itself references: graph node images and videos, `src`/`poster` files and JSON data files named in the page source. Anything a component fetches or imports at run time (wasm, `.rrd` recordings, extra scripts) is not packaged, and `file://` blocks module and wasm loads anyway. For those sites:
+
+```
+npm run export -- site/index.md --serve --out talk.zip
+```
+
+The zip holds the whole built site (all of `public/` included) and `serve.py`. On the viewing machine: unzip, `python3 serve.py [port]`, and it opens `http://127.0.0.1:8000/`. Everything works as on the live site except the comment overlay and anything that needs a live server (for example a catalog server). `--page /x` (repeatable) builds only those pages. Size is the site's `public/` size.
