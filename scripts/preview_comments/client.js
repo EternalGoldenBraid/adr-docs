@@ -2688,7 +2688,7 @@
   markStyle.textContent += "[data-adr-point]{outline:2px solid #ff5a4f;outline-offset:4px;border-radius:6px}";
   document.head.append(markStyle);
   const popStyle = document.createElement("style");
-  popStyle.textContent = ".mark-pop{position:fixed;transform:scale(var(--s,1));transform-origin:top left;width:min(var(--pw,480px),calc(100vw - 24px));max-height:70vh;overflow:auto;" +
+  popStyle.textContent = ".mark-pop{position:fixed;z-index:2;transform:scale(var(--s,1));transform-origin:top left;width:min(var(--pw,480px),calc((100vw - 24px) / var(--s,1)));max-height:calc(70vh / var(--s,1));overflow:auto;" +
     "padding:12px;background:#1b1d22;border:1px solid #59616d;border-radius:12px;box-shadow:0 12px 40px #0008;margin:0}" +
     ".mark-pop .note{margin:8px 0}.mark-pop textarea{width:100%;min-height:54px;box-sizing:border-box}" +
     ".mark-pop .row{display:flex;gap:6px;align-items:center;margin:6px 0}" +
