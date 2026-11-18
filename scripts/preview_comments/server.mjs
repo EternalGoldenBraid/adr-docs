@@ -245,7 +245,7 @@ export async function startCommentBridge({
   }
   // Quiet mesh note to each addressed agent other than the owner; they pull the thread when they choose.
   // Without a hosting agent session (ownerViaMesh), the owner is also told this way, including of unaddressed comments.
-  function announce(comment, text) {
+  function announce(comment, text, queued = false) {
     const names = comment.to?.length ? comment.to : ownerViaMesh ? [ownerName()] : [];
     if (!mesh) return;
     for (const who of names) {
@@ -258,6 +258,11 @@ export async function startCommentBridge({
         `Read: read_doc_review_comments(as="${target.slug}", store="${name ?? sessionId}"); reply: update_doc_review_comment(store="${name ?? sessionId}", comment_id="${comment.id}").`;
       // A recipient that is not on the mesh right now would otherwise never hear of it: retry until it is, or it has read the thread.
       const attempt = async tries => {
+        // Queued: hold the note while the recipient is working, so it arrives when it is free.
+        if (queued && target.session && agents().find(row => row.slug === who)?.status === "working" && tries < 720) {
+          setTimeout(() => { const live = comments.get(comment.id); if (live && !live.resolved && !readBy(live, target.slug)) attempt(tries + 1); }, 5_000).unref();
+          return;
+        }
         try { await mesh.send(target.session, note); } catch (error) {
           if (!tries) onError?.(error);
           if (tries < 360) setTimeout(() => { const live = comments.get(comment.id); if (live && !live.resolved && !readBy(live, target.slug)) attempt(tries + 1); }, 60_000).unref();
@@ -407,6 +412,7 @@ export async function startCommentBridge({
       ...(input.note === true && input.highlight !== true ? { note: true } : {}),
       color: COLORS.includes(input.color) ? input.color : "yellow",
       ...(images.length ? { images } : {}),
+      ...(input.queued === true ? { queued: true } : {}),
       ...(regionField(input.region) ? { region: regionField(input.region) } : {}),
       ...(refs.length ? { refs } : {}),
       ...(names(input.to, "to")?.length ? { to: names(input.to, "to") } : {}),
@@ -451,6 +457,7 @@ export async function startCommentBridge({
     if (author === "user" && input.clear === true) value.clear = true;
     if (author === "user" && input.note === true && value.reply !== undefined) value.note = true;
     if (author === "user" && input.promote === true) value.promote = true;
+    if (author === "user" && input.queued === true) value.queued = true;
     if (author === "user" && Object.hasOwn(input, "editComment")) value.editComment = field(input.editComment, "Comment", 8192);
     if (author === "user" && input.editReply) {
       value.editReply = { id: identifier(input.editReply.id, "Reply ID"), text: field(input.editReply.text, "Reply", 8192) };
@@ -697,8 +704,8 @@ export async function startCommentBridge({
       if (request.url === "/updates") {
         const result = saveUpdate(input);
         saved = true;
-        if (input.reply !== undefined && !input.note) announce(comments.get(input.commentId), input.reply);
-        await notify();
+        if (input.reply !== undefined && !input.note) announce(comments.get(input.commentId), input.reply, input.queued);
+        if (!input.queued) await notify();
         return reply(response, 200, { ...result, awaitingReview: !comments.get(input.commentId).seen });
       }
       let comment = comments.get(input.id);
@@ -716,8 +723,8 @@ export async function startCommentBridge({
         comment = comments.get(comment.id);
       }
       saved = true;
-      if (!comment.note && !comment.highlight) announce(comment, comment.comment);
-      await notify();
+      if (!comment.note && !comment.highlight) announce(comment, comment.comment, input.queued);
+      if (!input.queued) await notify();
       reply(response, 200, { id: comment.id, saved: true, awaitingReview: !comment.seen });
     } catch (error) {
       await onError(error);

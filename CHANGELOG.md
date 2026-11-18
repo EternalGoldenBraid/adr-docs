@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.82.0 - 2026-11-18
+
+- Queued send: `Ctrl+Shift+Enter` in the comment or reply box sends without pinging. The agent gets it when it next goes idle (the hosting agent via its usual idle check, mesh agents once their status is no longer "working"), instead of interrupting what it is doing. `Ctrl+Enter` still sends right away.
+
 ## 0.81.4 - 2026-11-18
 
 - Region rectangles are anchored to the smallest element that contains the whole drawn area, so they stay put when small elements reflow.

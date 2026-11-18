@@ -341,3 +341,7 @@ A page component can also start the region capture by dispatching a `preview-com
 ## Region outlines
 
 A thread started with a region screenshot (`s`) keeps the drawn area: the page shows an unfilled rectangle in the thread's colour with its bubble on the corner. The area is stored relative to the element it was drawn over, so it moves with the layout. Screenshots added to an existing thread, and threads from before 0.81.0, have no rectangle.
+
+## Queued send
+
+`Ctrl+Enter` sends a comment or reply immediately. `Ctrl+Shift+Enter` queues it: it is saved and addressed as usual, but nothing wakes or messages the agent while it is busy. The hosting agent picks it up the next time it goes idle; an addressed mesh agent is messaged once its status is no longer "working". Use it to leave feedback without interrupting.

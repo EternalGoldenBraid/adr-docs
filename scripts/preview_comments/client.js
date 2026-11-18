@@ -131,7 +131,7 @@
         <details class="quote-box"><summary class="quote-summary">Selected content</summary><div class="quote thread-quote"></div></details>
         <div class="thread-links"></div>
         <div class="thread-messages"></div>
-        <form class="reply-form"><div class="reply-target" hidden><span></span><button type="button" title="Drop (Esc in the field, or click)">✕</button></div><div class="to to-reply" hidden></div><textarea id="thread-reply" aria-label="Your reply" placeholder="Reply (i to focus · Ctrl+Enter sends · Esc/jk normal mode, again leaves)" required maxlength="4000"></textarea>
+        <form class="reply-form"><div class="reply-target" hidden><span></span><button type="button" title="Drop (Esc in the field, or click)">✕</button></div><div class="to to-reply" hidden></div><textarea id="thread-reply" aria-label="Your reply" placeholder="Reply (i to focus · Ctrl+Enter sends · Ctrl+Shift+Enter queues until the agent is idle · Esc/jk normal mode, again leaves)" required maxlength="4000"></textarea>
         <div class="actions"><button class="thread-region" type="button" title="Attach a screenshot of a region (s)">Region</button>
         <button class="thread-branch" type="button" title="Start a linked child thread from the selected text or focused message (n)">↳ New thread</button>
         <button class="primary reply-send" type="submit">Reply</button></div></form>
@@ -174,6 +174,7 @@
   let selecting = false;
   let draftId;
   let noteRequested = false;
+  let queueRequested = false;
   let submittedText;
   let sessionId;
   let statusTimer;
@@ -1699,7 +1700,7 @@
         fitReply();
         setReplyTarget(null);
         host.dataset.replyDrafts = String([...replyDrafts.values()].filter(draft => draft.text.trim()).length);
-        message("Reply saved");
+        message(values.queued ? "Reply queued · delivered when the agent is idle" : "Reply saved");
       } else if (values.resolved !== undefined) message(result.resolved ? "Comment resolved" : "Comment reopened");
       else message("Saved");
       if (values.resolved === true && result.resolved) selectedThread = undefined;
@@ -1800,7 +1801,9 @@
     draft.submitted = replyInput.value;
     replyDrafts.set(selectedThread, draft);
     const target = replyTarget;
-    updateThread({ id: draft.id, reply: replyInput.value, ...(target ? { inReplyTo: { id: target.id, quote: target.quote } } : {}), ...toValue(replyTo, !find(".to-reply").hidden) });
+    const queued = queueRequested;
+    queueRequested = false;
+    updateThread({ id: draft.id, reply: replyInput.value, ...(queued ? { queued: true } : {}), ...(target ? { inReplyTo: { id: target.id, quote: target.quote } } : {}), ...toValue(replyTo, !find(".to-reply").hidden) });
     rememberTo(replyTo);
   });
   find(".thread-resolve").addEventListener("click", () => {
@@ -2652,10 +2655,12 @@
       if (!sessionId) sessionId = (await api("status")).sessionId;
       const asNote = noteRequested;
       noteRequested = false;
-      await api("comments", { ...target, id: draftId, sessionId, comment: submittedText, ...(draftImages.length ? { images: draftImages.map(shot => shot.id) } : {}), ...(draftImages[0]?.region ? { region: draftImages[0].region } : {}), ...(asNote ? { note: true } : {}), ...(branchOf ? { refs: [branchOf] } : {}), ...toValue(composeTo, !find(".to-new").hidden) });
+      const queued = queueRequested;
+      queueRequested = false;
+      await api("comments", { ...target, id: draftId, sessionId, comment: submittedText, ...(draftImages.length ? { images: draftImages.map(shot => shot.id) } : {}), ...(draftImages[0]?.region ? { region: draftImages[0].region } : {}), ...(asNote ? { note: true } : {}), ...(queued ? { queued: true } : {}), ...(branchOf ? { refs: [branchOf] } : {}), ...toValue(composeTo, !find(".to-new").hidden) });
       branchOf = undefined;
       rememberTo(composeTo);
-      message(asNote ? "Saved as private note" : "Saved · awaiting review");
+      message(asNote ? "Saved as private note" : queued ? "Queued · delivered when the agent is idle" : "Saved · awaiting review");
       statusTimer = setTimeout(() => message(""), 5000);
       textarea.value = "";
       draftId = undefined;
@@ -3035,10 +3040,10 @@
     pill.setAttribute("aria-expanded", String(!toolbar.hidden));
   });
   textarea.addEventListener("keydown", event => {
-    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) { event.preventDefault(); find("form").requestSubmit(); }
+    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) { event.preventDefault(); queueRequested = event.shiftKey; find("form").requestSubmit(); }
   });
   replyInput.addEventListener("keydown", event => {
-    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) { event.preventDefault(); find(".reply-form").requestSubmit(); }
+    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) { event.preventDefault(); queueRequested = event.shiftKey; find(".reply-form").requestSubmit(); }
   });
   const clock = seconds => `${Math.floor(seconds / 60)}:${(seconds % 60).toFixed(2).padStart(5, "0")}`;
   const videoName = video => (video.currentSrc || video.src || "video").split("/").pop().split("?")[0];
