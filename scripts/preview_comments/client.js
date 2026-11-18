@@ -2127,7 +2127,8 @@
     if (!element?.closest(".vp-doc")) return null;
     return context(element, "text", selected.toString().trim());
   }
-  function elementSelection(element) {
+  // Page controls (buttons, inputs) only become comment targets while choosing one (c), so using them does not pop up the comment offer.
+  function elementSelection(element, choosing = true) {
     if (!element?.closest?.(".vp-doc")) return null;
     const equation = element.closest("mjx-container");
     if (equation) {
@@ -2136,6 +2137,7 @@
         label ? `Equation ${label}` : equation.textContent.trim()) };
     }
     const control = element.closest("input, textarea, select, button") || element.closest("label")?.control;
+    if (control && !choosing) return null;
     if (control && !control.matches("input[type=password], input[type=hidden], input[type=file]")) {
       const label = control.getAttribute("aria-label") ||
         [...(control.labels || [])].map(node => node.textContent.trim()).join(" ") ||
@@ -2246,7 +2248,7 @@
   document.addEventListener("mouseup", event => {
     if (host.contains(event.target)) return;
     const selected = selection();
-    const picked = selected ? null : elementSelection(event.target);
+    const picked = selected ? null : elementSelection(event.target, selecting);
     const chosen = selected || picked?.chosen;
     if (!chosen) { contextual.hidden = true; return; }
     const anchor = picked?.element || getSelection().getRangeAt(0).cloneRange();
