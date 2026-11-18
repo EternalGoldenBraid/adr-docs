@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.88.0 - 2026-11-18
+
+- Theme picker button next to the light/dark toggle: π (default style) or N (company theme). Choice is remembered.
+
 ## 0.87.0 - 2026-11-18
 
 - company brand theme (Brand Guide colours, Funnel Sans), opt in with `?theme=company` (remembered; `?theme=default` turns it off). Works with the light/dark toggle.
