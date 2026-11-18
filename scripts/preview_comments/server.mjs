@@ -350,6 +350,12 @@ export async function startCommentBridge({
   for (const record of records) apply(record);
   const token = randomUUID();
 
+  // A drawn region: child-index path from the page body to an element, and the rectangle as fractions of that element.
+  function regionField(value) {
+    if (!value || !Array.isArray(value.path) || value.path.length > 32 || !value.path.every(n => Number.isInteger(n) && n >= 0 && n < 100000)) return null;
+    if (!Array.isArray(value.box) || value.box.length !== 4 || !value.box.every(n => Number.isFinite(n) && Math.abs(n) < 1000)) return null;
+    return { path: value.path, box: value.box };
+  }
   function imageIds(value) {
     if (value === undefined) return [];
     if (!Array.isArray(value) || value.length > MAX_IMAGES) throw new Error(`images must list at most ${MAX_IMAGES} attachments.`);
@@ -401,6 +407,7 @@ export async function startCommentBridge({
       ...(input.note === true && input.highlight !== true ? { note: true } : {}),
       color: COLORS.includes(input.color) ? input.color : "yellow",
       ...(images.length ? { images } : {}),
+      ...(regionField(input.region) ? { region: regionField(input.region) } : {}),
       ...(refs.length ? { refs } : {}),
       ...(names(input.to, "to")?.length ? { to: names(input.to, "to") } : {}),
     };

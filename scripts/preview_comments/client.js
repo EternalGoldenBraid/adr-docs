@@ -88,7 +88,7 @@
       .toolbar[hidden]{display:none!important}.toolbar{margin-bottom:8px}
       .dock{display:flex;flex-direction:column;align-items:flex-end;transform-origin:bottom right;transform:translate(var(--dx,0px),var(--dy,0px)) scale(var(--ds,1))}
       .rail{position:fixed;top:0;right:0;width:0;height:100vh;pointer-events:none}
-      .bubble{position:fixed;transform:scale(var(--s,1));transform-origin:center;width:24px;height:24px;padding:0;border-radius:50%;pointer-events:auto;border:2px solid #0006;font-size:11px;line-height:1;opacity:.8}
+      .region-mark{position:fixed;box-sizing:border-box;border:2px solid;border-radius:3px;pointer-events:none;opacity:.85}.bubble{position:fixed;transform:scale(var(--s,1));transform-origin:center;width:24px;height:24px;padding:0;border-radius:50%;pointer-events:auto;border:2px solid #0006;font-size:11px;line-height:1;opacity:.8}
       .tick{position:fixed;right:0;width:12px;height:5px;padding:0;border-radius:2px;border:1px solid #0008;pointer-events:auto;cursor:pointer;opacity:.95}.tick:hover{width:18px}
       .bubble:hover{opacity:1}.bubble.fresh{box-shadow:0 0 0 3px #fff8}
       .bubble.resolved{opacity:.35}
@@ -1936,7 +1936,7 @@
       const result = await response.json();
       if (!response.ok) throw new Error(result.error);
       imageUrls.set(result.id, Promise.resolve(URL.createObjectURL(blob)));
-      return { id: result.id, url: await imageUrls.get(result.id), element };
+      return { id: result.id, url: await imageUrls.get(result.id), element, region: regionOf(element, rect) };
     } catch (error) {
       message(error.name === "NotAllowedError" ? "Screen capture was not allowed." : error.message, true);
       return null;
@@ -1944,6 +1944,23 @@
       host.style.visibility = "";
       regioning = false;
     }
+  }
+  // Where a region was drawn, as child indices from .vp-doc to the element under it and fractions of that element's box, so the outline follows layout changes.
+  function regionOf(element, rect) {
+    const doc = document.querySelector(".vp-doc");
+    if (!element || !doc?.contains(element) || element === doc) return null;
+    const path = [];
+    for (let node = element; node !== doc; node = node.parentElement) path.unshift([...node.parentElement.children].indexOf(node));
+    const box = element.getBoundingClientRect();
+    if (!(box.width > 0 && box.height > 0) || path.length > 32) return null;
+    return { path, box: [(rect.x - box.left) / box.width, (rect.y - box.top) / box.height, rect.width / box.width, rect.height / box.height].map(n => Math.round(n * 1e4) / 1e4) };
+  }
+  function regionRect(doc, region) {
+    let node = doc;
+    for (const index of region.path) node = node?.children[index];
+    if (!node) return null;
+    const box = node.getBoundingClientRect(), [fx, fy, fw, fh] = region.box;
+    return { left: box.left + fx * box.width, top: box.top + fy * box.height, right: box.left + (fx + fw) * box.width, bottom: box.top + (fy + fh) * box.height };
   }
   function addDraftImage(shot) {
     if (draftImages.length >= 4) { message("A comment can carry at most 4 screenshots.", true); return; }
@@ -2632,7 +2649,7 @@
       if (!sessionId) sessionId = (await api("status")).sessionId;
       const asNote = noteRequested;
       noteRequested = false;
-      await api("comments", { ...target, id: draftId, sessionId, comment: submittedText, ...(draftImages.length ? { images: draftImages.map(shot => shot.id) } : {}), ...(asNote ? { note: true } : {}), ...(branchOf ? { refs: [branchOf] } : {}), ...toValue(composeTo, !find(".to-new").hidden) });
+      await api("comments", { ...target, id: draftId, sessionId, comment: submittedText, ...(draftImages.length ? { images: draftImages.map(shot => shot.id) } : {}), ...(draftImages[0]?.region && !draftId ? { region: draftImages[0].region } : {}), ...(asNote ? { note: true } : {}), ...(branchOf ? { refs: [branchOf] } : {}), ...toValue(composeTo, !find(".to-new").hidden) });
       branchOf = undefined;
       rememberTo(composeTo);
       message(asNote ? "Saved as private note" : "Saved · awaiting review");
@@ -2822,6 +2839,16 @@
         tick.addEventListener("click", event => { event.stopPropagation(); scrollTo({ top: Math.max(0, docY - innerHeight / 3), behavior: "smooth" }); });
         rail.append(tick);
       }
+      if (mark.outline) {
+        const box = mark.range.getBoundingClientRect();
+        if (Number.isFinite(box.top)) {
+          const outline = document.createElement("div");
+          outline.className = "region-mark";
+          const rgb = COLORS[mark.comment.color || "yellow"];
+          Object.assign(outline.style, { left: `${box.left}px`, top: `${box.top}px`, width: `${box.right - box.left}px`, height: `${box.bottom - box.top}px`, borderColor: `rgb(${rgb})` });
+          rail.append(outline);
+        }
+      }
       const spot = bubbleSpot(mark);
       if (!spot || !(spot.y >= top) || spot.y > innerHeight - 40) continue;
       let { x, y } = spot;
@@ -2857,6 +2884,8 @@
       if (comment.kind === "node" || comment.kind === "edge") {
         const id = comment.anchor.replace(/^(node|edge)-/, "");
         marks.push({ custom: true, comment, range: { getBoundingClientRect: () => customTarget(id)?.rect || { top: NaN } } });
+      } else if (comment.region && doc) {
+        marks.push({ custom: true, comment, range: { getBoundingClientRect: () => regionRect(doc, comment.region) || { top: NaN } }, outline: true });
       } else if (comment.kind === "equation" && doc) {
         const el = findEquation(doc, comment.quote);
         if (el) {
