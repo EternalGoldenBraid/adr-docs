@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.82.1 - 2026-11-18
+
+- The thread popup opened from a page bubble now stacks above region rectangles, and its size is limited to the window when the interface is scaled up for a zoomed-out browser, so it can no longer outgrow the screen.
+
 ## 0.82.0 - 2026-11-18
 
 - Queued send: `Ctrl+Shift+Enter` in the comment or reply box sends without pinging. The agent gets it when it next goes idle (the hosting agent via its usual idle check, mesh agents once their status is no longer "working"), instead of interrupting what it is doing. `Ctrl+Enter` still sends right away.
