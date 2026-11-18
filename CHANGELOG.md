@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.81.1 - 2026-11-18
+
+- The region rectangle now appears (dashed) as soon as the region is captured, before the comment is sent, and goes away on cancel.
+
 ## 0.81.0 - 2026-11-18
 
 - A region comment (`s`, then drag) now leaves a rectangle on the page in the thread's colour, with the usual bubble on its corner. The rectangle follows the element it was drawn on when the layout changes. Threads made before this have no rectangle.
