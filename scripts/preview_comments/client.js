@@ -1672,7 +1672,7 @@
     clearPrefix();
     toggle.textContent = "Comment";
     shadow.activeElement?.blur();
-    panel.hidden = true;
+    panel.hidden = true; placeBubbles();
     contextual.hidden = true;
     history.hidden = false;
     showCaret();
@@ -1830,6 +1830,7 @@
       item.append(image, remove);
       return item;
     }));
+    placeBubbles();
     if (!panel.hidden && targetAnchor) position(panel, targetAnchor);
   }
   const regionLayer = find(".region");
@@ -2500,7 +2501,7 @@
       selecting = false;
       toggle.textContent = "Comment";
       shadow.activeElement?.blur();
-      panel.hidden = true;
+      panel.hidden = true; placeBubbles();
       message("");
       showCaret();
       return;
@@ -2630,7 +2631,7 @@
   });
   find(".cancel").addEventListener("click", () => {
     shadow.activeElement?.blur();
-    panel.hidden = true;
+    panel.hidden = true; placeBubbles();
     message("");
     showCaret();
   });
@@ -2826,6 +2827,14 @@
     const taken = [];
     const size = 24 * uiScale();
     const total = Math.max(document.documentElement.scrollHeight, 1);
+    const draftRegion = !panel.hidden && !draftId && draftImages[0]?.region;
+    const draftBox = draftRegion && regionRect(document.querySelector(".vp-doc"), draftRegion);
+    if (draftBox && Number.isFinite(draftBox.top)) {
+      const outline = document.createElement("div");
+      outline.className = "region-mark";
+      Object.assign(outline.style, { left: `${draftBox.left}px`, top: `${draftBox.top}px`, width: `${draftBox.right - draftBox.left}px`, height: `${draftBox.bottom - draftBox.top}px`, borderColor: `rgb(${COLORS.yellow})`, borderStyle: "dashed" });
+      rail.append(outline);
+    }
     for (const mark of marks) {
       if (mark.comment.resolved && !hasFresh(mark.comment)) continue;
       const rect = mark.range.getBoundingClientRect();
