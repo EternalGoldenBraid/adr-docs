@@ -16,6 +16,7 @@ function meshDataDirectory() {
   const moved = join(homedir(), ".agent-mesh");
   return existsSync(join(moved, "agent-mesh.db")) ? moved : meshCodeDirectory;
 }
+import { readCell, writeCell } from "./table-edit.mjs";
 import { readRoster } from "../../src/roster.mjs";
 import { readPageTree } from "../../src/page-tree.mjs";
 
@@ -626,7 +627,7 @@ export async function startCommentBridge({
         response.writeHead(200, { "Content-Type": "image/png", "Cache-Control": "private, max-age=31536000, immutable" });
         return response.end(readFileSync(imageFile(download[1])));
       }
-      if (request.method !== "POST" || !["/comments", "/updates", "/attachments", "/userseen", "/settings", "/agent-update", "/agent-add", "/agent-status", "/face-open", "/face-post", "/restart", "/tts"].includes(request.url)) {
+      if (request.method !== "POST" || !["/comments", "/updates", "/attachments", "/userseen", "/settings", "/agent-update", "/agent-add", "/agent-status", "/face-open", "/face-post", "/restart", "/tts", "/table-edit"].includes(request.url)) {
         return reply(response, 404, { error: "Unknown comment endpoint." });
       }
       if (request.url === "/restart") {
@@ -649,6 +650,25 @@ export async function startCommentBridge({
           return reply(response, 200, { id: await speech(JSON.parse(Buffer.concat(chunks).toString("utf8")).text) });
         } catch (error) {
           return reply(response, 503, { error: error.message });
+        }
+      }
+      if (request.url === "/table-edit") {
+        try {
+          const body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+          const url = new URL(field(body.url, "Page URL", 2048));
+          const pathname = decodeURIComponent(url.pathname).replace(/\.html$/, "");
+          const stem = resolve(root, "." + pathname);
+          const source = realpathSync(pathname.endsWith("/") ? join(stem, "index.md") : stem + ".md");
+          const within = relative(root, source);
+          if (isAbsolute(within) || within === ".." || within.startsWith(".." + sep)) throw new Error("The document is outside the preview root.");
+          const text = readFileSync(source, "utf8");
+          const where = [body.table, body.row, body.col];
+          if (!where.every(Number.isInteger)) throw new Error("Invalid cell.");
+          if (body.value === undefined) return reply(response, 200, readCell(text, ...where));
+          writeFileSync(source, writeCell(text, ...where, body.value, body.hash));
+          return reply(response, 200, { saved: true });
+        } catch (error) {
+          return reply(response, 400, { error: error.message });
         }
       }
       if (request.url === "/attachments") {

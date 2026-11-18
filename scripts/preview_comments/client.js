@@ -1984,6 +1984,44 @@
     addDraftImage(shot);
   }
   document.addEventListener("preview-comment-region", () => regionComment());
+  // Editable tables (`{editable}` under a table): double-click a cell to edit its markdown; Enter saves into the page file, Esc cancels.
+  const editStyle = document.createElement("style");
+  editStyle.textContent = "td.adr-edit-cell{cursor:cell;border-bottom:1px dotted #8b949e}td.adr-edit-cell:hover{background:#ffffff14}td.adr-editing{padding:0!important}td.adr-editing input{width:100%;box-sizing:border-box;font:inherit;color:inherit;background:#0d1117;border:2px solid #388bfd;padding:6px 10px;margin:0}";
+  document.head.append(editStyle);
+  const markEditable = () => document.querySelectorAll("tr[data-adr-edit]:not([data-adr-marked])").forEach(row => {
+    row.dataset.adrMarked = "1";
+    row.dataset.adrCols.split(",").filter(Boolean).forEach(col => row.cells[Number(col)]?.classList.add("adr-edit-cell"));
+  });
+  new MutationObserver(markEditable).observe(document.body, { childList: true, subtree: true });
+  markEditable();
+  document.addEventListener("dblclick", async event => {
+    const cell = event.target.closest?.("td.adr-edit-cell");
+    if (!cell || cell.classList.contains("adr-editing")) return;
+    event.preventDefault();
+    getSelection()?.removeAllRanges();
+    const tr = cell.parentElement;
+    const where = { url: location.href, table: Number(tr.dataset.adrEdit), row: Number(tr.dataset.adrRow), col: cell.cellIndex };
+    let current;
+    try { current = await api("table-edit", where); } catch (error) { return message(error.message, true); }
+    const shown = [...cell.childNodes];
+    const input = document.createElement("input");
+    input.value = current.raw;
+    cell.classList.add("adr-editing");
+    cell.replaceChildren(input);
+    input.focus();
+    let done = false;
+    const close = () => { done = true; cell.classList.remove("adr-editing"); cell.replaceChildren(...shown); };
+    input.addEventListener("keydown", async key => {
+      key.stopPropagation();
+      if (key.key === "Escape") close();
+      else if (key.key === "Enter") {
+        done = true;
+        try { await api("table-edit", { ...where, value: input.value, hash: current.hash }); cell.classList.remove("adr-editing"); cell.textContent = input.value; message("Saved to the page file"); }
+        catch (error) { done = false; message(error.message, true); }
+      }
+    });
+    input.addEventListener("blur", () => { if (!done) close(); });
+  });
   async function regionDraft() {
     const shot = await captureRegion();
     if (!shot) return;

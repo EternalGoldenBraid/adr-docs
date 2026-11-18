@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.84.0 - 2026-11-18
+
+- Editable tables in the live preview: put a blank line and `{editable}` (all columns) or `{editable: Col A, Col B}` under a table, then double-click a cell, type, and press Enter to write it into the page's markdown file (Esc cancels). Only the marked table and columns are writable, and a save is refused if the file changed since you started editing. The marker line is not shown. Not available in exports or on the published site yet.
+
 ## 0.83.3 - 2026-11-18
 
 - Read aloud starts the text-to-speech server itself when it is down (the first read then takes about a minute). `:tts on|off` turns that off; `:settings` shows it.
