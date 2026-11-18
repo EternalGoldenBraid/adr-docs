@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import mathjax from "markdown-it-mathjax3";
 import taskLists from "./task-lists.mjs";
 import { markdownFiles, treeThemeConfig, treeJsonPlugin } from "./page-tree.mjs";
@@ -135,6 +136,14 @@ function exportPlugin(documentRoot) {
   };
 }
 
+// A site may add dev-server plugins in <documentRoot>/.vitepress/preview-plugins.mjs: the default export is an array of Vite plugins, or a function of documentRoot returning one. Preview only, never exports.
+async function sitePlugins(documentRoot) {
+  const file = join(documentRoot, ".vitepress", "preview-plugins.mjs");
+  if (!existsSync(file)) return [];
+  const exported = (await import(pathToFileURL(file).href)).default;
+  return typeof exported === "function" ? await exported(documentRoot) : exported ?? [];
+}
+
 export function previewConfig({ documentRoot, connectionFile, workspace, packageRoot, exportMode = false, onlyPages }) {
   return {
     // An export renders chosen pages only, so unrelated pages (even with broken front matter) cannot break it.
@@ -157,7 +166,7 @@ export function previewConfig({ documentRoot, connectionFile, workspace, package
       // VitePress supplies fixed optimizer inputs; the document tree needs no dependency scan.
       optimizeDeps: { noDiscovery: true, include: ["cytoscape"] },
       customLogger: stderrLogger(),
-      plugins: exportMode ? [] : [previewComments({ connectionFile }), treeJsonPlugin(documentRoot), exportPlugin(documentRoot), searchPlugin(documentRoot), versionPlugin(packageRoot)],
+      plugins: exportMode ? [] : [previewComments({ connectionFile }), treeJsonPlugin(documentRoot), exportPlugin(documentRoot), searchPlugin(documentRoot), versionPlugin(packageRoot), sitePlugins(documentRoot)],
       server: {
         host: "127.0.0.1",
         fs: { allow: [documentRoot, packageRoot, workspace] },

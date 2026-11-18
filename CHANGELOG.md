@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.80.0 - 2026-11-18
+
+- A site can add its own dev-server plugins to the preview: `<site>/.vitepress/preview-plugins.mjs` default-exports an array of Vite plugins, or a function of the document root returning one. Preview only; exports and the published site ignore it. (Lets a page start a local helper process through an endpoint the site defines.)
+
 ## 0.79.2 - 2026-11-18
 
 - A page can start region-comment capture (as the `s` key does) with `document.dispatchEvent(new CustomEvent("preview-comment-region"))`, so embedded canvas or iframe content (such as the Rerun viewer, whose text cannot be selected) can offer a "comment on a region" button.
