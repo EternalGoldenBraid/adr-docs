@@ -333,3 +333,7 @@ The Team panel's **Room** tab (`-` then `m`) lists the rooms you are in. A room 
 The index (side columns: the sidebar and "On this page") is hidden so the page and its graphs use the full width. **+ Show index** under the top bar, or `\` outside text fields, shows it again (**− Hide index** hides it); the choice is remembered. Graphs open fitted; `+ - 0` zoom and `:fit` refits.
 
 A page component can also start the region capture by dispatching a `preview-comment-region` event on `document`; use it for a button beside content whose text cannot be selected (iframes, canvases).
+
+## Site dev-server plugins
+
+`<site>/.vitepress/preview-plugins.mjs` may default-export an array of Vite plugins, or a function of the document root returning one. They load in the preview only (not in exports or the published site), so a page can use a site-defined endpoint, for example to start a local helper process. Restart the preview after adding the file.
