@@ -354,4 +354,4 @@ The normal export packages only what the page itself references: graph node imag
 npm run export -- site/index.md --serve --out talk.zip
 ```
 
-The zip holds the whole built site (all of `public/` included) and `serve.py`. On the viewing machine: unzip, `python3 serve.py [port]`, and it opens `http://127.0.0.1:8000/`. Everything works as on the live site except the comment overlay and anything that needs a live server (for example a catalog server). `--page /x` (repeatable) builds only those pages. Size is the site's `public/` size.
+The zip holds the whole built site (all of `public/` included) and `serve.py`. On the viewing machine: unzip, `python3 serve.py [port]`, and it opens `http://127.0.0.1:8000/`. Everything works as on the live site except the comment overlay and anything that needs a live server (for example a catalog server). `--page /x` (repeatable) builds only those pages. All of `public/` is included, so leave out unrelated large files with `--exclude 'data/v0/**'` (repeatable; globs relative to the site root).

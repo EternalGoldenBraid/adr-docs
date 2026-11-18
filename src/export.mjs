@@ -6,7 +6,7 @@ import {
   symlinkSync, writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, dirname, extname, join, resolve } from "node:path";
+import { basename, dirname, extname, join, matchesGlob, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const packageRoot = fileURLToPath(new URL("../", import.meta.url));
@@ -218,13 +218,21 @@ except KeyboardInterrupt:
 
 // The whole built site (every page, plus public/ assets such as wasm and data files) with a tiny local server, for sites whose
 // components fetch files at runtime and so cannot work from file://. Needs python3 (or any static server) on the viewing machine.
-async function exportServed({ documentRoot, sources, outFile, stem, onProgress }) {
+async function exportServed({ documentRoot, sources, exclude, outFile, stem, onProgress }) {
   onProgress({ stage: "Building site", done: 0, total: 3 });
   const workspace = await buildSite(documentRoot, sources, true);
   try {
     const staging = join(workspace, "bundle");
     mkdirSync(staging, { recursive: true });
     cpSync(join(workspace, "dist"), join(staging, "site"), { recursive: true, dereference: true });
+    // --exclude globs are relative to the site root (public/ files sit at the root, e.g. data/v0/**).
+    if (exclude.length) {
+      const site = join(staging, "site");
+      for (const entry of readdirSync(site, { recursive: true })) {
+        const full = join(site, entry);
+        if (existsSync(full) && statSync(full).isFile() && exclude.some(pattern => matchesGlob(entry, pattern))) rmSync(full);
+      }
+    }
     writeFileSync(join(staging, "serve.py"), SERVE_PY, { mode: 0o755 });
     writeFileSync(join(staging, "README.txt"), "Run:  python3 serve.py   (optionally a port: python3 serve.py 8080)\nThen open http://127.0.0.1:8000/ . The site needs a local web server; it will not work by opening the files directly.\n");
     const target = resolve(outFile ?? `${stem}-site.zip`);
@@ -239,7 +247,7 @@ async function exportServed({ documentRoot, sources, outFile, stem, onProgress }
 }
 
 // `pages` (several) or `page` (one). onProgress({ stage, done, total }) reports coarse steps.
-export async function exportPage({ documentPath, documentRoot, page, pages, outFile, inlineLimit = 2 * 1024 * 1024, zip, single, compress, serve, onProgress = () => {} } = {}) {
+export async function exportPage({ documentPath, documentRoot, page, pages, outFile, inlineLimit = 2 * 1024 * 1024, zip, single, compress, serve, exclude = [], onProgress = () => {} } = {}) {
   let stem = "index";
   if (documentPath) {
     const document = realpathSync(documentPath);
@@ -257,7 +265,7 @@ export async function exportPage({ documentPath, documentRoot, page, pages, outF
       if (dirname(root) === root) break;
     }
   }
-  if (serve) return exportServed({ documentRoot, sources: explicit ? sources0(documentRoot, pages) : undefined, outFile, stem, onProgress });
+  if (serve) return exportServed({ documentRoot, sources: explicit ? sources0(documentRoot, pages) : undefined, exclude, outFile, stem, onProgress });
   const sources = pages.map(item => {
     const source = sourceFor(documentRoot, item);
     if (!source) throw new Error(`Page ${item} not found under ${documentRoot}. Pass any .md file in the site root, e.g. its index.md, or the page's own file.`);
@@ -303,7 +311,7 @@ export async function exportPage({ documentPath, documentRoot, page, pages, outF
     const media = rendered.flatMap(item => item.media);
     const asZip = many || (zip ?? media.length > 0);
     const first = rendered[0].htmlName;
-    const target = resolve(outFile ?? `${many ? "pages" : basename(first, ".html") === "index" ? stem : basename(first, ".html")}.${asZip ? "zip" : "html"}`);
+    const target = resolve(asZip && outFile?.toLowerCase().endsWith(".html") ? outFile.replace(/\.html$/i, ".zip") : outFile ?? `${many ? "pages" : basename(first, ".html") === "index" ? stem : basename(first, ".html")}.${asZip ? "zip" : "html"}`);
     onProgress({ stage: asZip ? "Zipping" : "Writing", done: total - 1, total });
     if (asZip) {
       const staging = join(workspace, "bundle");
