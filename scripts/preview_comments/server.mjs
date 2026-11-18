@@ -6,8 +6,8 @@ import {
 } from "node:fs";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { homedir, hostname } from "node:os";
-import { execFile } from "node:child_process";
-import { pathToFileURL } from "node:url";
+import { execFile, spawn } from "node:child_process";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 const meshCodeDirectory = join(homedir(), ".copilot", "extensions", "agent-mesh");
 // MESH_DIR, else ~/.agent-mesh, else the pre-move location inside the extension.
@@ -86,6 +86,13 @@ export async function startCommentBridge({
   // Read aloud: text goes to a local text-to-speech server (ADR_TTS_URL, default via `adr tts` on 127.0.0.1:8765); audio is cached by text.
   const speechUrl = process.env.ADR_TTS_URL || "http://127.0.0.1:8765";
   const speaking = new Map();
+  // First read-aloud with the server down starts it (tools/tts.mjs start, about a minute), unless the user turned it off.
+  let speechStart = null;
+  const startSpeechServer = () => speechStart ??= new Promise(done => {
+    const child = spawn(process.execPath, [fileURLToPath(new URL("../../tools/tts.mjs", import.meta.url)), "start"], { stdio: "ignore" });
+    child.on("error", () => done(false));
+    child.on("exit", code => done(code === 0));
+  }).finally(() => { speechStart = null; });
   async function speech(text) {
     if (typeof text !== "string" || !text.trim()) throw new Error("Nothing to read.");
     const id = createHash("sha256").update(text.trim()).digest("hex");
@@ -93,11 +100,15 @@ export async function startCommentBridge({
     if (existsSync(file)) return id;
     if (!speaking.has(id)) {
       speaking.set(id, (async () => {
+        const speak = () => fetch(speechUrl + "/speak", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: text.trim() }), signal: AbortSignal.timeout(120_000) });
         let result;
         try {
-          result = await fetch(speechUrl + "/speak", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: text.trim() }), signal: AbortSignal.timeout(120_000) });
+          result = await speak().catch(async error => {
+            if (settings.tts === false || !(await startSpeechServer())) throw error;
+            return speak();
+          });
         } catch {
-          throw new Error("Text-to-speech server not reachable. Start it with `node tools/tts.mjs start`.");
+          throw new Error(settings.tts === false ? "Text-to-speech is off (:tts on to enable)." : "Text-to-speech server could not be started. Try `node tools/tts.mjs start`.");
         }
         if (!result.ok) throw new Error(`Text-to-speech failed (${result.status}).`);
         writeFileSync(file, Buffer.from(await result.arrayBuffer()), { mode: 0o600 });
@@ -672,6 +683,7 @@ export async function startCommentBridge({
             if (!["owner", "last"].includes(body.default)) throw new Error("Default must be owner or last.");
             next.default = body.default;
           }
+          if (body.tts !== undefined) next.tts = body.tts === true;
           settings = next;
           writeFileSync(settingsFile, JSON.stringify(settings), { mode: 0o600 });
           revision++;
