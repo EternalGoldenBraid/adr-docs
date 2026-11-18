@@ -15,6 +15,7 @@ npm ci
 npm run readme                       # the landing page, with a graph demo
 npm run preview -- path/to/doc.md    # any Markdown file
 npm run export -- doc.md --page /x   # offline copy of one page; repeat --page for several (or the Export button / :export)
+npm run export -- site/index.md --serve   # whole site + public/ assets + serve.py, for pages that fetch files at run time
 adr path/to/doc.md 5190              # same, from anywhere (ln -s $PWD/bin/preview.mjs ~/.local/bin/adr)
 adr path/to/site --port 5174         # a whole folder of pages, from its index.md
 adr path/to/site -d                  # run in the background (log in the state dir)
