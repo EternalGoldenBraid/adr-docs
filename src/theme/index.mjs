@@ -13,6 +13,7 @@ import { enhanceTables } from "./table-tools.mjs";
 import { installPublishing } from "./publish.mjs";
 import "./task-lists.css";
 import "./layout.css";
+import "./company.css";
 
 // The default theme plus <DocGraph src="/graph.json" /> (an editable layered graph) <RerunViewer src="x.rrd" /> (hosted Rerun web viewer) and the page tree:
 // breadcrumbs, child pages and a collapsible tree (`t`) driven by `parent:` / `order:` front matter.
@@ -27,6 +28,9 @@ export default {
       window.addEventListener("load", run);
       installSidebarToggle();
       installPublishing();
+      const q = new URLSearchParams(location.search).get("theme");
+      if (q) localStorage.setItem("adr-theme", q);
+      document.documentElement.classList.toggle("company", localStorage.getItem("adr-theme") === "company");
     }
     app.component("DocGraph", DocGraph); app.component("TeamGraph", TeamGraph); app.component("RerunViewer", RerunViewer); app.component("WorkstreamBoard", WorkstreamBoard); app.component("WorkstreamNow", WorkstreamNow); },
 };
