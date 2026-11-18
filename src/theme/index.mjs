@@ -17,10 +17,19 @@ import "./company.css";
 
 // The default theme plus <DocGraph src="/graph.json" /> (an editable layered graph) <RerunViewer src="x.rrd" /> (hosted Rerun web viewer) and the page tree:
 // breadcrumbs, child pages and a collapsible tree (`t`) driven by `parent:` / `order:` front matter.
+const themeButton = () => {
+  const on = () => typeof document !== "undefined" && document.documentElement.classList.contains("company");
+  return h("button", { class: "adr-theme-pick", title: "Theme: π (default) / company", "aria-label": "Switch theme", onClick: e => {
+    const next = on() ? "default" : "company";
+    localStorage.setItem("adr-theme", next);
+    document.documentElement.classList.toggle("company", next === "company");
+    e.currentTarget.textContent = next === "company" ? "N" : "π";
+  } }, on() ? "N" : "π");
+};
 const tree = pad => () => h(PageTree, { pad });
 export default {
   extends: DefaultTheme,
-  Layout: () => h(DefaultTheme.Layout, null, { "doc-before": tree(false), "page-top": tree(true), "home-hero-before": tree(true), "layout-top": () => h(ClassificationBanner), "layout-bottom": () => h(WorkstreamLinks) }),
+  Layout: () => h(DefaultTheme.Layout, null, { "doc-before": tree(false), "page-top": tree(true), "home-hero-before": tree(true), "nav-bar-content-after": themeButton, "layout-top": () => h(ClassificationBanner), "layout-bottom": () => h(WorkstreamLinks) }),
   enhanceApp({ app, router }) {
     if (typeof window !== "undefined") {
       const run = () => setTimeout(() => enhanceTables(document, location.pathname), 150);
