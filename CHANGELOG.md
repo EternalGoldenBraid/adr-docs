@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.81.0 - 2026-11-18
+
+- A region comment (`s`, then drag) now leaves a rectangle on the page in the thread's colour, with the usual bubble on its corner. The rectangle follows the element it was drawn on when the layout changes. Threads made before this have no rectangle.
+
 ## 0.80.1 - 2026-11-18
 
 - Clicking a button or form field on a page no longer pops up the comment offer. Controls are comment targets only while choosing one with `c`.
