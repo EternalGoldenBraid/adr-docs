@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.127.0 - 2026-11-19
+
+- Unblock ping: when a page held in review (open thread or missing verdict) loses its last blocker and turns done, its owner gets one mesh note to check it and set it done. Pages held when the preview starts are only recorded, not announced.
+
 ## 0.126.0 - 2026-11-19
 
 - Queue events: ADR reads the site's `.queue-events.jsonl` and sends a hand-over note to the doers a finished test unblocks, and an alert to the owner and blocked doers when a test fails or is lost. Replaces the site dispatcher timer.
