@@ -94,7 +94,7 @@ The agent can show a status line (`set_doc_review_status`) and attach a before/a
 
 ## Command line
 
-`:` opens a command line at the bottom of the page (Tab completes command names): `:help`, `:history`, `:chat`, `:comment`, `:tree`, `:new`, `:keys`, `:vim on|off`.
+`:` opens a command line at the bottom of the page (Tab completes command names): `:help`, `:history`, `:threads`, `:chat`, `:comment`, `:tree`, `:new`, `:keys`, `:vim on|off`.
 
 ## Resizing and key bindings
 
@@ -340,7 +340,7 @@ Like a pull request's "viewed" state: a blue dot in the page tree, the breadcrum
 
 ## What's new
 
-The status bar shows `N changed · n` when pages changed since you last left them. Press `n` (or `:new`) for the list, newest first: `j`/`k` move, `s` sorts by name, `l` or Enter shows the changed lines of the page (added in green, removed struck through, with context), `j`/`k` there jump between changes, `l` opens the page, `h` goes back, `m` marks the page seen, `M` marks all seen, Esc closes. The copy you last saw is kept in `<site>/.adr-data/snapshots/`; pages that were already marked seen before this existed show no diff until you next leave them. Preview only; the published site has no server to keep this.
+The status bar shows `N changed · n` when pages changed since you last left them. Press `n` (or `:new`) for the list, newest first: `j`/`k` move, `s` sorts by name, `l` or Enter shows the changed lines of the page (added in green, removed struck through, with context), `j`/`k` there jump between changes, `l` opens the page, `h` goes back, `m` marks the page seen, `M` marks all seen, Esc closes. A row shows `💬 N` for the open threads about that page, and `t` opens the page with them listed. The copy you last saw is kept in `<site>/.adr-data/snapshots/`; pages that were already marked seen before this existed show no diff until you next leave them. Preview only; the published site has no server to keep this.
 
 Pressing `l` on a page in the diff view (or Enter in the list) opens the page and makes the changed passages glow, the first one in gold and the others in lilac. `}` and `{` jump between them, and `Space` marks the current one read and moves on. `O` opens the page in a new tab, with the same glow.
 
@@ -489,3 +489,7 @@ Effort votes: `adr-vote` writes `votes.json` (see the changelog, 0.115.0) and `<
 An agent on a peer machine (for example the GPU host) reaches a preview through the mesh, with no tunnel and no shared token. On that machine, install the plugin and write `~/.local/state/agent-doc-review/remote.json` as `{"machine": "my-laptop"}` (the peer that runs the previews). The usual tools (`read_doc_review_comments`, `update_doc_review_comment`, `unanswered_threads`, `add_doc_review_comment`, `set_doc_review_status`) then take `store: "demo"` for a store that machine does not run itself.
 
 A named preview (`adr --name demo`) listens for `ADR-REQ` mesh messages (every 2 s; `ADR_MESH_SERVE=off` disables it). The caller finds the preview among the peer's agents by its directory name, sends the request, and the preview answers with `ADR-RES` messages, chunked to stay under the mesh's 10 KB limit. Only the agent endpoints are served (`/read`, `/unanswered`, `/agent-update`, `/agent-add`, `/agent-status`). Text only: images in replies are not carried yet.
+
+## Threads about this page
+
+`:threads` opens the history on **This page**: the threads started on the page, the threads of the page it was created from, and any thread whose text (comment or replies) links to the page by path, with or without `.html`. The What's new list (`n`) shows `💬 N` per page and `t` opens that page with the list. Read-only; it never edits links.
