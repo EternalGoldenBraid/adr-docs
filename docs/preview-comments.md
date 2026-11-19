@@ -323,7 +323,7 @@ Image up is world +x and image right is world −y (the Sim mosaic's convention)
 
 ## Workstreams
 
-Tickets in `workstreams/*.md` follow the schema in `workstreams/README.md`. The index page (`<WorkstreamBoard />`, built live from the front matter) groups them by status; `list_workstreams` (agent tool) or `npm run workstreams -- --json` returns them as JSON.
+Tickets in `workstreams/*.md` follow the schema in `workstreams/README.md`. The board is legacy: new work goes on page cards as tests (see Team queues), and nothing in ADR creates tickets. The index page (`<WorkstreamBoard />`, built live from the front matter) groups them by status; `list_workstreams` (agent tool) or `npm run workstreams -- --json` returns them as JSON.
 
 Within a status, tickets sort by `priority:` (lower first, unnumbered last); the queued group shows its rank. Owner chips (and `machine:` chips) on the board filter it. `<WorkstreamNow queued="3" />` puts a compact strip (all active tickets plus the next queued ones) on any page. To show the board in the top bar, give its index `parent: none` (an explicit top-level page) and a `nav:` label.
 
