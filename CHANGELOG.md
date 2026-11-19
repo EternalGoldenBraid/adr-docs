@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.113.1 - 2026-11-19
+
+- Fix: 0.113.0 shipped with a syntax error in the preview server (it did not start). Use 0.113.1 or later.
+
 ## 0.113.0 - 2026-11-19
 
 - Team graph: each node's current task comes from `queues.json` at the site root (`{agent-slug: [{rank, test, page, state, run}]}`): the running item, else the lowest rank. The agent's status ping is only the fallback when its queue is empty. `/mesh` returns `queues`.
