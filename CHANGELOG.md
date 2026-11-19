@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.128.1 - 2026-11-19
+
+- The plugin's tools load the preview (VitePress) only when a preview starts, so a client machine without `node_modules` can use them over the mesh.
+
 ## 0.128.0 - 2026-11-19
 
 - Doc-review tools work from a peer machine over the mesh: a named preview answers `ADR-REQ` messages with chunked `ADR-RES` replies, and with `remote.json` naming the peer, the tools take `store: "mokki"` for a store the machine does not run. Text only; images are not carried yet.
