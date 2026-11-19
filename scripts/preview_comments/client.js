@@ -73,7 +73,7 @@
       .thread-links select{width:auto;max-width:180px;border-radius:999px;padding:2px 8px;font-size:12px}
       details.quote-box{margin-bottom:8px}details.quote-box summary{cursor:pointer;color:#b7c1ce;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
       .reply-form{position:sticky;bottom:0;margin:0!important;padding:10px 20px 14px;background:#1b1d22;border-top:1px solid #3a404a}
-      textarea.whispering{border:1px dashed #b197fc;background:#2a2538}.assist{font-size:12px;margin-top:2px}.assist.hint{color:#d0bfff}.assist.list{display:flex;flex-wrap:wrap;gap:4px}.assist.list button{padding:1px 8px;border:1px solid #59616d;border-radius:999px;background:#1b1d22;color:inherit;font:inherit;cursor:pointer}.assist.list button.on{border-color:#74c0fc;background:rgba(116,192,252,.2)}textarea{field-sizing:content}.reply-form textarea{min-height:56px;max-height:240px}.reply-form .actions{margin-top:8px}
+      textarea.whispering{border:1px dashed #b197fc;background:#2a2538}.queue-lines{display:inline-flex;gap:6px;flex-wrap:wrap;margin-left:6px}.qline{font-size:11px;padding:1px 7px;border-radius:999px;border:1px solid #3a404a;background:#20242b}.qline.missing{border-color:#e03131;color:#ffa8a8;background:#3a1d1d}.assist{font-size:12px;margin-top:2px}.assist.hint{color:#d0bfff}.assist.list{display:flex;flex-wrap:wrap;gap:4px}.assist.list button{padding:1px 8px;border:1px solid #59616d;border-radius:999px;background:#1b1d22;color:inherit;font:inherit;cursor:pointer}.assist.list button.on{border-color:#74c0fc;background:rgba(116,192,252,.2)}textarea{field-sizing:content}.reply-form textarea{min-height:56px;max-height:240px}.reply-form .actions{margin-top:8px}
       .thread-messages{padding-bottom:6px}
       .note.whisper.mine,.note.whisper.copilot{border:1px dashed #b197fc;background:#2a2538}
       .note{margin:8px 0;padding:8px 12px;background:#252a32;border-radius:10px}.note.copilot{background:#1e2a3a;margin-right:36px}.note.mine{margin-left:36px}
@@ -1081,6 +1081,25 @@
   const STATUS_HINT = { working: "busy: mid-task", waiting: "waiting on something", asking: "waiting for an answer", idle: "free", active: "online, state unknown", offline: "offline" };
   let meshRoster = [], meshRosterAt = 0;
   const rosterEntry = name => meshRoster.find(m => m.session && [m.name, m.slug].some(n => n && n.toLowerCase() === name.toLowerCase()));
+  // Where a thread sits in each addressee's queue (queues.json items id "thread-<first 8>"): reassurance it will be picked up, or a red flag it is nowhere.
+  let queueData = {}, queueAt = 0;
+  function queueLine(comment, holder) {
+    const draw = () => {
+      const short = comment.id.slice(0, 8);
+      const names = (comment.to?.length ? comment.to : []).filter(name => Array.isArray(queueData[name]));
+      const last = comment.replies?.at(-1);
+      holder.replaceChildren(...(comment.resolved || isNote(comment) || (last && last.author !== "user") ? [] : names.map(name => {
+        const items = queueData[name].filter(item => item.state !== "done").sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0));
+        const at = items.findIndex(item => item.id === `thread-${short}`);
+        const chip = document.createElement("span");
+        chip.className = at < 0 ? "qline missing" : "qline";
+        chip.textContent = at < 0 ? `⚠ not in ${name}'s queue` : `queue ${name}: #${at + 1} of ${items.length}`;
+        return chip;
+      })));
+    };
+    draw();
+    if (Date.now() - queueAt > 15000) { queueAt = Date.now(); api("mesh").then(({ queues }) => { queueData = queues ?? {}; draw(); }).catch(() => {}); }
+  }
   function refreshRoster(redraw) {
     if (Date.now() - meshRosterAt < 15000) return;
     meshRosterAt = Date.now();
@@ -1609,6 +1628,8 @@
     const quoteLine = (comment.quote || "").replace(/!?\[([^\]\n]*)\]\([^\s)]+\)/g, "$1").replace(/\s+/g, " ");
     find(".quote-summary").textContent = quoteLine ? `“${quoteLine.slice(0, 90)}${quoteLine.length > 90 ? "…" : ""}”` : "Selected content";
     state.classList.toggle("resolved", comment.resolved);
+    if (!state.nextElementSibling?.classList.contains("queue-lines")) { const row = document.createElement("span"); row.className = "queue-lines"; state.after(row); }
+    queueLine(comment, state.nextElementSibling);
     find(".thread-resolve").textContent = isNote(comment) ? "Remove" : comment.resolved ? "Reopen" : "Resolve";
     markSeen(comment);
     renderLinks(comment);

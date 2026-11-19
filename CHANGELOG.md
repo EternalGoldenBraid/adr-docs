@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.121.0 - 2026-11-19
+
+- Thread header shows its queue position per addressee (`queue sim-agent: #3 of 8`), or a red `not in X's queue` flag while that agent still owes an answer.
+
 ## 0.120.0 - 2026-11-19
 
 - `@name` picker in the comment and reply boxes: arrows/Tab/Enter choose a team name and add that agent to the To: chips (typed `@names` are added on send too).
