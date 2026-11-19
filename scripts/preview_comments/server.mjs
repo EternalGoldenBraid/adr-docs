@@ -135,7 +135,7 @@ export async function startCommentBridge({
     if (!Array.isArray(value) || value.length > 12 || !value.every(name => typeof name === "string" && NAME.test(name))) {
       throw new Error(`${label} must list at most 12 short names.`);
     }
-    return [...new Set(value)];
+    return [...new Set(value.map(canon))];
   };
   // The team page (src/roster.mjs) is the source of the team when it lists agent sessions; settings are the fallback.
   let rosterAt = 0, rosterRows = [];
@@ -151,7 +151,8 @@ export async function startCommentBridge({
   const teamNames = () => agents().length ? agents().map(row => row.slug) : settings.team;
   const nameFor = value => agents().find(row => row.session === value)?.slug ?? value;
   const effective = () => ({ ...settings, owner: ownerName(), team: teamNames(), roster: roster(), fromRoster: agents().length > 0 });
-  const addressed = (comment, name) => comment.to?.length ? comment.to.includes(name) : name === ownerName();
+  const canon = name => agents().find(row => row.legacy === name && row.slug !== name)?.slug ?? name;
+  const addressed = (comment, name) => comment.to?.length ? comment.to.map(canon).includes(name) : name === ownerName();
   const readBy = (comment, name) => name === ownerName() ? comment.seen : Boolean(comment.readBy?.[name]);
 
   // Agents on enrolled peer machines are asked over the mesh's own SSH route (machines.json); cached so polling stays cheap.
@@ -259,7 +260,7 @@ export async function startCommentBridge({
   // Quiet mesh note to each addressed agent other than the owner; they pull the thread when they choose.
   // Without a hosting agent session (ownerViaMesh), the owner is also told this way, including of unaddressed comments.
   function announce(comment, text, queued = false) {
-    const names = comment.to?.length ? comment.to : ownerViaMesh ? [ownerName()] : [];
+    const names = comment.to?.length ? comment.to.map(canon) : ownerViaMesh ? [ownerName()] : [];
     if (!mesh) return;
     for (const who of names) {
       const target = agents().find(row => row.slug === who);

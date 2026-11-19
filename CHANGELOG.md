@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.112.1 - 2026-11-19
+
+- Agent names lose accents instead of the letter: "Demo agent" is `demo-agent`, not `m-kki-agent`. The old form is still accepted in `to` lists and comments already addressed to it.
+
 ## 0.112.0 - 2026-11-19
 
 - Page front-matter `owner:` is shown on the card and is the default recipient of a new thread on that page (when it names a known recipient, e.g. `pc-lead`; matching ignores case and spaces). `participants:` stay selectable as extra recipients. `/pagelinks` returns `owner` and `partners`.

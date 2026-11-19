@@ -3,7 +3,9 @@ import { join } from "node:path";
 
 const UUID = /[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}/i;
 const cells = line => line.trim().replace(/^\||\|$/g, "").split("|").map(cell => cell.trim());
-export const slugify = text => text.toLowerCase().replace(/[^a-z\d]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
+// "Demo agent" is "demo-agent"; `legacySlug` is the older form that dropped the accent ("m-kki-agent") and is still accepted.
+export const legacySlug = text => text.toLowerCase().replace(/[^a-z\d]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
+export const slugify = text => text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().replace(/[^a-z\d]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
 
 // The team page is the roster: a Markdown table whose header has "Who" and "Session". Optional columns:
 // Role, Machine, Harness, Topic, Working on, Reports to (the views of <TeamGraph />). Rows with a session id are agents and become the comment recipients.
@@ -30,7 +32,7 @@ export function readRoster(documentRoot) {
     const name = row[who]?.replace(/[*_`]/g, "").replace(/\[([^\]]*)\]\([^)]*\)/g, "$1").trim();
     if (!name) continue;
     rows.push({
-      name, slug: slugify(name), role: row[role] ?? "", machine: row[machine]?.replace(/[`—-]+$/, "") ?? "",
+      name, slug: slugify(name), ...(legacySlug(name) !== slugify(name) ? { legacy: legacySlug(name) } : {}), role: row[role] ?? "", machine: row[machine]?.replace(/[`—-]+$/, "") ?? "",
       harness: row[harness]?.replace(/[`—-]+$/, "") ?? "", work: row[work]?.replace(/^[—-]+$/, "") ?? "", topic: row[topic]?.replace(/^[—-]+$/, "") ?? "",
       reportsTo: row[reports]?.replace(/^[—-]+$/, "") ?? "", session: row[session]?.match(UUID)?.[0] ?? "",
     });

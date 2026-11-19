@@ -1054,7 +1054,7 @@
   const recipients = () => [...new Set([settings.owner, ...settings.team])];
   // A message's `from` is a display name ("ADR agent"); recipients are slugs ("adr-agent"). Unknown names are dropped.
   const recipientFor = name => {
-    const slug = String(name).toLowerCase().replace(/[^\w.-]+/g, "-");
+    const slug = String(name).normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().replace(/[^\w.-]+/g, "-");
     return recipients().find(r => r.toLowerCase() === slug);
   };
   // A page's front-matter `owner:` is the default recipient of new threads on it, when that name is a known recipient.
