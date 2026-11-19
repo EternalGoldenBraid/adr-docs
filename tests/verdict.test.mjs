@@ -66,3 +66,8 @@ test("page front-matter owner becomes the card owner", async () => {
   writeFileSync(join(dir, "o.md"), "---\nowner: pc-lead\ncard:\n  gist: \"G\"\n  state: planned\n---\n# O\n");
   assert.equal(pageCards(dir)["/o"].owner, "pc-lead");
 });
+
+test("slugs drop accents instead of the letter, and keep the old form as an alias", async () => {
+  const { slugify, legacySlug } = await import("../src/roster.mjs");
+  assert.deepEqual([slugify("Mökki agent"), legacySlug("Mökki agent")], ["mokki-agent", "m-kki-agent"]);
+});
