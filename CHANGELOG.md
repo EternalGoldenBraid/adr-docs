@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.104.2 - 2026-11-19
+
+- Links inside **bold** or *italic* in messages now render (`**[text](/path): done**` showed raw Markdown).
+
 ## 0.104.1 - 2026-11-19
 
 - A thread's "Selected content" box now renders Markdown links and quotes (was raw `[text](/path)`), and the summary and reply-target lines show the link text only.
