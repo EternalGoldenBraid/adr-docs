@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.101.0 - 2026-11-19
+
+- Removed the company (company) theme and the π/N theme picker from the package; branding stays local to the site that wants it. Earlier entries below still describe the removed feature.
+
 ## 0.100.0 - 2026-11-19
 
 - What's new: the highlighted row shows a preview (the page's `card-line`, `card-state`, `card-next`, then its first added lines), and reopening the list (`n`) puts the cursor back on the page you last opened from it.
