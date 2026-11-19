@@ -3,6 +3,7 @@ import DefaultTheme from "vitepress/theme";
 import TeamGraph from "../components/TeamGraph.vue";
 import DocGraph from "../components/DocGraph.vue";
 import RerunViewer from "../components/RerunViewer.vue";
+import RouteMap from "../components/RouteMap.vue";
 import WorkstreamLinks from "../components/WorkstreamLinks.vue";
 import ClassificationBanner from "../components/ClassificationBanner.vue";
 import WorkstreamBoard from "../components/WorkstreamBoard.vue";
@@ -41,5 +42,5 @@ export default {
       if (q) localStorage.setItem("adr-theme", q);
       document.documentElement.classList.toggle("company", localStorage.getItem("adr-theme") === "company");
     }
-    app.component("DocGraph", DocGraph); app.component("TeamGraph", TeamGraph); app.component("RerunViewer", RerunViewer); app.component("WorkstreamBoard", WorkstreamBoard); app.component("WorkstreamNow", WorkstreamNow); },
+    app.component("DocGraph", DocGraph); app.component("TeamGraph", TeamGraph); app.component("RerunViewer", RerunViewer); app.component("RouteMap", RouteMap); app.component("WorkstreamBoard", WorkstreamBoard); app.component("WorkstreamNow", WorkstreamNow); },
 };
