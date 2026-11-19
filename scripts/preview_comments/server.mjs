@@ -297,7 +297,8 @@ export async function startCommentBridge({
   }
   // Idle nudge: an agent that has been idle for NUDGE_AFTER with open work (queue items, or threads waiting on it) gets one mesh note,
   // then at most one per NUDGE_EVERY; none while it is working. Idle comes from the agent-notify hook or its status line (ticket|state|...).
-  const NUDGE_AFTER = Number(process.env.ADR_NUDGE_MINUTES ?? 5) * 60_000, NUDGE_EVERY = 30 * 60_000, NUDGE_AFTER_PROGRESS = 2 * 60_000;
+  // Threads waiting on you are pinged after 10 s idle; other queue items after 1 min. Repeats: 5 min (threads) or 30 min (items) without progress, the same idle wait after progress.
+  const NUDGE_AFTER = Number(process.env.ADR_NUDGE_MINUTES ?? 1) * 60_000, NUDGE_THREAD_AFTER = 10_000, NUDGE_THREAD_EVERY = 5 * 60_000, NUDGE_EVERY = 30 * 60_000;
   const idleSince = new Map(), nudgedAt = new Map(), nudgedCount = new Map();
   const readQueues = () => { try { return JSON.parse(readFileSync(join(documentRoot, "queues.json"), "utf8")); } catch { return {}; } };
   const openWork = slug => {
@@ -318,19 +319,21 @@ export async function startCommentBridge({
       if (!count) { nudgedCount.delete(row.slug); continue; }
       // Progress since the last nudge (the backlog shrank) earns the next one soon, so the queue drains one by one; otherwise keep the slow pace.
       const progressed = count < (nudgedCount.get(row.slug) ?? 0);
-      if (now - since < (progressed ? NUDGE_AFTER_PROGRESS : NUDGE_AFTER) || now - (nudgedAt.get(row.slug) ?? 0) < (progressed ? NUDGE_AFTER_PROGRESS : NUDGE_EVERY)) continue;
+      const waiting = threads.length + toResolve.length > 0;
+      const after = waiting ? NUDGE_THREAD_AFTER : NUDGE_AFTER;
+      if (now - since < after || now - (nudgedAt.get(row.slug) ?? 0) < (progressed ? after : waiting ? NUDGE_THREAD_EVERY : NUDGE_EVERY)) continue;
       const first = items[0];
       const note = `ADR idle nudge (no reply needed): you have been idle ${Math.round((now - since) / 60000)} min with ${items.length} open queue item(s), ${threads.length} thread(s) waiting and ${toResolve.length} to resolve. ` +
         (!threads.length && toResolve.length ? `Thread ${toResolve[0].id.slice(0, 8)} on ${toResolve[0].page} needs your resolve vote (or a reply if you disagree). ` : "") +
         (threads.length ? `Thread ${threads[0].id.slice(0, 8)} on ${threads[0].page} is waiting on you. ` : "") +
         (first ? `Next in your queue: "${first.test}" (rank ${first.rank}${first.weight ? `, weight ${first.weight}` : ""}, ${first.page}). ` : "") +
-        "Start it, or post what blocks it. When you finish one and go idle, the next one follows within 2 minutes.";
+        "Start it, or post what blocks it. When you finish one and go idle, the next one follows right after.";
       nudgedAt.set(row.slug, now);
       nudgedCount.set(row.slug, count);
       try { await mesh.send(meshAddress(row).session, note, meshAddress(row).machine); } catch (error) { nudgedAt.delete(row.slug); onError?.(error); }
     }
   }
-  const nudgeTimer = mesh && process.env.ADR_NUDGE !== "off" ? setInterval(() => nudgeIdle().catch(error => onError?.(error)), 60_000) : undefined;
+  const nudgeTimer = mesh && process.env.ADR_NUDGE !== "off" ? setInterval(() => nudgeIdle().catch(error => onError?.(error)), 5_000) : undefined;
   nudgeTimer?.unref();
   // .queue-events.jsonl at the site root (one line per test state change): a test turning done hands over to the doers it unblocks;
   // one turning failed or lost alerts its owner and those doers. Reading starts at the end of the file, so old events are not replayed.
