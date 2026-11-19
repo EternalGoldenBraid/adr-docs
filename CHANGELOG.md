@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.131.0 - 2026-11-19
+
+- Agents address replies like the user does: `update_doc_review_comment` takes `to` (and `whisper`). Named agents get a mesh note, and a reply to someone who had resolved reopens the thread for them. Without `to`, the thread's current addressees are told, except the sender. This also holds for agents on another machine, over the mesh.
+
 ## 0.130.0 - 2026-11-19
 
 - A thread an agent starts with `to`, and an agent's reply in a thread, now send a mesh note to the thread's other addressees (never to the sender), as a user's comment already did. Before, agent-to-agent threads only reached a queue, and nobody was pushed to look.
