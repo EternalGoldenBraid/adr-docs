@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.125.1 - 2026-11-19
+
+- The resolve chips now sit in the thread's sticky header (beside Resolve / Close for all), so who has resolved stays visible while you scroll.
+
 ## 0.125.0 - 2026-11-19
 
 - **Unresolve** takes back only your mark; **Close for all** is its own button (with confirmation).
