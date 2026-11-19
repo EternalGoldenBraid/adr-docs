@@ -1,10 +1,10 @@
 {
   "name": "adr-docs",
-  "version": "0.110.0",
+  "version": "0.111.0",
   "private": true,
   "license": "MIT",
   "type": "module",
-  "bin": { "adr": "bin/preview.mjs" },
+  "bin": { "adr": "bin/preview.mjs", "adr-check": "bin/check.mjs" },
   "description": "Local Markdown, equation and figure review with persistent Copilot session comments",
   "engines": {
     "node": ">=20"

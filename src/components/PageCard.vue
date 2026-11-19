@@ -25,20 +25,20 @@ const staleDays = computed(() => theme.value.staleDays ?? 2)
 const clip = t => t.length > props.budget ? t.slice(0, props.budget - 1) + '…' : t
 const over = t => t.length > props.budget
 const ORDER = ['building', 'planned', 'idea', 'shipped', 'superseded']
-const rows = computed(() => Object.entries(cards.value).filter(([, c]) => c.line || c.needsVerdict).map(([link, c]) => ({ link, ...c }))
+const rows = computed(() => Object.entries(cards.value).filter(([, c]) => c.line || c.needsVerdict || c.missing).map(([link, c]) => ({ link, ...c }))
   .sort((a, b) => Boolean(b.needsVerdict) - Boolean(a.needsVerdict) || ORDER.indexOf(a.status) - ORDER.indexOf(b.status) || a.title.localeCompare(b.title)))
 </script>
 
 <template>
   <div v-if="board" class="pc-board">
     <a v-for="r in rows" :key="r.link" :href="withBase(r.link)" class="pc-row">
-      <b :class="['pc-tag', r.status]">{{ r.status || '—' }}</b> <b v-if="r.needsVerdict" class="pc-tag needs">needs verdict</b> <span>{{ r.title }}</span><small> {{ clip(r.line) }}</small>
+      <b :class="['pc-tag', r.status]">{{ r.status || '—' }}</b> <b v-if="r.missing" class="pc-tag bad">missing: {{ r.missing.join(', ') }}</b> <b v-if="r.needsVerdict" class="pc-tag needs">needs verdict</b> <span>{{ r.title }}</span><small> {{ clip(r.line) }}</small>
     </a>
     <p v-if="!rows.length" class="pc-empty">No page has a <code>card-line</code> yet.</p>
   </div>
   <div v-else-if="here" class="pc-card">
     <div v-if="here['superseded-by']" class="pc-super">Superseded by <a :href="withBase(here['superseded-by'])">{{ here['superseded-by'] }}</a>. Kept as history.</div>
-    <div class="pc-head"><b :class="['pc-tag', here.status]" v-if="here.status">{{ here.status }}</b><b v-if="here.needsVerdict" class="pc-tag needs" title="Finished, but the Verdict and Learnings sections are missing or empty">needs verdict</b><span v-if="here.line">{{ clip(here.line) }}</span></div>
+    <div class="pc-head"><b :class="['pc-tag', here.status]" v-if="here.status">{{ here.status }}</b><b v-if="here.missing" class="pc-tag bad" title="Mandatory card fields are empty">missing: {{ here.missing.join(', ') }}</b><b v-if="here.needsVerdict" class="pc-tag needs" title="Finished, but the Verdict and Learnings sections are missing or empty">needs verdict</b><span v-if="here.line">{{ clip(here.line) }}</span></div>
     <div v-if="tests.length" class="pc-slot"><i>tests</i><div>
       <div class="pc-count"><b>{{ summary.count }}</b><span v-if="summary.age !== null" :class="{ 'pc-old': summary.running && summary.age > staleDays }"> · last result {{ summary.age ? summary.age + ' d ago' : 'today' }}<template v-if="summary.running && summary.age > staleDays"> ⚠ stale</template></span></div>
       <ul class="pc-tests"><li v-for="t in tests" :key="t.name" :class="['pc-test', t.status]"><span class="pc-mark">{{ MARK[t.status] || '?' }}</span><span>{{ t.name }}</span><small>{{ t.at || '' }}{{ t.verified ? ' ·run' : '' }}</small></li></ul>
@@ -56,6 +56,7 @@ const rows = computed(() => Object.entries(cards.value).filter(([, c]) => c.line
 .pc-tag.building { background: #51cf6633; color: #2b8a3e }
 .pc-tag.planned { background: #fcc41933; color: #a67c00 }
 .pc-tag.needs { background: #ff922b44; color: #d9480f }
+.pc-tag.bad { background: #e0313122; color: #c92a2a }
 .pc-count { font-size: 13px }
 .pc-mark, .pc-count b { font-family: "DejaVu Sans", "Noto Sans Symbols 2", sans-serif }
 .vp-doc .pc-tests { list-style: none; margin: 4px 0 0; padding: 0 }

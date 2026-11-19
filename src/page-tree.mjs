@@ -214,6 +214,8 @@ export function pageCards(documentRoot, options) {
       const derived = derivedState(card.tests);
       if (derived) { if (card.status && card.status !== derived) card.statusMismatch = card.status; card.status = derived; }
     }
+    const missing = ["line", "owner", "status"].filter(k => !card[k]);
+    if (Object.keys(card).length && missing.length) card.missing = missing.map(k => ({ line: "gist", status: "state" }[k] ?? k));
     const verdict = needsVerdict(text);
     if (!Object.keys(card).length && !verdict) continue;
     const slug = file.slice(0, -3);
