@@ -311,7 +311,8 @@
     ]],
     ["Search & commands", [
       "/ or :grep [-d N] [-u N] [-s] [-p|-c] <regex> searches pages and threads (no flag: all pages; -d 0: this page; -d N: N levels below; -u N: N ancestors; -1 = all)",
-      "Commands: :help [section] :man :history :chat :comment :tree :new :present :export [single|compress] :read [stop] :figure :restart :grep :vim off|on :keys",
+      "Commands: :help [section] :man :history :threads :chat :comment :tree :new :present :export [single|compress] :read [stop] :figure :restart :grep :vim off|on :keys",
+      ":threads opens the threads about this page: those started on it and those whose text links to it. In the What's new list (n), 💬 N counts them and t opens the page with them.",
       "Keys are configured in ~/.config/agent-doc-review/keymap.json",
     ]],
   ];
@@ -1569,7 +1570,7 @@
     list.replaceChildren();
     const filter = historyFilter;
     const rows = [...historyComments].sort((a, b) => new Date(b.updatedAt || b.at) - new Date(a.updatedAt || a.at));
-    const linkedHere = comment => comment.kind !== "session" && pagePath(comment.url) !== hereLink() && cameFrom(hereLink(), comment);
+    const linkedHere = comment => comment.kind !== "session" && pagePath(comment.url) !== hereLink() && (cameFrom(hereLink(), comment) || mentionsPage(comment, hereLink()));
     const groups = { here: [], linked: [] };
     const author = pageLinks[hereLink()]?.author;
     for (const comment of rows) {
@@ -1818,6 +1819,13 @@
   const loadPageLinks = () => api("pagelinks").then(value => { pageLinks = value.pages || {}; if (!history.hidden) renderHistory(); }).catch(() => {});
   const cameFrom = (link, comment) => (pageLinks[link]?.from || []).some(id => comment.id.startsWith(id));
   const hereLink = () => pagePath(location.href);
+  // A thread whose text links to the page (a relative or absolute path, with or without .html) is about it too.
+  const mentionsPage = (comment, link) => {
+    if (link === "/") return false;
+    const text = [comment.comment, ...(comment.replies || []).map(reply => reply.comment)].join("\n");
+    return new RegExp(`${link.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\w/-])`).test(text);
+  };
+  const threadsAbout = link => historyComments.filter(c => !c.removed && !c.resolved && !isNote(c) && c.kind !== "session" && (pagePath(new URL(c.url, location.origin)) === link || mentionsPage(c, link))).length;
   async function loadAllHistory() {
     if (historyAll) return;
     historyAll = true;
@@ -2395,7 +2403,7 @@
     whats.sorted = sorted;
     whats.i = Math.min(whats.i, Math.max(0, sorted.length - 1));
     if (whats.view === "list") {
-      whatsHint.textContent = `j/k move · l or Enter see changes · O new tab · m seen · M all seen · s sort (${whats.byName ? "name" : "newest"}) · Esc`;
+      whatsHint.textContent = `j/k move · l or Enter see changes · t threads · O new tab · m seen · M all seen · s sort (${whats.byName ? "name" : "newest"}) · Esc`;
       whatsBody.replaceChildren(...(sorted.length ? sorted.map((page, index) => {
         const row = document.createElement("div");
         row.className = "whats-row" + (index === whats.i ? " on" : "");
@@ -2403,7 +2411,8 @@
         const add = Object.assign(document.createElement("span"), { className: "add", textContent: page.noCopy ? "" : `+${page.added}` });
         const del = Object.assign(document.createElement("span"), { className: "del", textContent: page.noCopy ? "" : `−${page.removed}` });
         const when = Object.assign(document.createElement("span"), { className: "when", textContent: agoText(page.changedAt) });
-        row.append(slug, add, del, when);
+        const talk = threadsAbout(pagePath(new URL(page.link, location.origin)));
+        row.append(slug, add, del, when, ...(talk ? [Object.assign(document.createElement("span"), { className: "when", title: "Open threads about this page (t)", textContent: `💬 ${talk}` })] : []));
         row.addEventListener("click", () => { whats.i = index; whats.view = "diff"; whats.hunk = 0; whatsDraw(); });
         return row;
       }) : [Object.assign(document.createElement("div"), { textContent: "Nothing changed since you last looked." })]));
@@ -2471,6 +2480,7 @@
   }
   find(".whats-close").addEventListener("click", () => { whatsPanel.hidden = true; });
   commands.new = () => whatsOpen();
+  commands.threads = async () => { await openHistory(); setFilter("page"); };
   document.addEventListener("keydown", event => {
     const field = shadow.activeElement?.matches?.("textarea, input, select") || document.activeElement?.matches?.("input, textarea, select, [contenteditable]");
     if (event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
@@ -2491,7 +2501,8 @@
     else if ((key === "l" || key === "ArrowRight" || key === "Enter") && whats.sorted[whats.i]) {
       if (whats.view === "list") { whats.view = "diff"; whats.hunk = 0; whatsDraw(); }
       else whatsGo(false);
-    } else if (key === "O" && whats.sorted[whats.i]) whatsGo(true);
+    } else if (key === "t" && whats.sorted[whats.i]) { sessionStorage.setItem("adr-open-threads", "1"); sessionStorage.setItem("adr-whats-at", whats.sorted[whats.i].link); whatsPanel.hidden = true; location.assign(whats.sorted[whats.i].link); }
+    else if (key === "O" && whats.sorted[whats.i]) whatsGo(true);
     else if ((key === "h" || key === "ArrowLeft") && whats.view === "diff") { whats.view = "list"; whatsDraw(); }
     else return;
     event.preventDefault(); event.stopImmediatePropagation();
@@ -3608,6 +3619,7 @@
       sessionStorage.removeItem("adr-open-thread");
       openThreadById(pendingOpen);
     }
+    if (sessionStorage.getItem("adr-open-threads")) { sessionStorage.removeItem("adr-open-threads"); commands.threads(); }
     applyMarks();
     announceAwaiting();
   }

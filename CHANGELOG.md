@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.133.0 - 2026-11-19
+
+- **Threads about this page** (thread f379e1a8): the **This page** filter now also lists threads whose text links to the page. `:threads` opens it; in the What's new list (`n`) each page shows `💬 N` open threads and `t` opens the page with them.
+
 ## 0.132.1 - 2026-11-19
 
 - A reply sent under a display name ("Site manager") no longer notifies its own sender: the sender is matched by slug too.
