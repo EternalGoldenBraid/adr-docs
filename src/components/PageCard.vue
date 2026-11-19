@@ -15,20 +15,20 @@ const here = computed(() => {
 const clip = t => t.length > props.budget ? t.slice(0, props.budget - 1) + '…' : t
 const over = t => t.length > props.budget
 const ORDER = ['building', 'planned', 'idea', 'shipped', 'superseded']
-const rows = computed(() => Object.entries(cards.value).filter(([, c]) => c.line).map(([link, c]) => ({ link, ...c }))
-  .sort((a, b) => ORDER.indexOf(a.status) - ORDER.indexOf(b.status) || a.title.localeCompare(b.title)))
+const rows = computed(() => Object.entries(cards.value).filter(([, c]) => c.line || c.needsVerdict).map(([link, c]) => ({ link, ...c }))
+  .sort((a, b) => Boolean(b.needsVerdict) - Boolean(a.needsVerdict) || ORDER.indexOf(a.status) - ORDER.indexOf(b.status) || a.title.localeCompare(b.title)))
 </script>
 
 <template>
   <div v-if="board" class="pc-board">
     <a v-for="r in rows" :key="r.link" :href="withBase(r.link)" class="pc-row">
-      <b :class="['pc-tag', r.status]">{{ r.status || '—' }}</b> <span>{{ r.title }}</span><small> {{ clip(r.line) }}</small>
+      <b :class="['pc-tag', r.status]">{{ r.status || '—' }}</b> <b v-if="r.needsVerdict" class="pc-tag needs">needs verdict</b> <span>{{ r.title }}</span><small> {{ clip(r.line) }}</small>
     </a>
     <p v-if="!rows.length" class="pc-empty">No page has a <code>card-line</code> yet.</p>
   </div>
   <div v-else-if="here" class="pc-card">
     <div v-if="here['superseded-by']" class="pc-super">Superseded by <a :href="withBase(here['superseded-by'])">{{ here['superseded-by'] }}</a>. Kept as history.</div>
-    <div class="pc-head"><b :class="['pc-tag', here.status]" v-if="here.status">{{ here.status }}</b><span v-if="here.line">{{ clip(here.line) }}</span></div>
+    <div class="pc-head"><b :class="['pc-tag', here.status]" v-if="here.status">{{ here.status }}</b><b v-if="here.needsVerdict" class="pc-tag needs" title="Finished, but the Verdict and Learnings sections are missing or empty">needs verdict</b><span v-if="here.line">{{ clip(here.line) }}</span></div>
     <template v-for="k in SLOTS" :key="k"><div v-if="here[k]" class="pc-slot"><i>{{ k }}</i><span :title="over(here[k]) ? here[k] : undefined">{{ clip(here[k]) }}</span></div></template>
   </div>
 </template>
@@ -41,6 +41,7 @@ const rows = computed(() => Object.entries(cards.value).filter(([, c]) => c.line
 .pc-tag { font-size: 11px; text-transform: uppercase; padding: 1px 6px; border-radius: 4px; background: var(--vp-c-default-soft); color: var(--vp-c-text-2) }
 .pc-tag.building { background: #51cf6633; color: #2b8a3e }
 .pc-tag.planned { background: #fcc41933; color: #a67c00 }
+.pc-tag.needs { background: #ff922b44; color: #d9480f }
 .pc-tag.idea { background: #74c0fc33; color: #1c7ed6 }
 .pc-board { display: flex; flex-direction: column; gap: 4px; margin: 12px 0; font-size: 14px }
 .pc-row { display: block; padding: 4px 10px; border: 1px solid var(--vp-c-divider); border-radius: 6px; text-decoration: none; color: var(--vp-c-text-1) }

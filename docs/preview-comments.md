@@ -436,3 +436,7 @@ curl -s -X POST -H 'X-Preview-Comment: 1' -H 'Content-Type: application/json' \
 ```
 
 Footprints are stored in `<site>/.adr-data/touches.jsonl`.
+
+### Needs verdict
+
+A page with `card-status: shipped` (or `status: done`) must have non-empty `## Verdict` and `## Learnings` sections. Otherwise the tree and the card show an amber "needs verdict" chip and the board lists the page first.

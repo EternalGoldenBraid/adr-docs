@@ -171,7 +171,7 @@ onUnmounted(() => {
     <div v-for="(r, i) in rows" :key="r.slug" class="pt-row" :class="[{ cur: r.slug === current, at: i === cursor }, r.tense && 'tense-' + r.tense]" :title="tenseTitle(r)"
       :style="{ paddingLeft: 10 + r.depth * 18 + 'px' }" role="treeitem" @click="rowClick($event, r.link)" @auxclick.middle.prevent="goNewTab(r.link)">
       <button v-if="r.kids" class="pt-fold" tabindex="-1" @click.stop="fold(r, !collapsed.has(r.slug))">{{ collapsed.has(r.slug) ? '▸' : '▾' }}</button>
-      <span v-else class="pt-fold"></span><input v-if="selecting" type="checkbox" class="pt-check" tabindex="-1" :checked="picked.has(r.slug)" title="Select this page for export" @click.stop="pick(r)">{{ r.title }}<button v-if="selecting && r.kids" class="pt-kids" tabindex="-1" title="Select or clear this page and all pages below it" @click.stop="pick(r, true)">+ below</button><b v-if="waits(r.slug)" class="pt-dot" :style="tint(r.slug)" title="Threads with something new for you">{{ waits(r.slug) }}</b><i v-if="changed(r.slug)" class="pt-new" :title="newTitle(r.slug)"></i><b v-if="opens(r.slug)" class="pt-ring" title="Open threads waiting on the agent">{{ opens(r.slug) }}</b><b v-if="collapsed.has(r.slug) && hidden(r.slug)" class="pt-dot" :style="hiddenTint(r.slug)" title="Something new on pages folded below">↓{{ hidden(r.slug) }}</b>
+      <span v-else class="pt-fold"></span><input v-if="selecting" type="checkbox" class="pt-check" tabindex="-1" :checked="picked.has(r.slug)" title="Select this page for export" @click.stop="pick(r)">{{ r.title }}<em v-if="r.needsVerdict" class="pt-tense pt-verdict" title="Finished, but no Verdict and Learnings yet">needs verdict</em><button v-if="selecting && r.kids" class="pt-kids" tabindex="-1" title="Select or clear this page and all pages below it" @click.stop="pick(r, true)">+ below</button><b v-if="waits(r.slug)" class="pt-dot" :style="tint(r.slug)" title="Threads with something new for you">{{ waits(r.slug) }}</b><i v-if="changed(r.slug)" class="pt-new" :title="newTitle(r.slug)"></i><b v-if="opens(r.slug)" class="pt-ring" title="Open threads waiting on the agent">{{ opens(r.slug) }}</b><b v-if="collapsed.has(r.slug) && hidden(r.slug)" class="pt-dot" :style="hiddenTint(r.slug)" title="Something new on pages folded below">↓{{ hidden(r.slug) }}</b>
     </div>
     <div v-if="selecting" class="pt-export">
       <button :disabled="!picked.size" @click="runExport">Export {{ picked.size || '' }} selected</button>
@@ -199,6 +199,7 @@ onUnmounted(() => {
 .pt-row.tense-present { border-left: 3px solid #51cf66 }
 .pt-row.tense-future { border-left: 3px solid #74c0fc }
 .pt-tense { font-style: normal; font-size: 11px; text-transform: uppercase; margin-left: 8px; padding: 0 6px; border-radius: 4px; background: var(--vp-c-default-soft) }
+.pt-verdict { background: #ff922b44; color: #d9480f }
 .pt-tense.tense-present { background: #51cf6633 } .pt-tense.tense-future { background: #74c0fc33 } .pt-tense.tense-past { background: #adb5bd44 }
 .pt-row.cur { font-weight: 700; color: var(--vp-c-brand-1); }
 .pt-row.at { background: var(--vp-c-default-soft); }
