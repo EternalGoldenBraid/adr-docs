@@ -7,7 +7,8 @@ const done = "---\ncard-status: shipped\n---\n# T\n";
 test("a finished page needs non-empty Verdict and Learnings sections", () => {
   assert.equal(needsVerdict(done), true);
   assert.equal(needsVerdict(`${done}## Verdict\n\n## Learnings\nx\n`), true);
-  assert.equal(needsVerdict(`${done}## Verdict\nok\n## Learnings\nx\n`), false);
+  assert.equal(needsVerdict(`${done}## Verdict\nok\n## Learnings\nx\n`), true);
+  assert.equal(needsVerdict(`---\ncard-status: shipped\nverdict:\n  result: supported\n  claim: holds\n  confidence: confirmed\n---\n# T\n## Learnings\nx\n`), false);
 });
 
 test("an unfinished page is never flagged", () => {
@@ -88,7 +89,19 @@ test("effort votes: reveal gives mean, variance, convergence and the median weig
 });
 
 test("front-matter verdict and a 'What we learned' section satisfy a finished page", () => {
-  assert.equal(needsVerdict("---\nstatus: done\nverdict: stable at 0.012\n---\n# T\n## What we learned\nx\n"), false);
+  assert.equal(needsVerdict("---\nstatus: done\nverdict:\n  result: inconclusive\n  claim: stable at 0.012\n  confidence: hypothesis\n---\n# T\n## What we learned\nx\n"), false);
+  assert.equal(needsVerdict("---\nstatus: done\nverdict: stable at 0.012\n---\n# T\n## What we learned\nx\n"), true);
+});
+
+test("a done page without a structured verdict is held in review as blocked by the verdict", async () => {
+  const { mkdtempSync, writeFileSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { pageCards } = await import("../src/page-tree.mjs");
+  const dir = mkdtempSync(join(tmpdir(), "cards-"));
+  writeFileSync(join(dir, "d.md"), "---\nowner: lead\nquestion: Q?\nverdict: fine\ncard:\n  tests:\n    - {name: \"Run 1\", state: done}\n---\n# D\n");
+  const card = pageCards(dir)["/d"];
+  assert.deepEqual([card.status, card.blockedBy], ["review", ["verdict"]]);
 });
 
 test("a finished page with open threads is in review until they are resolved", async () => {
@@ -97,7 +110,7 @@ test("a finished page with open threads is in review until they are resolved", a
   const { join } = await import("node:path");
   const { pageCards } = await import("../src/page-tree.mjs");
   const dir = mkdtempSync(join(tmpdir(), "cards-"));
-  writeFileSync(join(dir, "c.md"), "---\nowner: lead\nquestion: Does it hold?\ncard:\n  tests:\n    - {name: \"Run 1\", state: done}\n---\n# C\n");
+  writeFileSync(join(dir, "c.md"), "---\nowner: lead\nquestion: Does it hold?\nverdict:\n  result: supported\n  claim: holds\n  confidence: confirmed\ncard:\n  tests:\n    - {name: \"Run 1\", state: done}\n---\n# C\n");
   assert.deepEqual([pageCards(dir)["/c"].status, pageCards(dir)["/c"].line], ["done", "Does it hold?"]);
   writeFileSync(join(dir, "threads.json"), JSON.stringify([{ id: "t1", page: "/c.html", addressees: ["lead"], answered_by: [], at: "x" }]));
   const card = pageCards(dir)["/c"];
