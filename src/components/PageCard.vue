@@ -14,7 +14,7 @@ const here = computed(() => {
 })
 const clip = t => t.length > props.budget ? t.slice(0, props.budget - 1) + '…' : t
 const over = t => t.length > props.budget
-const ORDER = ['building', 'planned', 'idea', 'shipped']
+const ORDER = ['building', 'planned', 'idea', 'shipped', 'superseded']
 const rows = computed(() => Object.entries(cards.value).filter(([, c]) => c.line).map(([link, c]) => ({ link, ...c }))
   .sort((a, b) => ORDER.indexOf(a.status) - ORDER.indexOf(b.status) || a.title.localeCompare(b.title)))
 </script>
@@ -27,6 +27,7 @@ const rows = computed(() => Object.entries(cards.value).filter(([, c]) => c.line
     <p v-if="!rows.length" class="pc-empty">No page has a <code>card-line</code> yet.</p>
   </div>
   <div v-else-if="here" class="pc-card">
+    <div v-if="here['superseded-by']" class="pc-super">Superseded by <a :href="withBase(here['superseded-by'])">{{ here['superseded-by'] }}</a>. Kept as history.</div>
     <div class="pc-head"><b :class="['pc-tag', here.status]" v-if="here.status">{{ here.status }}</b><span v-if="here.line">{{ clip(here.line) }}</span></div>
     <template v-for="k in SLOTS" :key="k"><div v-if="here[k]" class="pc-slot"><i>{{ k }}</i><span :title="over(here[k]) ? here[k] : undefined">{{ clip(here[k]) }}</span></div></template>
   </div>
@@ -44,4 +45,5 @@ const rows = computed(() => Object.entries(cards.value).filter(([, c]) => c.line
 .pc-board { display: flex; flex-direction: column; gap: 4px; margin: 12px 0; font-size: 14px }
 .pc-row { display: block; padding: 4px 10px; border: 1px solid var(--vp-c-divider); border-radius: 6px; text-decoration: none; color: var(--vp-c-text-1) }
 .pc-row small { margin-left: 8px; color: var(--vp-c-text-2); font-size: 13px }
+.pc-super { margin-bottom: 8px; padding: 4px 8px; border-radius: 4px; background: #adb5bd33; font-size: 13px }
 </style>
