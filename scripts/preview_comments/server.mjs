@@ -322,6 +322,7 @@ export async function startCommentBridge({
           ...(record.inReplyTo ? { inReplyTo: record.inReplyTo } : {}),
           ...(record.from ? { from: record.from } : {}),
           ...(record.to?.length ? { to: record.to } : {}),
+          ...(record.whisper && record.to?.length ? { whisper: true } : {}),
           ...(record.proposal ? { proposal: record.proposal } : {}),
         });
       }
@@ -466,6 +467,7 @@ export async function startCommentBridge({
       value.resolved = input.resolved;
     }
     if (author === "user" && names(input.to, "to")?.length) value.to = names(input.to, "to");
+    if (author === "user" && input.whisper === true && value.to?.length && value.reply !== undefined) value.whisper = true;
     if (author === "user" && COLORS.includes(input.color)) value.color = input.color;
     if (author === "user" && input.clear === true) value.clear = true;
     if (author === "user" && input.note === true && value.reply !== undefined) value.note = true;
@@ -539,7 +541,9 @@ export async function startCommentBridge({
   }
   function readAs(as, includeSeen = false) {
     const rows = unread(as);
-    const result = (includeSeen ? [...comments.values()].filter(comment => addressed(comment, as)) : rows).map(withFiles);
+    // A whisper is shown only to the agents it names; to everyone else the thread reads as if it was never said.
+    const hideWhispers = comment => comment.replies.some(reply => reply.whisper && !reply.to.includes(as)) ? { ...comment, replies: comment.replies.filter(reply => !reply.whisper || reply.to.includes(as)) } : comment;
+    const result = (includeSeen ? [...comments.values()].filter(comment => addressed(comment, as)) : rows).map(withFiles).map(hideWhispers);
     if (rows.length) {
       const receipt = { event: "seen", ids: rows.map(comment => comment.id), by: as, at: new Date().toISOString() };
       append(log, receipt);
