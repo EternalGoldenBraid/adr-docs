@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.90.0 - 2026-11-19
+
+- Threads and pages are linked both ways. A page with `from: <thread id>` (and optionally `author:`) in its front matter shows up on that thread as a `📄` link, and in the page's history as *Led to this page*, apart from the threads *Written on this page*. New `GET /pagelinks`.
+
 ## 0.89.1 - 2026-11-19
 
 - Fixed: replying to (`q`) or branching from an agent's message failed with "to must list at most 12 short names". The message's display name ("ADR agent") was used as the recipient instead of its slug ("adr-agent"); it is now mapped to the team member, and dropped if unknown.

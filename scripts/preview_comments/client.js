@@ -52,6 +52,7 @@
       .tab{border:0;border-bottom:2px solid transparent;border-radius:0;background:none;padding:6px 10px;color:#b7c1ce}
       .tab[aria-selected=true]{color:#fff;border-bottom-color:#74c0fc}
       .thread-list{padding-bottom:12px}.thread-list:empty{display:none}
+      .group-head{margin:10px 2px 3px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#8b949e}
       .thread-card{display:block;width:100%;text-align:left;margin:3px 0;padding:7px 10px;border-radius:6px;border:1px solid transparent;background:#22262d;border-left:4px solid #444c56}
       .thread-card:focus-visible{outline:0;border-color:#74c0fc;background:#2a3140}
       .thread-card .row-top{display:flex;gap:8px;align-items:baseline}.thread-card .row-top strong{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1446,13 +1447,16 @@
     list.replaceChildren();
     const filter = historyFilter;
     const rows = [...historyComments].sort((a, b) => new Date(b.updatedAt || b.at) - new Date(a.updatedAt || a.at));
+    const linkedHere = comment => comment.kind !== "session" && pagePath(comment.url) !== hereLink() && cameFrom(hereLink(), comment);
+    const groups = { here: [], linked: [] };
+    const author = pageLinks[hereLink()]?.author;
     for (const comment of rows) {
       if (comment.removed) continue;
       // A resolved thread with a reply you have not seen stays listed as open until viewed.
       const closed = comment.resolved && !hasFresh(comment);
       if (filter === "notes" ? !isNote(comment) : isNote(comment) && filter !== "all") continue;
       if (filter !== "notes" && (filter === "chat" ? closed || (comment.kind !== "page" && comment.kind !== "session")
-        : filter === "page" ? closed || (comment.kind !== "session" && pagePath(comment.url) !== pagePath(location.href))
+        : filter === "page" ? closed || (comment.kind !== "session" && pagePath(comment.url) !== pagePath(location.href) && !linkedHere(comment))
         : filter === "pagehist" ? comment.kind === "session" || pagePath(comment.url) !== pagePath(location.href)
         : filter === "unresolved" ? closed
         : filter === "resolved" ? !comment.resolved : false)) continue;
@@ -1477,8 +1481,12 @@
       text.textContent = comment.comment || "Highlight";
       card.append(top, text);
       card.addEventListener("click", () => selectThread(comment.id));
-      list.append(card);
+      (linkedHere(comment) ? groups.linked : groups.here).push(card);
     }
+    const heading = text => Object.assign(document.createElement("div"), { className: "group-head", textContent: text });
+    if (filter === "page" && groups.linked.length) list.append(...(groups.here.length ? [heading("Written on this page"), ...groups.here] : []), heading("Led to this page"), ...groups.linked);
+    else list.append(...groups.here, ...groups.linked);
+    if (filter === "page" && author) list.prepend(heading(`Page by ${author}`));
     if (!list.children.length) list.textContent = "No comments match this filter.";
     const comment = currentThread();
     find(".thread").hidden = !comment;
@@ -1580,7 +1588,13 @@
     picker.title = "Link to another thread";
     for (const c of live) if (!c.resolved && !out.includes(c)) picker.append(new Option(linkLabel(c), c.id));
     picker.addEventListener("change", () => picker.value && updateThread({ id: crypto.randomUUID(), addRefs: [picker.value] }));
-    box.replaceChildren(...out.map(c => row("→", c, true)), ...back.map(c => row("←", c, false)), picker);
+    const made = Object.entries(pageLinks).filter(([link]) => cameFrom(link, comment)).map(([link, page]) => {
+      const go = document.createElement("a");
+      go.className = "chip"; go.href = link; go.title = `Page created from this thread${page.author ? ` by ${page.author}` : ""}`;
+      go.textContent = `📄 ${(page.title || link).slice(0, 34)}`;
+      return go;
+    });
+    box.replaceChildren(...out.map(c => row("→", c, true)), ...back.map(c => row("←", c, false)), ...made, picker);
   }
   // Cycle through threads awaiting you, across pages; remembers the last stop.
   // Needs your eyes: the agent started it and waits, or it has an agent reply you have not seen (resolved ones only if the reply came after resolving).
@@ -1640,6 +1654,11 @@
   }
   // The history loads open and recent threads only; older resolved ones come in with loadAllHistory() when something needs them.
   let historyAll = false, historyArchived = 0, historyForce = false;
+  // Pages that name the threads they came from (`from:` in their front matter), and their author.
+  let pageLinks = {};
+  const loadPageLinks = () => api("pagelinks").then(value => { pageLinks = value.pages || {}; if (!history.hidden) renderHistory(); }).catch(() => {});
+  const cameFrom = (link, comment) => (pageLinks[link]?.from || []).some(id => comment.id.startsWith(id));
+  const hereLink = () => pagePath(location.href);
   async function loadAllHistory() {
     if (historyAll) return;
     historyAll = true;
@@ -1692,6 +1711,7 @@
     renderHistory();
     clearInterval(historyTimer);
     const load = () => refreshHistory().catch(historyError);
+    loadPageLinks();
     await load();
     if (history.hidden) return;
     clearInterval(historyTimer);
