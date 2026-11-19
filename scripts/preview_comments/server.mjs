@@ -553,6 +553,14 @@ export async function startCommentBridge({
     return result;
   }
 
+  const touchedBy = new Map();
+  try {
+    for (const line of readFileSync(join(data, "touches.jsonl"), "utf8").split("\n")) {
+      if (!line) continue;
+      const { path, agent } = JSON.parse(line);
+      touchedBy.set(path, new Set([...(touchedBy.get(path) ?? []), agent]));
+    }
+  } catch { /* no footprints yet */ }
   const server = createServer(async (request, response) => {
     let saved = false;
     try {
@@ -631,9 +639,29 @@ export async function startCommentBridge({
           const field = name => (new RegExp(`^${name}:[ \\t]*(.*)$`, "m").exec(head) || [])[1]?.trim().replace(/^\[|\]$/g, "");
           const from = (field("from") || "").split(/[ ,]+/).map(id => id.replace(/^["']|["']$/g, "")).filter(id => /^[0-9a-f-]{8,36}$/i.test(id));
           const author = (field("author") || "").replace(/^["']|["']$/g, "");
-          if (from.length || author) result[page.link] = { title: page.title, author: author || undefined, from };
+          const list = name => (field(name) || "").split(/\s*,\s*/).map(v => v.replace(/^["']|["']$/g, "")).filter(Boolean);
+          const people = new Set([...list("card-owner"), ...list("participants"), author].filter(Boolean));
+          for (const name of touchedBy.get(page.link) ?? []) people.add(name);
+          for (const comment of comments.values()) {
+            if (comment.removed || !comment.url || new URL(comment.url).pathname.replace(/\.html$/, "").replace(/\/index$/, "/") !== page.link) continue;
+            for (const message of [comment, ...(comment.replies ?? [])]) if (message.from) people.add(message.from);
+          }
+          if (from.length || author || people.size) result[page.link] = { title: page.title, author: author || undefined, from, participants: [...people] };
         }
         return reply(response, 200, { pages: result });
+      }
+      // A harness footprint: whoever touches a page (edit, run, comment) reports its name, so the page's participants fill themselves in.
+      if (request.method === "POST" && request.url === "/touch") {
+        const body = [];
+        for await (const chunk of request) { body.push(chunk); if (body.length > 16) break; }
+        let input;
+        try { input = JSON.parse(Buffer.concat(body).toString("utf8")); } catch { return reply(response, 400, { error: "Invalid JSON." }); }
+        const link = typeof input.path === "string" ? input.path.replace(/\.html$/, "").replace(/\/index$/, "/").replace(/(.)\/$/, "$1") : "";
+        const agent = typeof input.agent === "string" ? input.agent.trim().slice(0, 64) : "";
+        if (!link.startsWith("/") || !agent) return reply(response, 400, { error: "Need path (/page) and agent." });
+        append(join(data, "touches.jsonl"), { path: link, agent, at: new Date().toISOString() });
+        touchedBy.set(link, new Set([...(touchedBy.get(link) ?? []), agent]));
+        return reply(response, 200, { ok: true });
       }
       if (request.method === "GET" && request.url === "/settings") return reply(response, 200, effective());
       const faceRoute = request.method === "GET" && /^\/faces(?:\/([\w-]{1,64}))?$/.exec(request.url);
