@@ -71,3 +71,18 @@ test("slugs drop accents instead of the letter, and keep the old form as an alia
   const { slugify, legacySlug } = await import("../src/roster.mjs");
   assert.deepEqual([slugify("Demo agent"), legacySlug("Demo agent")], ["demo-agent", "m-kki-agent"]);
 });
+
+test("effort votes: reveal gives mean, variance, convergence and the median weight; unrevealed votes stay private", async () => {
+  const { mkdtempSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { applyVote, reveal, publicVotes, readVotes } = await import("../src/votes.mjs");
+  const dir = mkdtempSync(join(tmpdir(), "votes-"));
+  for (const [agent, vote] of [["a", 1], ["b", 1], ["c", 3], ["d", 2]]) applyVote(dir, { page: "/p", item: "A", agent, vote });
+  assert.deepEqual(publicVotes(readVotes(dir))[0].rounds[0], { round: 1, voted: ["a", "b", "c", "d"], votes: {} });
+  const first = reveal(dir, { page: "/p", item: "A" }).rounds[0];
+  assert.deepEqual([first.mean, first.converged, first.median], [1.75, false, 2]);
+  assert.throws(() => applyVote(dir, { page: "/p", item: "A", agent: "a", vote: 4 }), /Fibonacci|must be one of/);
+  for (const [agent, vote] of [["a", 1], ["b", 1], ["c", 2], ["d", 2]]) applyVote(dir, { page: "/p", item: "A", agent, vote });
+  assert.equal(reveal(dir, { page: "/p", item: "A" }).weight, 2);
+});

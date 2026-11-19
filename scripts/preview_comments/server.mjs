@@ -18,6 +18,7 @@ function meshDataDirectory() {
 }
 import { readCell, writeCell } from "./table-edit.mjs";
 import { readRoster } from "../../src/roster.mjs";
+import { addNote, applyVote, publicVotes, readVotes, reveal } from "../../src/votes.mjs";
 import { readPageTree } from "../../src/page-tree.mjs";
 import { diffLines, hunks } from "./page-diff.mjs";
 
@@ -665,6 +666,16 @@ export async function startCommentBridge({
         append(join(data, "touches.jsonl"), { path: link, agent, at: new Date().toISOString() });
         touchedBy.set(link, new Set([...(touchedBy.get(link) ?? []), agent]));
         return reply(response, 200, { ok: true });
+      }
+      if (request.method === "GET" && request.url === "/votes") return reply(response, 200, { votes: publicVotes(readVotes(root)) });
+      if (request.method === "POST" && request.url === "/vote") {
+        const body = [];
+        for await (const chunk of request) { body.push(chunk); if (body.length > 16) break; }
+        try {
+          const input = JSON.parse(Buffer.concat(body).toString("utf8"));
+          const row = input.reveal ? reveal(root, input) : input.note ? addNote(root, { ...input, text: input.note }) : applyVote(root, input);
+          return reply(response, 200, { ok: true, item: publicVotes([row])[0] });
+        } catch (error) { return reply(response, 400, { error: error.message }); }
       }
       if (request.method === "GET" && request.url === "/settings") return reply(response, 200, effective());
       const faceRoute = request.method === "GET" && /^\/faces(?:\/([\w-]{1,64}))?$/.exec(request.url);

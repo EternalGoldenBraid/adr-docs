@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.115.0 - 2026-11-19
+
+- Effort votes: `votes.json` at the site root holds every vote round. `adr-vote [--root DIR] PAGE ITEM AGENT N` casts a vote (Fibonacci 1 2 3 5 8 13 21); `--reveal PAGE ITEM` closes the round and stores mean, variance and whether it converged (max and min within one step), and sets the weight (median, the higher value on an even count) when it did; `--note PAGE ITEM AGENT-or-owner "text"` adds a min/max justification or the owner's reply. `POST /vote` and `GET /votes` do the same for scripts and agents. Votes stay hidden (only who voted) until the round is revealed.
+- New `<VoteHistory />` (optionally `page="/path"`): one collapsible row per item with its rounds indented (votes, mean, variance, converged, notes, owner reply), an inline-SVG dot plot of the votes per round, a "rounds needed to decide" bar chart, and 10 items per page. Works on the published site from the baked-in copy.
+
 ## 0.114.0 - 2026-11-19
 
 - Team graph: a queue item's `weight` (from `queues.json`) is shown next to its state.
