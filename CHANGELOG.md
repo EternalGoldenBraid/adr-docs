@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.105.0 - 2026-11-19
+
+- Links in a page that lead to a page changed (blue dot) or new (green dot) since your last visit get a dot, so an index page shows where the news is. It follows the same viewed state as the tree and What's new.
+
 ## 0.104.2 - 2026-11-19
 
 - Links inside **bold** or *italic* in messages now render (`**[text](/path): done**` showed raw Markdown).
