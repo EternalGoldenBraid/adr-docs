@@ -66,7 +66,7 @@
       .thread-head{display:flex;gap:8px;align-items:center;margin:0 0 8px!important;padding:10px 20px;position:sticky;top:44px;background:#1b1d22;z-index:1;border-bottom:1px solid #3a404a}
       .thread-title{flex:1;min-width:0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
       .thread-head a{white-space:nowrap}.thread-head button{padding:4px 10px}
-      .thread-state{display:block;width:max-content;margin:2px 20px 8px;padding:1px 10px;border-radius:999px;background:#2a2f38;color:#b7c1ce;font-size:12px}.thread-state.resolved{color:#a2d8b1}.thread-state[data-marks]::before{content:"";display:inline-block;width:10px;height:10px;margin-right:6px;border-radius:50%;background:var(--pie,none)}
+      .thread-state{display:block;width:max-content;margin:2px 20px 8px;padding:1px 10px;border-radius:999px;background:#2a2f38;color:#b7c1ce;font-size:12px}.thread-state.resolved{color:#a2d8b1}.resolve-line{display:flex;flex-wrap:wrap;gap:6px;margin:0 20px 6px}.resolve-chip{padding:1px 8px;border-radius:999px;font-size:12px}.resolve-chip.done{background:#1f3a2a;color:#6fcf97}.resolve-chip.wait{background:#3d3516;color:#f2c94c}.resolve-chip.gone{background:#4a1f1f;color:#ff8a80}.thread-state[data-marks]::before{content:"";display:inline-block;width:10px;height:10px;margin-right:6px;border-radius:50%;background:var(--pie,none)}
       .thread-links{display:flex;flex-wrap:wrap;gap:6px;margin:4px 20px 8px}
       .chip{padding:2px 10px;border-radius:999px;font-size:12px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
       .chip-x{margin-left:-6px;padding:2px 7px}
@@ -1633,8 +1633,19 @@
     delete state.dataset.marks;
     if (marks.length) state.dataset.marks = marks.map(m => `${m.done ? "✓" : "○"}${m.name}`).join(" ");
     state.style.setProperty("--pie", marks.length ? `conic-gradient(${marks.map((m, i) => `${m.done ? "#6fcf97" : "#f2c94c"} ${i * 360 / marks.length}deg ${(i + 1) * 360 / marks.length}deg`).join(",")})` : "none");
-    if (!state.nextElementSibling?.classList.contains("queue-lines")) { const row = document.createElement("span"); row.className = "queue-lines"; state.after(row); }
-    queueLine(comment, state.nextElementSibling);
+    let resolveRow = find(".resolve-line");
+    if (!resolveRow) { resolveRow = document.createElement("span"); resolveRow.className = "resolve-line"; state.after(resolveRow); }
+    refreshRoster(() => {});
+    resolveRow.replaceChildren(...(comment.resolved || isNote(comment) ? [] : resolveMarks(comment).map(m => {
+      const chip = document.createElement("span");
+      const entry = m.name === "you" ? null : rosterEntry(m.name);
+      const gone = !m.done && m.name !== "you" && (!entry || meshState(entry) === "offline");
+      chip.className = `resolve-chip ${m.done ? "done" : gone ? "gone" : "wait"}`;
+      chip.textContent = `${m.done ? "✓" : gone ? "✗" : "○"} ${m.name}${m.done ? " resolved" : gone ? " offline, not resolved" : " not resolved"}`;
+      return chip;
+    })));
+    if (!resolveRow.nextElementSibling?.classList.contains("queue-lines")) { const row = document.createElement("span"); row.className = "queue-lines"; resolveRow.after(row); }
+    queueLine(comment, resolveRow.nextElementSibling);
     find(".thread-resolve").textContent = isNote(comment) ? "Remove" : comment.resolved ? "Reopen" : comment.resolvedBy?.you ? "Close for all" : "Resolve";
     markSeen(comment);
     renderLinks(comment);

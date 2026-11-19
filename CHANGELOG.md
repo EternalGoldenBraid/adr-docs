@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.124.1 - 2026-11-19
+
+- Open threads show a row of resolve chips under the state line, one per participant: green ✓ resolved, yellow ○ not resolved, red ✗ not resolved and offline. This replaces relying on the small pie alone.
+
 ## 0.124.0 - 2026-11-19
 
 - Resolve is per participant: the user's Resolve is one mark among the addressees', and a thread closes when everyone has resolved. The thread state shows a pie of who has and "waiting on …". **Close for all** (after you have resolved) asks for confirmation and lists the remaining agents with their mesh state. Old log records still close for all on replay.
