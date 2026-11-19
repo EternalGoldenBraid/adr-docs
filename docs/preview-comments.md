@@ -409,7 +409,7 @@ Give a page a fixed-size summary in its front matter:
 
 ```yaml
 card-line: Interactive route map demo
-card-status: building   # idea | planned | building | shipped
+card-status: building   # idea | planned | building | review | shipped
 card-what: ...
 card-state: ...
 card-evidence: ...
@@ -441,7 +441,7 @@ Footprints are stored in `<site>/.adr-data/touches.jsonl`.
 
 ### Needs verdict
 
-A page with `card-status: shipped` (or `status: done`) must have non-empty `## Verdict` and `## Learnings` sections. Otherwise the tree and the card show an amber "needs verdict" chip and the board lists the page first.
+A page with `card-status: shipped` (or `status: done`) must have a verdict and learnings: a non-empty `## Verdict` section or a front-matter `verdict:`, and a `## Learnings`, `## What we learned` or `## Lessons` section or a `learnings:` field. Otherwise the tree and the card show an amber "needs verdict" chip and the board lists the page first.
 
 ### Tests on the card
 
@@ -458,6 +458,8 @@ Page owner: `owner: pc-lead` in a page's front matter fills the card's owner and
 Team queues: put `queues.json` at the site root (`{"demo-agent": [{"rank": 2, "test": "…", "page": "…", "state": "planned", "run": ""}]}`). The team graph and table show each agent's running item, else the lowest rank; with an empty queue they fall back to the status ping. Items may carry `id` and `after` (ids of tests that must finish first, `id` or `page#id`); the team page then draws a task graph with one lane per agent and arrows for `after`. An agent listed with `[]` shows a "queue empty" chip.
 
 An open thread's header shows where it sits in each addressee's queue (`queue sim-agent: #3 of 8`, from the `thread-<first 8 characters of the id>` item in `queues.json`), or a red `⚠ not in X's queue` while that agent still owes an answer. Answered, resolved and note threads show nothing.
+
+`review` is the status between running and done: a finished page whose threads are still open. A page with `status: review` (or `card-status: review`) shows it, and where `threads.json` exists a page that would be done shows `review` automatically while threads on it are open (`openThreads` counts them), turning done again when they are resolved; it never gets "needs verdict" while in review. A card with no gist falls back to the page's `question:` front matter.
 
 Typing `@` in a comment or reply opens a picker of team names (arrows, Tab or Enter to choose; Esc closes); the chosen agent is added to the To: chips, so `@sim-agent @gpu-agent please look` addresses both. A reply that starts `/w name[,name] text` is a whisper: while you type it the box turns purple with "🤫 Whisper: only … will get this" (or flags an unknown name).
 

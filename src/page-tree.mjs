@@ -1,20 +1,21 @@
-import { existsSync, readdirSync, readFileSync, utimesSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync, utimesSync } from "node:fs";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { readBoard } from "./workstreams.mjs";
 import { publicVotes, readVotes } from "./votes.mjs";
 
 const frontOf = text => text.match(/^---\n([\s\S]*?)\n---/)?.[1] ?? "";
-// A finished page (card-status shipped, or status done) must have non-empty "Verdict" and "Learnings" sections.
+// A finished page (card-status shipped, or status done) must have a verdict and learnings: a non-empty section ("Verdict"; "Learnings", "What we learned" or "Lessons") or the front-matter field.
 export function needsVerdict(text) {
   const front = text.match(/^---\n([\s\S]*?)\n---/)?.[1] ?? "";
   const done = /^card-status:\s*["']?shipped["']?\s*$/m.test(front) || /^status:\s*["']?done["']?\s*$/mi.test(front);
   if (!done) return false;
   const body = text.slice(front.length ? text.indexOf("\n---", 3) + 4 : 0);
+  const fronted = name => new RegExp(`^${name}:[ \\t]*\\S`, "m").test(front);
   const filled = name => {
     const m = new RegExp(`^#{1,6}\\s*${name}\\b[^\\n]*\\n([\\s\\S]*?)(?=^#{1,6}\\s|(?![\\s\\S]))`, "mi").exec(body);
     return Boolean(m && m[1].replace(/<!--[\s\S]*?-->/g, "").trim());
   };
-  return !(filled("verdict") && filled("learnings?"));
+  return !((fronted("verdict") || filled("verdict")) && (fronted("learnings?") || filled("(?:learnings?|what we learned|lessons)")));
 }
 const isUnpublished = text => /^publish:\s*false\s*$/m.test(frontOf(text));
 
@@ -195,6 +196,23 @@ export function derivedState(tests) {
   if (open.some(t => t.status === "running")) return "running";
   return open.every(t => t.status === "done") ? "done" : "planned";
 }
+const pageKey = file => "/" + file.replace(/(^|\/)index\.md$/, "$1").replace(/\.md$/, "").replace(/\/$/, "");
+let threadsCache;
+function openThreads(documentRoot) {
+  try {
+    const file = join(documentRoot, "threads.json");
+    const stamp = statSync(file).mtimeMs;
+    if (threadsCache?.file !== file || threadsCache.stamp !== stamp) {
+      const counts = {};
+      for (const thread of JSON.parse(readFileSync(file, "utf8"))) {
+        const key = String(thread.page ?? "").replace(/\.html$/, "").replace(/\/$/, "") || "/";
+        counts[key] = (counts[key] ?? 0) + 1;
+      }
+      threadsCache = { file, stamp, counts };
+    }
+    return threadsCache.counts;
+  } catch { return {}; }
+}
 export function pageCards(documentRoot, options) {
   const out = {};
   for (const file of markdownFiles(documentRoot)) {
@@ -217,6 +235,12 @@ export function pageCards(documentRoot, options) {
       const derived = derivedState(card.tests);
       if (derived) { if (card.status && card.status !== derived) card.statusMismatch = card.status; card.status = derived; }
     }
+    const question = front.match(/^question:[ \t]*(.+)$/m)?.[1].trim().replace(/^["']|["']$/g, "");
+    if (!card.line && question && Object.keys(card).length) card.line = question;
+    // Open threads on the page hold a finished page in review; the page is done when they are resolved (threads.json is written by the preview server).
+    const open = openThreads(documentRoot)[pageKey(file)];
+    if (open && ["done", "shipped"].includes(card.status)) { card.reviewFrom = card.status; card.status = "review"; card.openThreads = open; }
+    if (/^(?:card-)?status:\s*["']?review["']?\s*$/m.test(front)) card.status = "review";
     const missing = ["line", "owner", "status"].filter(k => !card[k]);
     if (Object.keys(card).length && missing.length) card.missing = missing.map(k => ({ line: "gist", status: "state" }[k] ?? k));
     const verdict = needsVerdict(text);

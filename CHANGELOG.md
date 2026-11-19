@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.122.0 - 2026-11-19
+
+- New page status `review` (between running and done), with its own tag colour. A finished page shows it automatically while threads on it are open (from `threads.json`) and returns to done when they are resolved; an explicit `status: review` / `card-status: review` is respected.
+- Fewer false "needs verdict" and "missing gist" flags: a front-matter `verdict:` / `learnings:` counts, `## What we learned` and `## Lessons` count as learnings, and a card with no gist falls back to the page's `question:`. On the Demo site this clears 23 of 46 needs-verdict flags and 12 of 58 missing-field flags.
+
 ## 0.121.0 - 2026-11-19
 
 - Thread header shows its queue position per addressee (`queue sim-agent: #3 of 8`), or a red `not in X's queue` flag while that agent still owes an answer.
