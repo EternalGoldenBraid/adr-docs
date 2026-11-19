@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.114.0 - 2026-11-19
+
+- Team graph: a queue item's `weight` (from `queues.json`) is shown next to its state.
+
 ## 0.113.1 - 2026-11-19
 
 - Fix: 0.113.0 shipped with a syntax error in the preview server (it did not start). Use 0.113.1 or later.

@@ -15,7 +15,7 @@ let queues = {}
 const queued = m => {
   const items = queues[m.slug] ?? []
   const item = items.find(t => t.state === 'running') ?? [...items].sort((a, b) => a.rank - b.rank)[0]
-  return item ? `${item.test} (${item.state})` : ''
+  return item ? `${item.test} (${item.state}${item.weight ? ', weight ' + item.weight : ''})` : ''
 }
 let edges = []
 
