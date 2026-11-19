@@ -44,7 +44,7 @@
       .thread{margin:0!important}.thread>*{margin-left:20px;margin-right:20px}
       .history-head h2{margin:0}.history-head .history-counts{margin-left:auto;margin-right:12px}
       .icon{padding:2px 9px;border-radius:6px;line-height:1.4}
-      .whats-panel{width:min(780px,94vw)}.whats-body{max-height:62vh;overflow:auto;font:13px/1.5 ui-monospace,monospace}.whats-row{display:flex;gap:12px;padding:3px 8px;border-radius:4px;cursor:pointer}.whats-row.on,.whats-hunk.on{background:#3b4a63}.whats-row .slug{flex:1}.whats-row .add{color:#69db7c}.whats-row .del{color:#ff8787}.whats-row .when{color:#8b95a5}.whats-hunk{border-left:3px solid #59616d;margin:6px 0;padding:2px 8px;white-space:pre-wrap}.whats-hunk.on{border-color:#8ab4f8}.whats-hunk .ln{color:#8b95a5}.whats-hunk .op-plus{color:#69db7c}.whats-hunk .op-minus{color:#ff8787;text-decoration:line-through}.sb-new{color:#74c0fc;font-weight:700;white-space:nowrap}
+      .whats-panel{width:min(780px,94vw)}.whats-body{max-height:62vh;overflow:auto;font:13px/1.5 ui-monospace,monospace}.whats-row{display:flex;gap:12px;padding:3px 8px;border-radius:4px;cursor:pointer}.whats-row.on,.whats-hunk.on{background:#3b4a63}.whats-preview{position:sticky;bottom:0;margin-top:8px;padding:6px 8px;background:#1f2430;border-top:1px solid #59616d;white-space:pre-wrap;color:#c9d1d9}.whats-row .slug{flex:1}.whats-row .add{color:#69db7c}.whats-row .del{color:#ff8787}.whats-row .when{color:#8b95a5}.whats-hunk{border-left:3px solid #59616d;margin:6px 0;padding:2px 8px;white-space:pre-wrap}.whats-hunk.on{border-color:#8ab4f8}.whats-hunk .ln{color:#8b95a5}.whats-hunk .op-plus{color:#69db7c}.whats-hunk .op-minus{color:#ff8787;text-decoration:line-through}.sb-new{color:#74c0fc;font-weight:700;white-space:nowrap}
       .help-panel{width:min(640px,94vw)}.help-tabs,.help-tabs-look{display:flex;gap:6px;margin:8px 0;flex-wrap:wrap}.help-tabs button,.help-tabs-look button{background:#2a2e36;color:inherit;border:1px solid #59616d;border-radius:6px;padding:3px 10px;cursor:pointer}.help-tabs button[aria-selected=true],.help-tabs-look button[aria-selected=true]{background:#3b4a63;border-color:#8ab4f8}.help-body{white-space:pre-wrap;font:13px/1.5 ui-monospace,monospace;margin:0;max-height:50vh;overflow:auto}
       .mesh-machines{margin-top:10px}.mach{display:grid;grid-template-columns:100px 1fr 230px;gap:8px;align-items:center;font-size:12px;padding:2px 0}.mach svg{width:100%;height:22px}.mach .hot{color:#f38ba8}.mach-detail{display:grid;gap:4px;margin:2px 0 8px;font-size:11px}.mach-detail.stale{opacity:.5}.cores{display:flex;gap:2px;height:36px;align-items:flex-end;flex:1}.core{flex:1;max-width:16px;height:100%;display:flex;align-items:flex-end;background:#252a32;border-radius:2px;overflow:hidden}.core i{display:block;width:100%;min-height:1px}.gpu{display:grid;grid-template-columns:110px 1fr 54px 1fr 80px 90px;gap:6px;align-items:center}.gpu .bar{position:relative;height:14px;background:#252a32;border-radius:3px;overflow:hidden}.gpu .bar i{position:absolute;inset:0 auto 0 0;display:block}.core{position:relative}.core em{position:absolute;top:0;left:0;right:0;text-align:center;font-style:normal;font-size:8px;opacity:.65}.cores-wrap{display:flex;gap:6px;align-items:stretch}.cores-wrap .scale{display:flex;flex-direction:column;justify-content:space-between;font-size:9px;opacity:.6;text-align:right;min-width:28px}.cores-wrap .avg{align-self:center;white-space:nowrap}.mach.stale{opacity:.5}.mesh-panel{width:min(640px,94vw)}.mesh-panel.peek{position:fixed;left:auto;top:auto;right:12px;bottom:52px;margin:0;max-height:70vh;overflow:auto;opacity:.97}.mesh-corner{position:fixed;right:0;bottom:130px;padding:10px 3px;z-index:2147483000;background:#1b1d22cc;color:#aab;border:1px solid #3a404a;border-right:0;border-radius:8px 0 0 8px;font:11px/1 ui-monospace,monospace;writing-mode:vertical-rl;cursor:pointer;opacity:.55}.mesh-corner:hover{opacity:1}.mesh-table td:nth-child(2){white-space:nowrap}.mesh-tabs{margin:0 8px}.mesh-graph[hidden],.mesh-room[hidden]{display:none}.mesh-room{margin:8px;font-size:13px}.room-list{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}.room-list button,.room-new button,.room-send button{padding:2px 10px;border:1px solid #59616d;border-radius:999px;background:transparent;color:inherit;font:inherit;cursor:pointer}.room-list button.on,.room-new button.on{border-color:#74c0fc;background:rgba(116,192,252,.18)}.room-log{max-height:46vh;overflow:auto;display:grid;gap:6px;padding:4px 0}.room-post{padding:5px 9px;border-left:3px solid #59616d;background:#20242b;border-radius:0 6px 6px 0;white-space:pre-wrap}.room-post.me{border-color:#74c0fc}.room-post b{display:block;font-size:11px;margin-bottom:2px}.room-send{display:flex;gap:6px;margin-top:6px}.room-send textarea{flex:1;min-height:44px;background:#14171c;color:inherit;border:1px solid #3a404a;border-radius:6px;padding:5px;font:inherit}.room-new{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px}.room-new input{background:#14171c;color:inherit;border:1px solid #3a404a;border-radius:6px;padding:2px 6px;font:inherit}.mesh-graph{width:100%;height:auto;display:block}.mesh-graph text{fill:#d7dde6;font:11px ui-monospace,monospace;text-anchor:middle}.mesh-edges{font-size:12px;color:#aab;margin-top:8px}.mesh-table{width:100%;border-collapse:collapse;font-size:13px}.mesh-table th,.mesh-table td{text-align:left;padding:4px 8px;border-bottom:1px solid #3a404a}
       .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:#59616d}.dot.active{background:#51cf66}.dot.idle{background:#fcc419}
@@ -2233,6 +2233,16 @@
         return row;
       }) : [Object.assign(document.createElement("div"), { textContent: "Nothing changed since you last looked." })]));
       whatsBody.children[whats.i]?.scrollIntoView?.({ block: "nearest" });
+      // Preview of the highlighted row: its card (line, state, next), then the first added lines, so a glance says what happened.
+      const now = sorted[whats.i];
+      if (now) {
+        const preview = document.createElement("div");
+        preview.className = "whats-preview";
+        const card = Object.entries(now.card || {}).map(([k, v]) => `${k}: ${v}`);
+        const added = (now.hunks || []).flatMap(h => h.rows.filter(r => r.op === "+").map(r => r.text)).filter(t => t.trim()).slice(0, 3);
+        preview.textContent = [...card, ...added.map(t => "+ " + t.trim().slice(0, 140))].join("\n") || (now.noCopy ? "No earlier copy kept." : "");
+        if (preview.textContent) whatsBody.append(preview);
+      }
       return;
     }
     const page = sorted[whats.i];
@@ -2256,6 +2266,10 @@
     try {
       whats.pages = (await api("whatsnew")).pages;
       whats.view = "list"; whats.i = 0;
+      // Reopening keeps your place: the page you left from is highlighted again.
+      const last = sessionStorage.getItem("adr-whats-at");
+      const back = last ? [...whats.pages].sort(whats.byName ? (a, b) => a.slug.localeCompare(b.slug) : (a, b) => b.changedAt.localeCompare(a.changedAt)).findIndex(p => p.link === last) : -1;
+      if (back >= 0) whats.i = back;
       whatsPanel.hidden = false;
       whatsDraw();
       whatsPanel.focus?.();
@@ -2275,6 +2289,7 @@
     const page = whats.sorted[whats.i];
     const lines = page.hunks.flatMap(hunk => hunk.rows.filter(row => row.op === "+").map(row => row.text)).filter(text => text.trim()).slice(0, 300);
     localStorage.setItem("adr-glow", JSON.stringify({ link: page.link.replace(/\/$/, "") || "/", lines, at: Date.now() }));
+    sessionStorage.setItem("adr-whats-at", page.link);
     if (newTab) { window.open(page.link, "_blank"); return; }
     whatsPanel.hidden = true;
     location.assign(page.link);

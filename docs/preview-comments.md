@@ -420,3 +420,5 @@ card-owner: ...
 ### Past, present, future
 
 `tense: past | present | future` in front matter (inherited from the parent page) separates history (experiment narratives), the current state, and plans: the page tree gets a grey, green or blue edge and the page a chip. A "present" page with `as-of: YYYY-MM-DD` older than 14 days is flagged "may be stale". `card-status: superseded` counts as past; `card-superseded-by: /page` adds a banner linking to the page that replaced it.
+
+The What's new list (`n`) previews the highlighted page (its card fields and first added lines) and remembers which page you opened last, so reopening it puts you back there.
