@@ -1208,7 +1208,7 @@
   // Inline Markdown for messages (bold, italic, code), built from DOM nodes so message text is never parsed as HTML.
   function inlineMarkdown(text) {
     const fragment = document.createDocumentFragment();
-    const pattern = /(!?)\[([^\]\n]*)\]\(((?:https?:\/\/|\.{1,2}\/|\/(?!\/))[^\s)]+)\)|\*\*([^*\n]+?)\*\*|`([^`\n]+)`|(?<![\w*])\*([^*\s][^*\n]*?)\*(?![\w*])/g;
+    const pattern = /(!?)\[([^\]\n]*)\]\(((?:https?:\/\/|\.{1,2}\/|\/(?!\/)|#)[^\s)]+)\)|\*\*([^*\n]+?)\*\*|`([^`\n]+)`|(?<![\w*])\*([^*\s][^*\n]*?)\*(?![\w*])/g;
     let last = 0, match;
     while ((match = pattern.exec(text))) {
       if (match.index > last) fragment.append(text.slice(last, match.index));
@@ -1225,7 +1225,7 @@
       const el = document.createElement(href ? "a" : bold ? "strong" : code ? "code" : "em");
       if (bold || italic) el.append(inlineMarkdown(bold || italic));
       else el.textContent = label || href || code;
-      if (href) { el.href = href; el.target = "_blank"; el.rel = "noopener"; }
+      if (href) { el.href = href; if (!href.startsWith("#")) { el.target = "_blank"; el.rel = "noopener"; } }
       fragment.append(el);
       last = pattern.lastIndex;
     }
@@ -1519,7 +1519,7 @@
     const quoteBox = find(".thread-quote");
     if (quoteBox.dataset.q !== comment.quote) {
       quoteBox.dataset.q = comment.quote;
-      if (/\]\((?:https?:\/\/|\.{1,2}\/|\/(?!\/))/.test(comment.quote)) quoteBox.replaceChildren(...blockMarkdown(comment.quote).childNodes);
+      if (/\]\((?:https?:\/\/|\.{1,2}\/|\/(?!\/)|#)/.test(comment.quote)) quoteBox.replaceChildren(...blockMarkdown(comment.quote).childNodes);
       else quoteBox.textContent = comment.quote;
     }
     const state = find(".thread-state");

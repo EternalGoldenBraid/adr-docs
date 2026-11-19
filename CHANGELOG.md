@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.107.1 - 2026-11-19
+
+- In-page links `[text](#section)` now render as links in messages and the quote box (they showed as raw Markdown) and scroll within the page instead of opening a new tab.
+
 ## 0.107.0 - 2026-11-19
 
 - "Needs verdict": a finished page (`card-status: shipped` or `status: done`) without non-empty "Verdict" and "Learnings" sections gets an amber chip in the page tree and on its card, and `<PageCard board />` lists those pages first.
