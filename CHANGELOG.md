@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.124.2 - 2026-11-19
+
+- Fix: the agents' status icons on the To: chips disappeared in 0.124.1, because the resolve chips refreshed the roster with a no-op redraw. Roster refreshes now redraw every waiting row.
+
 ## 0.124.1 - 2026-11-19
 
 - Open threads show a row of resolve chips under the state line, one per participant: green ✓ resolved, yellow ○ not resolved, red ✗ not resolved and offline. This replaces relying on the small pie alone.

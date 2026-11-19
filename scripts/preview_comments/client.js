@@ -1100,10 +1100,12 @@
     draw();
     if (Date.now() - queueAt > 15000) { queueAt = Date.now(); api("mesh").then(({ queues }) => { queueData = queues ?? {}; draw(); }).catch(() => {}); }
   }
+  const rosterWaiters = new Set();
   function refreshRoster(redraw) {
+    if (redraw) rosterWaiters.add(redraw);
     if (Date.now() - meshRosterAt < 15000) return;
     meshRosterAt = Date.now();
-    api("mesh").then(({ members }) => { meshRoster = members; redraw(); }).catch(() => {});
+    api("mesh").then(({ members }) => { meshRoster = members; const waiting = [...rosterWaiters]; rosterWaiters.clear(); waiting.forEach(draw => draw()); }).catch(() => {});
   }
   // Chips choose who a message is for. Hidden until a team is configured (:team), so single-agent use is unchanged.
   function chipRow(holder, selected, onChange) {
@@ -1635,7 +1637,7 @@
     state.style.setProperty("--pie", marks.length ? `conic-gradient(${marks.map((m, i) => `${m.done ? "#6fcf97" : "#f2c94c"} ${i * 360 / marks.length}deg ${(i + 1) * 360 / marks.length}deg`).join(",")})` : "none");
     let resolveRow = find(".resolve-line");
     if (!resolveRow) { resolveRow = document.createElement("span"); resolveRow.className = "resolve-line"; state.after(resolveRow); }
-    refreshRoster(() => {});
+    refreshRoster(renderHistory);
     resolveRow.replaceChildren(...(comment.resolved || isNote(comment) ? [] : resolveMarks(comment).map(m => {
       const chip = document.createElement("span");
       const entry = m.name === "you" ? null : rosterEntry(m.name);
