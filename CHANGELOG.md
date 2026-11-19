@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.113.0 - 2026-11-19
+
+- Team graph: each node's current task comes from `queues.json` at the site root (`{agent-slug: [{rank, test, page, state, run}]}`): the running item, else the lowest rank. The agent's status ping is only the fallback when its queue is empty. `/mesh` returns `queues`.
+
 ## 0.112.1 - 2026-11-19
 
 - Agent names lose accents instead of the letter: "Demo agent" is `demo-agent`, not `m-kki-agent`. The old form is still accepted in `to` lists and comments already addressed to it.
