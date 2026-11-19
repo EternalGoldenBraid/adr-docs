@@ -422,3 +422,17 @@ card-owner: ...
 `tense: past | present | future` in front matter (inherited from the parent page) separates history (experiment narratives), the current state, and plans: the page tree gets a grey, green or blue edge and the page a chip. A "present" page with `as-of: YYYY-MM-DD` older than 14 days is flagged "may be stale". `card-status: superseded` counts as past; `card-superseded-by: /page` adds a banner linking to the page that replaced it.
 
 The What's new list (`n`) previews the highlighted page (its card fields and first added lines) and remembers which page you opened last, so reopening it puts you back there.
+
+### Participants
+
+A page's participants are derived, not typed: `card-owner`, an optional `participants: a, b` list, `author:`, every agent that commented or replied on a thread about the page, and every name reported by a harness footprint. The thread panel shows them ("on this page: …"), and `/pagelinks` returns them as `participants` per page.
+
+A harness records a footprint whenever its agent touches a page:
+
+```bash
+curl -s -X POST -H 'X-Preview-Comment: 1' -H 'Content-Type: application/json' \
+  -d '{"path":"/experiments/2026-11-19-pc-fovea","agent":"pc-lead"}' \
+  http://<name>.localhost:<port>/__preview_comments/touch
+```
+
+Footprints are stored in `<site>/.adr-data/touches.jsonl`.

@@ -1523,7 +1523,7 @@
       else quoteBox.textContent = comment.quote;
     }
     const state = find(".thread-state");
-    state.textContent = `${isNote(comment) ? "Note" : comment.resolved ? "Resolved" : "Unresolved"} · ${comment.note ? "Private note" : comment.seen ? "Read by Copilot" : "Unread by Copilot"}`;
+    state.textContent = `${isNote(comment) ? "Note" : comment.resolved ? "Resolved" : "Unresolved"} · ${comment.note ? "Private note" : comment.seen ? "Read by Copilot" : "Unread by Copilot"}${(pageLinks[pagePath(comment.url)]?.participants || []).length ? ` · on this page: ${pageLinks[pagePath(comment.url)].participants.join(", ")}` : ""}`;
     const quoteLine = (comment.quote || "").replace(/!?\[([^\]\n]*)\]\([^\s)]+\)/g, "$1").replace(/\s+/g, " ");
     find(".quote-summary").textContent = quoteLine ? `“${quoteLine.slice(0, 90)}${quoteLine.length > 90 ? "…" : ""}”` : "Selected content";
     state.classList.toggle("resolved", comment.resolved);
