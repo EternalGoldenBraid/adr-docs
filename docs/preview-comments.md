@@ -313,6 +313,8 @@ A link to `#anchor` scrolls the heading or passage clear of the nav bar and flas
 
 A recording may carry `"frames": { "src": "/data/thumbs/r1/{n}.jpg", "count": 40 }`: hovering the path then shows the frame nearest the cursor along the drive (`{n}` runs from 0 to count − 1, spread evenly over the points), so thumbnails from a bag can be dragged through with the mouse.
 
+Alternatively one strip per recording: `"thumbs": { "src": "/data/map/thumbs/r1.webp", "size": [w, h], "at": [i0, i1, …] }`, a horizontal strip of frames where frame k belongs to `points[at[k]]`; the frame whose point is nearest the cursor is shown.
+
 Image up is world +x and image right is world −y (the Sim mosaic's convention); `origin` is the pixel of world (0, 0), default the image centre. `image` is optional. A real map library is not needed until GPS arrives. `examples/map.md` shows it with synthetic data.
 
 ## Rerun viewer

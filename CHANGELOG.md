@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.96.0 - 2026-11-19
+
+- RouteMap: a recording may carry `thumbs: {src, size, at}`, one horizontal strip of frames with the point index of each; hovering shows the nearest frame.
+
 ## 0.95.0 - 2026-11-19
 
 - RouteMap: a recording with `frames: {src, count}` shows the frame nearest the cursor as you move along its path. Fixed the pointer position when the map is letterboxed.
