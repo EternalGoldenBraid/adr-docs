@@ -34,7 +34,7 @@ const state = m => {
 const ago = iso => { const m = Math.round((Date.now() - Date.parse(iso)) / 60000); return m < 1 ? 'now' : m < 60 ? m + 'm' : Math.round(m / 60) + 'h' }
 const rowOf = m => {
   const l = m.statusLine, st = state(m), q = queued(m)
-  return { key: id(m), name: m.name, st, status: st === 'offline' ? m.status : st, doing: q ? q : l ? `${l.ticket ? l.ticket + ' · ' : ''}${l.state} · ${l.doing}${l.next ? ' → ' + l.next : ''} (${ago(l.at)})` : '—', machine: m.machine || '—', noQueue: emptyQueue(m) }
+  return { key: id(m), name: m.name, st, status: st === 'offline' ? m.status : st, doing: q ? q : l ? `${l.ticket ? l.ticket + ' · ' : ''}${l.state} · ${l.doing}${l.next ? ' → ' + l.next : ''} (${ago(l.at)})` : '—', machine: m.machine || '—', noQueue: emptyQueue(m), stall: m.open && m.idleMinutes >= 1 ? `idle ${m.idleMinutes} min with ${m.open} open` : '' }
 }
 // The live table replaces the hand-written roster table on the page; the markdown source stays for the roster parser but is hidden.
 const hideSource = on => {
@@ -204,7 +204,7 @@ onUnmounted(() => { hideSource(false); clearInterval(timer) })
         <tr v-for="r in rows" :key="r.key">
           <td>{{ r.name }}</td>
           <td class="st"><span class="d" :class="[r.st === 'active' || r.st === 'offline' ? 'ring' : r.st, { off: r.st === 'offline' }]"></span>{{ r.status }}</td>
-          <td>{{ r.doing }} <span v-if="r.noQueue" class="noq" title="No tests with this agent as doer on any card">queue empty</span></td><td>{{ r.machine }}</td>
+          <td>{{ r.doing }} <span v-if="r.stall" class="noq stall" title="Idle while queue items or threads are waiting on this agent">{{ r.stall }}</span> <span v-if="r.noQueue" class="noq" title="No tests with this agent as doer on any card">queue empty</span></td><td>{{ r.machine }}</td>
         </tr>
       </tbody>
     </table>
@@ -278,6 +278,7 @@ onUnmounted(() => { hideSource(false); clearInterval(timer) })
 .d.working { background: #6fb7e8 } .d.waiting { background: #f38ba8 } .d.asking { background: #ffd500 } .d.idle { background: #9ccc65 } .d.ring { background: none; border: 2px solid #9399b2; box-sizing: border-box } .d.ring.off { opacity: .4 }
 .team-live { width: 100%; border-collapse: collapse; font-size: 14px; margin: 14px 0 }
 .team-live th, .team-live td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--vp-c-divider) }
+.noq.stall { border-color: #f38ba8; color: #f38ba8 }
 .noq { font-size: 11px; padding: 1px 7px; border-radius: 9px; border: 1px solid #ff8c1a; color: #ff8c1a; white-space: nowrap }
 .team-live td.st { white-space: nowrap } .team-live .d { margin: 0 6px 0 0 }
 .box { fill: rgba(42,47,56,.45); stroke: #59616d } .box-label { fill: #aab; font: bold 13px sans-serif }

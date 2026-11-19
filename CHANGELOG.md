@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.118.0 - 2026-11-19
+
+- Idle nudge: an agent idle for 5 minutes (`ADR_NUDGE_MINUTES`; `ADR_NUDGE=off` disables) with open queue items or threads waiting on it gets one mesh note naming its next item, then at most one per 30 minutes, never while working. Idle is read from the agent-notify hook or the agent's status line. `/mesh` members carry `open` and `idleMinutes`; the team table shows a red "idle N min with K open" chip.
+
 ## 0.117.0 - 2026-11-19
 
 - Unsent comment and reply text survives a refresh or server restart: drafts are saved in `localStorage` (`adr-drafts`) as you type, per page for new comments and per thread for replies, as a ring buffer of the newest 30 for 3 days. Sending clears the draft; reopening the comment box restores it ("Restored your unsent text").

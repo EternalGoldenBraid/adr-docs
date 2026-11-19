@@ -294,6 +294,37 @@ export async function startCommentBridge({
       attempt(0);
     }
   }
+  // Idle nudge: an agent that has been idle for NUDGE_AFTER with open work (queue items, or threads waiting on it) gets one mesh note,
+  // then at most one per NUDGE_EVERY; none while it is working. Idle comes from the agent-notify hook or its status line (ticket|state|...).
+  const NUDGE_AFTER = Number(process.env.ADR_NUDGE_MINUTES ?? 5) * 60_000, NUDGE_EVERY = 30 * 60_000;
+  const idleSince = new Map(), nudgedAt = new Map();
+  const readQueues = () => { try { return JSON.parse(readFileSync(join(documentRoot, "queues.json"), "utf8")); } catch { return {}; } };
+  const openWork = slug => {
+    const items = (readQueues()[slug] ?? []).filter(item => item.state !== "done").sort((a, b) => a.rank - b.rank);
+    return { items, threads: unansweredFor(slug).threads };
+  };
+  const isIdle = row => (row.activity ?? (row.statusLine?.state === "idle" ? "idle" : null)) === "idle";
+  async function nudgeIdle() {
+    const now = Date.now();
+    for (const row of await meshStatus()) {
+      if (!row.session || row.status === "offline" || row.session === sessionId) continue;
+      if (!isIdle(row)) { idleSince.delete(row.slug); continue; }
+      const since = idleSince.get(row.slug) ?? now;
+      idleSince.set(row.slug, since);
+      if (now - since < NUDGE_AFTER || now - (nudgedAt.get(row.slug) ?? 0) < NUDGE_EVERY) continue;
+      const { items, threads } = openWork(row.slug);
+      if (!items.length && !threads.length) continue;
+      const first = items[0];
+      const note = `ADR idle nudge (no reply needed): you have been idle ${Math.round((now - since) / 60000)} min with ${items.length} open queue item(s) and ${threads.length} thread(s) waiting. ` +
+        (threads.length ? `Thread ${threads[0].id.slice(0, 8)} on ${threads[0].page} is waiting on you. ` : "") +
+        (first ? `Next in your queue: "${first.test}" (rank ${first.rank}${first.weight ? `, weight ${first.weight}` : ""}, ${first.page}). ` : "") +
+        "Start it, or post what blocks it.";
+      nudgedAt.set(row.slug, now);
+      try { await mesh.send(meshAddress(row), note); } catch (error) { nudgedAt.delete(row.slug); onError?.(error); }
+    }
+  }
+  const nudgeTimer = mesh && process.env.ADR_NUDGE !== "off" ? setInterval(() => nudgeIdle().catch(error => onError?.(error)), 60_000) : undefined;
+  nudgeTimer?.unref();
   let api;
   let revision = 0;
   let latestFeedbackId;
@@ -701,7 +732,12 @@ export async function startCommentBridge({
       if (request.method === "GET" && request.url === "/mesh") {
         let queues = {};
         try { queues = JSON.parse(readFileSync(join(documentRoot, "queues.json"), "utf8")); } catch { /* no queues.json */ }
-        return reply(response, 200, { queues, members: await meshStatus(), edges: meshEdges, machines: await machines(), errors: Object.fromEntries(remoteErrors) });
+        const members = (await meshStatus()).map(row => {
+          if (!row.session) return row;
+          const open = (queues[row.slug] ?? []).filter(item => item.state !== "done").length + unansweredFor(row.slug).threads.length;
+          return { ...row, open, idleMinutes: isIdle(row) && idleSince.has(row.slug) ? Math.round((Date.now() - idleSince.get(row.slug)) / 60000) : 0 };
+        });
+        return reply(response, 200, { queues, members, edges: meshEdges, machines: await machines(), errors: Object.fromEntries(remoteErrors) });
       }
       const unansweredRoute = request.method === "GET" && /^\/unanswered\?(.*)$/.exec(request.url);
       if (unansweredRoute) {
@@ -912,6 +948,7 @@ export async function startCommentBridge({
     read: ({ includeSeen = false, as = ownerName() } = {}) => readAs(as, includeSeen),
     unanswered: ({ as = ownerName() } = {}) => unansweredFor(as),
     close: async () => {
+      clearInterval(nudgeTimer);
       unlinkSync(connectionFile);
       await new Promise((accept, reject) => server.close(error => error ? reject(error) : accept()));
     },

@@ -457,4 +457,6 @@ Page owner: `owner: pc-lead` in a page's front matter fills the card's owner and
 
 Team queues: put `queues.json` at the site root (`{"demo-agent": [{"rank": 2, "test": "…", "page": "…", "state": "planned", "run": ""}]}`). The team graph and table show each agent's running item, else the lowest rank; with an empty queue they fall back to the status ping. Items may carry `id` and `after` (ids of tests that must finish first, `id` or `page#id`); the team page then draws a task graph with one lane per agent and arrows for `after`. An agent listed with `[]` shows a "queue empty" chip.
 
+Idle nudge: an agent that is idle (agent-notify hook, or a status line `ticket|idle|…`) for 5 minutes while it has open queue items or threads waiting on it gets one mesh note naming its next item, then at most one per 30 minutes, never while it is working and none that need a reply. The team table shows "idle N min with K open". Tune with `ADR_NUDGE_MINUTES`, turn off with `ADR_NUDGE=off`. Agents with neither hook nor status line are never seen as idle.
+
 Effort votes: `adr-vote` writes `votes.json` (see the changelog, 0.115.0) and `<VoteHistory />` renders it with plots. Example: `adr-vote --root . /experiments/x A demo-agent 5`, then `adr-vote --root . --reveal /experiments/x A`.
