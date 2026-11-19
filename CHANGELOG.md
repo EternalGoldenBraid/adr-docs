@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.126.0 - 2026-11-19
+
+- Queue events: ADR reads the site's `.queue-events.jsonl` and sends a hand-over note to the doers a finished test unblocks, and an alert to the owner and blocked doers when a test fails or is lost. Replaces the site dispatcher timer.
+
 ## 0.125.1 - 2026-11-19
 
 - The resolve chips now sit in the thread's sticky header (beside Resolve / Close for all), so who has resolved stays visible while you scroll.
