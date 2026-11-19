@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync, utimesSync } from "node:fs";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { readBoard } from "./workstreams.mjs";
+import { publicVotes, readVotes } from "./votes.mjs";
 
 const frontOf = text => text.match(/^---\n([\s\S]*?)\n---/)?.[1] ?? "";
 // A finished page (card-status shipped, or status done) must have non-empty "Verdict" and "Learnings" sections.
@@ -253,5 +254,5 @@ export function treeThemeConfig(documentRoot, options) {
   // The static build gets VitePress's built-in fuzzy search. The live preview keeps `/` for its own :grep.
   const search = options?.publishedOnly && process.argv.includes("build")
     ? { search: { provider: "local", options: { miniSearch: { searchOptions: { fuzzy: 0.2, prefix: true } } } } } : {};
-  return { staleDays: staleDays(documentRoot), nav: topBar(pages), pageTree: pages, workstreams: workstreamSummary(documentRoot), cards: pageCards(documentRoot, options), classification: classificationConfig(documentRoot), ...search };
+  return { staleDays: staleDays(documentRoot), nav: topBar(pages), pageTree: pages, workstreams: workstreamSummary(documentRoot), cards: pageCards(documentRoot, options), votes: publicVotes(readVotes(documentRoot)), classification: classificationConfig(documentRoot), ...search };
 }

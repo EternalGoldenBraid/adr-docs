@@ -1,0 +1,64 @@
+import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+
+// Effort votes live in <site root>/votes.json: [{page, item, owner?, weight?, decidedAt?, rounds: [{round, votes, notes, ownerReply, revealed, mean, variance, converged}]}].
+// Fibonacci scale; a round has converged when its highest and lowest vote are within one step; the weight is the median (the higher value on an even count).
+export const SCALE = [1, 2, 3, 5, 8, 13, 21];
+
+export const stats = votes => {
+  const values = Object.values(votes).map(Number).filter(Number.isFinite).sort((a, b) => a - b);
+  if (!values.length) return {};
+  const mean = values.reduce((a, b) => a + b, 0) / values.length;
+  const variance = values.reduce((a, b) => a + (b - mean) ** 2, 0) / values.length;
+  const median = values[Math.floor(values.length / 2)];
+  const step = value => SCALE.indexOf(value);
+  const converged = step(values.at(-1)) - step(values[0]) <= 1;
+  return { mean: +mean.toFixed(2), variance: +variance.toFixed(2), median, converged, min: values[0], max: values.at(-1) };
+};
+
+const file = root => join(root, "votes.json");
+export const readVotes = root => {
+  try { return existsSync(file(root)) ? JSON.parse(readFileSync(file(root), "utf8")) : []; } catch { return []; }
+};
+const save = (root, items) => { const tmp = file(root) + ".tmp"; writeFileSync(tmp, JSON.stringify(items, null, 1) + "\n"); renameSync(tmp, file(root)); };
+
+const find = (items, page, item) => items.find(row => row.page === page && row.item === item);
+const open = row => row.rounds.find(round => !round.revealed);
+
+// Operations; each returns the updated item. A vote goes into the open round (a new item or a revealed round starts a new one).
+export function applyVote(root, { page, item, agent, vote, owner }) {
+  if (!SCALE.includes(Number(vote))) throw new Error(`Vote must be one of ${SCALE.join(", ")}.`);
+  const items = readVotes(root);
+  const row = find(items, page, item) ?? (items.push({ page, item, ...(owner ? { owner } : {}), rounds: [] }), items.at(-1));
+  if (owner) row.owner = owner;
+  if (row.decidedAt) throw new Error("This item is decided; start a new item name for another vote.");
+  if (!open(row)) row.rounds.push({ round: row.rounds.length + 1, votes: {} });
+  open(row).votes[agent] = Number(vote);
+  save(root, items);
+  return row;
+}
+
+export function reveal(root, { page, item }) {
+  const items = readVotes(root), row = find(items, page, item), round = row && open(row);
+  if (!round) throw new Error("No open round to reveal.");
+  Object.assign(round, { revealed: true }, stats(round.votes));
+  if (round.converged) { row.weight = round.median; row.decidedAt = new Date().toISOString(); }
+  save(root, items);
+  return row;
+}
+
+// A min/max justification (agent) or the owner's single reply before the revote (as: "owner").
+export function addNote(root, { page, item, agent, text, as }) {
+  const items = readVotes(root), row = find(items, page, item);
+  const round = row && (open(row) ?? row.rounds.at(-1));
+  if (!round) throw new Error("Unknown item.");
+  if (as === "owner") round.ownerReply = text; else (round.notes ??= {})[agent] = text;
+  save(root, items);
+  return row;
+}
+
+// What readers see: votes stay private until the round is revealed (only who has voted is shown).
+export const publicVotes = items => items.map(row => ({
+  ...row,
+  rounds: row.rounds.map(round => round.revealed ? round : { round: round.round, voted: Object.keys(round.votes), votes: {} }),
+}));
