@@ -4,7 +4,7 @@ import { homedir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { commentAttention } from "../scripts/preview_comments/extension.mjs";
 import { startDocumentPreview } from "./preview.mjs";
-import { remoteBridge } from "./remote-bridge.mjs";
+import { remoteBridge, remoteMachine } from "./remote-bridge.mjs";
 import { listDeadServers, listServers, recordExit, resolveStore } from "./servers.mjs";
 import { readBoard } from "./workstreams.mjs";
 
@@ -19,7 +19,10 @@ export async function connectDocumentReview({
   let attention;
   // Which standalone `adr` server to talk to: the given store, else this session's own when it has no in-process preview.
   const remoteStore = args => {
-    if (args.store) args = { ...args, store: resolveStore(stateRoot(), args.store) };
+    if (args.store) {
+      // A store this machine does not know is left as given when previews are reached over the mesh (remote.json).
+      try { args = { ...args, store: resolveStore(stateRoot(), args.store) }; } catch (error) { if (!remoteMachine(stateRoot())) throw error; }
+    }
     if (args.store && (args.store !== session.sessionId || !active)) return args.store;
     if (!args.store && !active && existsSync(join(stateRoot(), session.sessionId, "connection.json"))) return session.sessionId;
     return undefined;

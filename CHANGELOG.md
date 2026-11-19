@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.128.0 - 2026-11-19
+
+- Doc-review tools work from a peer machine over the mesh: a named preview answers `ADR-REQ` messages with chunked `ADR-RES` replies, and with `remote.json` naming the peer, the tools take `store: "mokki"` for a store the machine does not run. Text only; images are not carried yet.
+
 ## 0.127.0 - 2026-11-19
 
 - Unblock ping: when a page held in review (open thread or missing verdict) loses its last blocker and turns done, its owner gets one mesh note to check it and set it done. Pages held when the preview starts are only recorded, not announced.

@@ -483,3 +483,9 @@ Unblock ping: every 30 s ADR checks which pages are held in review. When one lea
 Queue events: ADR also reads `.queue-events.jsonl` at the site root (one JSON line per test state change: `at, page, test, state, by, owner, unblocks:[{id, doer}]`), polling every 30 s from the end of the file at startup. A test turning `done` sends each unblocked doer a hand-over note at once. A test turning `failed` or `lost` alerts its owner and the doers it blocks. Offline agents get nothing; `ADR_NUDGE=off` disables this too.
 
 Effort votes: `adr-vote` writes `votes.json` (see the changelog, 0.115.0) and `<VoteHistory />` renders it with plots. Example: `adr-vote --root . /experiments/x A mokki-agent 5`, then `adr-vote --root . --reveal /experiments/x A`.
+
+## Agents on another machine
+
+An agent on a peer machine (for example the GPU host) reaches a preview through the mesh, with no tunnel and no shared token. On that machine, install the plugin and write `~/.local/state/agent-doc-review/remote.json` as `{"machine": "nicklas-lenovo"}` (the peer that runs the previews). The usual tools (`read_doc_review_comments`, `update_doc_review_comment`, `unanswered_threads`, `add_doc_review_comment`, `set_doc_review_status`) then take `store: "mokki"` for a store that machine does not run itself.
+
+A named preview (`adr --name mokki`) listens for `ADR-REQ` mesh messages (every 2 s; `ADR_MESH_SERVE=off` disables it). The caller finds the preview among the peer's agents by its directory name, sends the request, and the preview answers with `ADR-RES` messages, chunked to stay under the mesh's 10 KB limit. Only the agent endpoints are served (`/read`, `/unanswered`, `/agent-update`, `/agent-add`, `/agent-status`). Text only: images in replies are not carried yet.
