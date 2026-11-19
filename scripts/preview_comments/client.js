@@ -73,7 +73,7 @@
       .thread-links select{width:auto;max-width:180px;border-radius:999px;padding:2px 8px;font-size:12px}
       details.quote-box{margin-bottom:8px}details.quote-box summary{cursor:pointer;color:#b7c1ce;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
       .reply-form{position:sticky;bottom:0;margin:0!important;padding:10px 20px 14px;background:#1b1d22;border-top:1px solid #3a404a}
-      textarea{field-sizing:content}.reply-form textarea{min-height:56px;max-height:240px}.reply-form .actions{margin-top:8px}
+      textarea.whispering{border:1px dashed #b197fc;background:#2a2538}.assist{font-size:12px;margin-top:2px}.assist.hint{color:#d0bfff}.assist.list{display:flex;flex-wrap:wrap;gap:4px}.assist.list button{padding:1px 8px;border:1px solid #59616d;border-radius:999px;background:#1b1d22;color:inherit;font:inherit;cursor:pointer}.assist.list button.on{border-color:#74c0fc;background:rgba(116,192,252,.2)}textarea{field-sizing:content}.reply-form textarea{min-height:56px;max-height:240px}.reply-form .actions{margin-top:8px}
       .thread-messages{padding-bottom:6px}
       .note.whisper.mine,.note.whisper.copilot{border:1px dashed #b197fc;background:#2a2538}
       .note{margin:8px 0;padding:8px 12px;background:#252a32;border-radius:10px}.note.copilot{background:#1e2a3a;margin-right:36px}.note.mine{margin-left:36px}
@@ -1128,6 +1128,70 @@
     return best;
   }
   const toValue = (selected, shown) => shown && recipients().length > 1 ? { to: [...selected] } : {};
+  // Under a textarea: a whisper banner while the text starts with "/w name…", and an @name picker.
+  // Picking (or sending) an @name also adds that agent to the To: chips.
+  const mentionedIn = text => [...text.matchAll(/(?:^|[\s(])@([\w.-]+)/g)].map(match => recipientFor(match[1])).filter(Boolean);
+  function attachAssist(input, getSelected, holder, whispers = false) {
+    const box = document.createElement("div");
+    box.className = "assist";
+    box.hidden = true;
+    input.after(box);
+    let items = [], index = 0, start = 0;
+    const addTo = name => { const selected = getSelected(); if (!selected.has(name)) { selected.add(name); chipRow(holder, selected); } };
+    const close = () => { box.hidden = true; items = []; };
+    const choose = name => {
+      const end = input.selectionStart;
+      input.setRangeText(`@${name} `, start, end, "end");
+      addTo(name);
+      close();
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    };
+    const draw = () => {
+      box.replaceChildren(...items.map((name, i) => {
+        const row = document.createElement("button");
+        row.type = "button";
+        row.textContent = "@" + name;
+        row.className = i === index ? "on" : "";
+        row.addEventListener("mousedown", event => { event.preventDefault(); choose(name); });
+        return row;
+      }));
+      box.className = "assist list";
+      box.hidden = !items.length;
+    };
+    const update = () => {
+      const whisper = /^\/w[ \t]+([\w.,-]+)[ \t]/.exec(input.value);
+      input.classList.toggle("whispering", Boolean(whisper && whispers));
+      if (whisper && whispers) {
+        const names = whisper[1].split(",").filter(Boolean).map(recipientFor);
+        close();
+        box.className = "assist hint";
+        box.textContent = names.some(name => !name) ? `🤫 Whisper: unknown name in "${whisper[1]}"` : `🤫 Whisper: only ${names.join(", ")} will get this`;
+        box.hidden = false;
+        return;
+      }
+      const before = input.value.slice(0, input.selectionStart);
+      const at = /(?:^|[\s(])@([\w.-]*)$/.exec(before);
+      if (!at) { close(); return; }
+      start = before.length - at[1].length - 1;
+      const typed = at[1].toLowerCase();
+      items = recipients().filter(name => name.toLowerCase().includes(typed)).sort((a, b) => Number(b.toLowerCase().startsWith(typed)) - Number(a.toLowerCase().startsWith(typed))).slice(0, 8);
+      index = Math.min(index, Math.max(items.length - 1, 0));
+      draw();
+    };
+    input.addEventListener("input", update);
+    input.addEventListener("click", update);
+    input.addEventListener("blur", () => setTimeout(close, 150));
+    input.addEventListener("keydown", event => {
+      if (box.hidden || !items.length || box.className !== "assist list") return;
+      if (event.key === "ArrowDown" || event.key === "ArrowUp") { index = (index + (event.key === "ArrowDown" ? 1 : items.length - 1)) % items.length; draw(); }
+      else if (event.key === "Tab" || (event.key === "Enter" && !event.ctrlKey && !event.metaKey && !event.shiftKey)) choose(items[index]);
+      else if (event.key === "Escape") close();
+      else return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }, true);
+    return { update, addMentions: text => mentionedIn(text).forEach(addTo) };
+  }
   const rememberTo = selected => {
     if (recipients().length > 1) api("settings", { last: [...selected] }).then(value => { settings = value; }).catch(() => {});
   };
@@ -1812,6 +1876,7 @@
     host.dataset.replyDrafts = String([...replyDrafts.values()].filter(draft => draft.text.trim()).length);
   });
   let replyTo = new Set();
+  const replyAssist = attachAssist(replyInput, () => replyTo, find(".to-reply"), true);
   function renderReplyTo(comment) {
     replyTo = new Set(comment?.to?.length ? comment.to : defaultTo());
     chipRow(find(".to-reply"), replyTo);
@@ -1880,6 +1945,7 @@
     queueRequested = false;
     // "/w name[,name] text" whispers: only those agents get it.
     let text = replyInput.value, whisper;
+    replyAssist.addMentions(text);
     const w = /^\/w[ \t]+([\w.,-]+)[ \t]+([\s\S]+)$/.exec(text);
     if (w) {
       const names = w[1].split(",").filter(Boolean).map(recipientFor);
@@ -1899,6 +1965,7 @@
   });
   let draftImages = [];
   let composeTo = new Set();
+  const composeAssist = attachAssist(textarea, () => composeTo, find(".to-new"));
   const shots = find(".shots");
   function renderShots() {
     shots.replaceChildren(...draftImages.map(shot => {
@@ -2936,6 +3003,7 @@
     if (!target || !textarea.value.trim()) return;
     if (!draftId || submittedText !== textarea.value) draftId = crypto.randomUUID();
     submittedText = textarea.value;
+    composeAssist.addMentions(submittedText);
     const send = find("button[type=submit]");
     send.disabled = true;
     toggle.disabled = true;

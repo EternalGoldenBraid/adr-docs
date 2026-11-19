@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.120.0 - 2026-11-19
+
+- `@name` picker in the comment and reply boxes: arrows/Tab/Enter choose a team name and add that agent to the To: chips (typed `@names` are added on send too).
+- Whisper indicator: a reply starting `/w name text` turns the box purple and shows who alone will get it, or an unknown-name warning.
+
 ## 0.119.1 - 2026-11-19
 
 - Fix: notes to agents on a peer machine (gpu-agent, sim-agent) now go through the mesh router (`machine` + session id). 0.116.1 addressed them as a `remote:[…]` id, which the mesh rejects as "not active" once its cached row goes stale, so those notes were silently retried and never delivered. The same path carries idle nudges.
