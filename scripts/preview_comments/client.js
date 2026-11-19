@@ -188,6 +188,22 @@
   const history = find(".history");
   const replyInput = find("#thread-reply");
   const replyDrafts = new Map();
+  // Unsent text survives a refresh or a server restart: a small ring buffer in localStorage, newest 30 drafts, dropped after 3 days.
+  const DRAFT_KEY = "adr-drafts", DRAFT_MAX = 30, DRAFT_DAYS = 3;
+  const draftStore = () => {
+    try {
+      const all = JSON.parse(localStorage.getItem(DRAFT_KEY) || "{}");
+      return Object.fromEntries(Object.entries(all).filter(([, draft]) => draft.text?.trim() && Date.now() - draft.at < DRAFT_DAYS * 864e5));
+    } catch { return {}; }
+  };
+  const keepDraft = (key, text) => {
+    const all = draftStore();
+    if (text.trim()) all[key] = { text, at: Date.now() }; else delete all[key];
+    const newest = Object.entries(all).sort((a, b) => b[1].at - a[1].at).slice(0, DRAFT_MAX);
+    try { localStorage.setItem(DRAFT_KEY, JSON.stringify(Object.fromEntries(newest))); } catch { /* storage full or off */ }
+  };
+  const pageDraftKey = () => "page:" + location.pathname;
+  for (const [key, draft] of Object.entries(draftStore())) if (key.startsWith("reply:")) replyDrafts.set(key.slice(6), { text: draft.text });
   let historyComments = [];
   let historyRevision = -1;
   let serverSeenInit = false;
@@ -1752,6 +1768,7 @@
       const result = await api("updates", { ...values, sessionId, commentId });
       if (values.reply !== undefined) {
         replyDrafts.delete(commentId);
+        keepDraft("reply:" + commentId, "");
         replyInput.value = "";
         fitReply();
         setReplyTarget(null);
@@ -1791,6 +1808,7 @@
   });
   replyInput.addEventListener("input", () => {
     replyDrafts.set(selectedThread, { ...replyDrafts.get(selectedThread), text: replyInput.value });
+    keepDraft("reply:" + selectedThread, replyInput.value);
     host.dataset.replyDrafts = String([...replyDrafts.values()].filter(draft => draft.text.trim()).length);
   });
   let replyTo = new Set();
@@ -1827,6 +1845,7 @@
     replyInput.style.height = `${Math.min(replyInput.scrollHeight + 2, 240)}px`;
   }
   replyInput.addEventListener("input", fitReply);
+  textarea.addEventListener("input", () => keepDraft(pageDraftKey(), textarea.value));
   textarea.addEventListener("input", () => { if (!autoSized) { textarea.style.height = "auto"; textarea.style.height = `${Math.min(textarea.scrollHeight + 2, 240)}px`; } });
   function replyToMessage(item) {
     const note = item?.closest?.(".note");
@@ -2518,6 +2537,7 @@
     if (targetAnchor) position(panel, targetAnchor);
     showCaret();
     message("");
+    if (!textarea.value) { const saved = draftStore()[pageDraftKey()]; if (saved) { textarea.value = saved.text; message("Restored your unsent text"); } }
     textarea.focus();
     try {
       const ready = await api("status");
@@ -2934,6 +2954,7 @@
       message(asNote ? "Saved as private note" : queued ? "Queued · delivered when the agent is idle" : "Saved · awaiting review");
       statusTimer = setTimeout(() => message(""), 5000);
       textarea.value = "";
+      keepDraft(pageDraftKey(), "");
       draftId = undefined;
       draftImages = [];
       renderShots();

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.117.0 - 2026-11-19
+
+- Unsent comment and reply text survives a refresh or server restart: drafts are saved in `localStorage` (`adr-drafts`) as you type, per page for new comments and per thread for replies, as a ring buffer of the newest 30 for 3 days. Sending clears the draft; reopening the comment box restores it ("Restored your unsent text").
+
 ## 0.116.1 - 2026-11-19
 
 - Fix: comment notes to agents on peer machines (for example `gpu`) were sent to the bare session id, which the mesh does not route, so GPU-side agents never received "ADR comment for you" messages. Recipients whose team-table machine is a peer in `machines.json` are now addressed as `remote:["machine","session"]`. Restart the preview server to pick this up.
