@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.104.0 - 2026-11-19
+
+- Package exports for site builds, so a site can `npm i github:EternalGoldenBraid/adr-docs` and import by name instead of through a symlink: `adr-docs/task-lists`, `/editable-tables`, `/build-info`, `/page-tree`, `/theme`.
+
 ## 0.103.1 - 2026-11-19
 
 - Leak guard also rejects a commit whose author or committer identity matches the denylist, and pre-push scans author names and e-mails of the commits being pushed.
