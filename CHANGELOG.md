@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.103.0 - 2026-11-19
+
+- `tools/leak-guard.sh` with `.githooks/pre-commit` and `.githooks/pre-push`: block commits and pushes whose added lines or file names match a private denylist kept outside the repo (`~/.config/adr/denylist`, or `$ADR_DENYLIST`). Enable once per clone with `git config core.hooksPath .githooks`.
+
 ## 0.102.0 - 2026-11-19
 
 - Renamed the package and plugin to `adr-docs` (repo `EternalGoldenBraid/adr-docs`); the history was rewritten to drop a company theme that should never have been in this repo. State, config and mesh names (`~/.local/state/agent-doc-review`, `~/.config/agent-doc-review`, `agent-doc-review-site`) are unchanged so existing sites and key maps keep working.
