@@ -325,6 +325,38 @@ export async function startCommentBridge({
   }
   const nudgeTimer = mesh && process.env.ADR_NUDGE !== "off" ? setInterval(() => nudgeIdle().catch(error => onError?.(error)), 60_000) : undefined;
   nudgeTimer?.unref();
+  // .queue-events.jsonl at the site root (one line per test state change): a test turning done hands over to the doers it unblocks;
+  // one turning failed or lost alerts its owner and those doers. Reading starts at the end of the file, so old events are not replayed.
+  const eventsPath = join(documentRoot, ".queue-events.jsonl");
+  let eventsOffset = existsSync(eventsPath) ? statSync(eventsPath).size : 0;
+  async function sendQueueEvents() {
+    if (!existsSync(eventsPath)) return;
+    const size = statSync(eventsPath).size;
+    if (size < eventsOffset) eventsOffset = 0;
+    if (size === eventsOffset) return;
+    const text = readFileSync(eventsPath).subarray(eventsOffset).toString("utf8");
+    const end = text.lastIndexOf("\n") + 1;
+    eventsOffset += Buffer.byteLength(text.slice(0, end));
+    const rows = await meshStatus();
+    for (const line of text.slice(0, end).split("\n")) {
+      let event; try { event = JSON.parse(line); } catch { continue; }
+      const unblocks = event.unblocks ?? [];
+      const targets = new Map();
+      if (event.state === "done") for (const next of unblocks) targets.set(next.doer, `ADR hand-over (no reply needed): "${event.test}" on ${event.page} is done${event.by ? ` (by ${event.by})` : ""}. Your "${next.id}" is unblocked; it is next in your queue.`);
+      else if (event.state === "failed" || event.state === "lost") {
+        const note = who => `ADR alert (no reply needed): "${event.test}" on ${event.page} ${event.state}${event.by ? ` (by ${event.by})` : ""}. ${who}`;
+        if (event.owner) targets.set(event.owner, note("You own it: decide whether to rerun or stop."));
+        for (const next of unblocks) if (!targets.has(next.doer)) targets.set(next.doer, note(`Your "${next.id}" is blocked on it.`));
+      }
+      for (const [slug, note] of targets) {
+        const row = rows.find(candidate => candidate.slug === slug);
+        if (!row?.session || row.status === "offline" || row.session === sessionId) continue;
+        try { await mesh.send(meshAddress(row).session, note, meshAddress(row).machine); } catch (error) { onError?.(error); }
+      }
+    }
+  }
+  const eventsTimer = mesh && process.env.ADR_NUDGE !== "off" ? setInterval(() => sendQueueEvents().catch(error => onError?.(error)), 30_000) : undefined;
+  eventsTimer?.unref();
   // threads.json at the site root (only where queues.json is): open threads with who they wait on, for the queue generator to merge as thread items.
   let threadsTimer;
   const writeThreads = () => {
@@ -996,6 +1028,7 @@ export async function startCommentBridge({
     unanswered: ({ as = ownerName() } = {}) => unansweredFor(as),
     close: async () => {
       clearInterval(nudgeTimer);
+      clearInterval(eventsTimer);
       unlinkSync(connectionFile);
       await new Promise((accept, reject) => server.close(error => error ? reject(error) : accept()));
     },

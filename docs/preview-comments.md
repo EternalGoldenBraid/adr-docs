@@ -478,4 +478,6 @@ Threads as work: where `queues.json` exists, ADR writes `threads.json` beside it
 
 Idle nudge: an agent that is idle (agent-notify hook, or a status line `ticket|idle|…`) for 5 minutes while it has open queue items or threads waiting on it gets one mesh note naming its next item, then at most one per 30 minutes, never while it is working and none that need a reply. The team table shows "idle N min with K open". Tune with `ADR_NUDGE_MINUTES`, turn off with `ADR_NUDGE=off`. Agents with neither hook nor status line are never seen as idle.
 
+Queue events: ADR also reads `.queue-events.jsonl` at the site root (one JSON line per test state change: `at, page, test, state, by, owner, unblocks:[{id, doer}]`), polling every 30 s from the end of the file at startup. A test turning `done` sends each unblocked doer a hand-over note at once. A test turning `failed` or `lost` alerts its owner and the doers it blocks. Offline agents get nothing; `ADR_NUDGE=off` disables this too.
+
 Effort votes: `adr-vote` writes `votes.json` (see the changelog, 0.115.0) and `<VoteHistory />` renders it with plots. Example: `adr-vote --root . /experiments/x A mokki-agent 5`, then `adr-vote --root . --reveal /experiments/x A`.
