@@ -268,8 +268,9 @@ export async function startCommentBridge({
   }
   // Quiet mesh note to each addressed agent other than the owner; they pull the thread when they choose.
   // Without a hosting agent session (ownerViaMesh), the owner is also told this way, including of unaddressed comments.
-  function announce(comment, text, queued = false) {
-    const names = comment.to?.length ? comment.to.map(canon) : ownerViaMesh ? [ownerName()] : [];
+  // Agent-authored threads and replies pass `only` (their recipients) and `sender`, who is not told of their own message.
+  function announce(comment, text, queued = false, only, sender) {
+    const names = (only?.length ? only.map(canon) : comment.to?.length ? comment.to.map(canon) : ownerViaMesh ? [ownerName()] : []).filter(who => !sender || who !== canon(sender));
     if (!mesh) return;
     for (const who of names) {
       const target = agents().find(row => row.slug === who);
@@ -1035,6 +1036,7 @@ export async function startCommentBridge({
       };
       append(log, record);
       apply(record);
+      if (record.to?.length) announce(comments.get(record.id), record.comment, false, record.to, from);
       return { id: record.id, saved: true, url: record.url };
     },
     setStatus: ({ state = "working", text = "" }) => {
@@ -1042,7 +1044,13 @@ export async function startCommentBridge({
       agentStatus = { state: String(state).slice(0, 24), text: String(text).slice(0, 120), at: new Date().toISOString() };
       return { saved: true };
     },
-    update: (input, author = "copilot") => saveUpdate(normalizeUpdate(input, author)),
+    update: (input, author = "copilot") => {
+      const value = normalizeUpdate(input, author);
+      const fresh = !updates.has(value.id);
+      const result = saveUpdate(value);
+      if (fresh && author === "copilot" && value.reply !== undefined && !value.note) announce(comments.get(value.commentId), value.reply, false, undefined, value.from);
+      return result;
+    },
     pending: (as) => {
       const rows = unread(as);
       return { count: rows.length, latestId: rows.length ? latestFeedbackId : undefined };

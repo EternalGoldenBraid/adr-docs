@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.130.0 - 2026-11-19
+
+- A thread an agent starts with `to`, and an agent's reply in a thread, now send a mesh note to the thread's other addressees (never to the sender), as a user's comment already did. Before, agent-to-agent threads only reached a queue, and nobody was pushed to look.
+
 ## 0.129.0 - 2026-11-19
 
 - A thread stays in `threads.json` (and so in an agent's queue) until that agent has **resolved** it, not just answered it. Before, an addressee who had replied dropped out, and the thread never came back to ask for their resolve vote.
