@@ -400,3 +400,19 @@ Under a table, leave a blank line and write `{editable}` (every column) or `{edi
 A site built in GitHub Actions can show a build badge and accept the same edits. In the site's `.vitepress/config.mjs` add `.use(editableTables)` to the markdown config (`src/editable-tables.mjs`) and `buildEnd: buildInfo` (`src/build-info.mjs`, which writes `build.json` with the commit, time and repository). The badge in the bottom-left corner shows the live commit and time, and "New version live, reload" when a later deploy appears.
 
 Paste a fine-grained token for the repository (Contents: write, Actions: read) into the badge once; it stays in that browser. Then double-click a marked cell, edit, and Enter to queue the edit (the cell turns amber). Edits are not sent until you press **Publish** in the badge panel, which makes one commit to the branch (409 if the file changed on the branch since you started: discard and retry) and follows the build as Saved, Building, Deploying, Live or Failed. With a token the badge also shows builds started by anyone. One file can be queued at a time.
+
+## Page cards
+
+Give a page a fixed-size summary in its front matter:
+
+```yaml
+card-line: Interactive route map demo
+card-status: building   # idea | planned | building | shipped
+card-what: ...
+card-state: ...
+card-evidence: ...
+card-next: ...
+card-owner: ...
+```
+
+`<PageCard />` shows the card (put it at the top of the page); `<PageCard board />` lists every page with a `card-line`, grouped by status. Each slot is clipped to 120 characters (`budget="N"` changes it; the full text is in the tooltip), so cards are equally quick to read. The card is level 1, the line level 0, the page itself level 2.
