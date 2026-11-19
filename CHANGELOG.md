@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.103.1 - 2026-11-19
+
+- Leak guard also rejects a commit whose author or committer identity matches the denylist, and pre-push scans author names and e-mails of the commits being pushed.
+
 ## 0.103.0 - 2026-11-19
 
 - `tools/leak-guard.sh` with `.githooks/pre-commit` and `.githooks/pre-push`: block commits and pushes whose added lines or file names match a private denylist kept outside the repo (`~/.config/adr/denylist`, or `$ADR_DENYLIST`). Enable once per clone with `git config core.hooksPath .githooks`.
