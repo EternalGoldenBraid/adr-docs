@@ -19,7 +19,7 @@ function meshDataDirectory() {
 import { readCell, writeCell } from "./table-edit.mjs";
 import { readRoster } from "../../src/roster.mjs";
 import { addNote, applyVote, publicVotes, readVotes, reveal } from "../../src/votes.mjs";
-import { readPageTree } from "../../src/page-tree.mjs";
+import { pageCards, readPageTree } from "../../src/page-tree.mjs";
 import { diffLines, hunks } from "./page-diff.mjs";
 
 function append(file, record) {
@@ -357,6 +357,24 @@ export async function startCommentBridge({
   }
   const eventsTimer = mesh && process.env.ADR_NUDGE !== "off" ? setInterval(() => sendQueueEvents().catch(error => onError?.(error)), 30_000) : undefined;
   eventsTimer?.unref();
+  // A page held in review (open thread or missing verdict) that loses its last blocker: its owner gets one note that it can be set done.
+  // The first pass only records which pages are held, so a restart does not re-announce.
+  let heldPages;
+  async function pingUnblocked() {
+    if (!existsSync(join(documentRoot, "queues.json"))) return;
+    const cards = pageCards(documentRoot), held = new Set(Object.entries(cards).filter(([, card]) => card.status === "review" && card.reviewFrom).map(([page]) => page));
+    const released = heldPages ? [...heldPages].filter(page => !held.has(page) && ["done", "shipped"].includes(cards[page]?.status)) : [];
+    heldPages = held;
+    if (!released.length) return;
+    const rows = await meshStatus();
+    for (const page of released) {
+      const row = rows.find(candidate => candidate.slug === cards[page].owner);
+      if (!row?.session || row.status === "offline" || row.session === sessionId) continue;
+      try { await mesh.send(meshAddress(row).session, `ADR unblock ping (no reply needed): ${page} has no blockers left (no open threads, verdict present). Check it and set it done.`, meshAddress(row).machine); } catch (error) { onError?.(error); }
+    }
+  }
+  const unblockTimer = mesh && process.env.ADR_NUDGE !== "off" ? setInterval(() => pingUnblocked().catch(error => onError?.(error)), 30_000) : undefined;
+  unblockTimer?.unref();
   // threads.json at the site root (only where queues.json is): open threads with who they wait on, for the queue generator to merge as thread items.
   let threadsTimer;
   const writeThreads = () => {
@@ -1029,6 +1047,7 @@ export async function startCommentBridge({
     close: async () => {
       clearInterval(nudgeTimer);
       clearInterval(eventsTimer);
+      clearInterval(unblockTimer);
       unlinkSync(connectionFile);
       await new Promise((accept, reject) => server.close(error => error ? reject(error) : accept()));
     },
