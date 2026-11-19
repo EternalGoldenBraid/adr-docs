@@ -91,14 +91,22 @@ function hover(e, text, rec) {
   if (!text) { tip.value = null; return }
   tip.value = { x: e.clientX - r.left + 12, y: e.clientY - r.top + 12, text, img: rec ? frameAt(e, rec) : null }
 }
-// With `frames: { src: "/data/thumbs/r1/{n}.jpg", count: 40 }` on a recording, the frame nearest the cursor along the path is shown (n counts from 0).
+// Frames along a drive, shown for the point nearest the cursor. Either `frames: { src: ".../{n}.jpg", count }` (one file per frame, spread evenly over the points)
+// or `thumbs: { src, size: [w, h], at: [point index per frame] }` (one horizontal strip; frame k belongs to points[at[k]]).
 function frameAt(e, rec) {
-  if (!rec.frames?.src || !rec.frames.count) return null
+  if (!rec.frames?.src && !rec.thumbs?.src) return null
   const p = toWorld(e)
   let best = 0, bestD = Infinity
   rec.px.forEach(([x, y], i) => { const d = (x - p.x) ** 2 + (y - p.y) ** 2; if (d < bestD) { bestD = d; best = i } })
+  if (rec.thumbs?.src && rec.thumbs.at?.length && rec.thumbs.size) {
+    const { at, size: [w, h], src } = rec.thumbs
+    let k = 0
+    at.forEach((i, j) => { if (Math.abs(i - best) < Math.abs(at[k] - best)) k = j })
+    return { strip: { backgroundImage: `url(${withBaseUrl(src)})`, backgroundPosition: `-${k * w}px 0`, width: `${w}px`, height: `${h}px` } }
+  }
+  if (!rec.frames?.count) return null
   const n = Math.round(best / Math.max(1, rec.px.length - 1) * (rec.frames.count - 1))
-  return withBaseUrl(rec.frames.src.replace('{n}', n))
+  return { src: withBaseUrl(rec.frames.src.replace('{n}', n)) }
 }
 const recText = r => [r.name ?? r.id, r.driver, r.role && `${r.role}`, r.route && `route ${r.route}`].filter(Boolean).join(' · ')
 </script>
@@ -125,7 +133,7 @@ const recText = r => [r.name ?? r.id, r.driver, r.role && `${r.role}`, r.route &
             @click="open(r)" @pointermove="hover($event, recText(r), r)" @pointerleave="hover($event, '')" />
         </g>
       </svg>
-      <div v-if="tip" class="rm-tip" :style="{ left: `${tip.x}px`, top: `${tip.y}px` }"><img v-if="tip.img" :src="tip.img" alt="" />{{ tip.text }}</div>
+      <div v-if="tip" class="rm-tip" :style="{ left: `${tip.x}px`, top: `${tip.y}px` }"><img v-if="tip.img?.src" :src="tip.img.src" alt="" /><div v-else-if="tip.img?.strip" class="rm-strip" :style="tip.img.strip"></div>{{ tip.text }}</div>
     </template>
     <p v-else class="rm-err">Loading map…</p>
   </div>
@@ -146,6 +154,7 @@ svg:active { cursor: grabbing }
 .rm-recs polyline { fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; opacity: .95 }
 .rm-recs polyline.link { cursor: pointer }
 .rm-recs polyline:hover { stroke-width: 5 }
+.rm-strip { margin-bottom: 4px; border-radius: 3px; background-repeat: no-repeat }
 .rm-tip img { display: block; width: 200px; margin-bottom: 4px; border-radius: 3px }
 .rm-tip { position: absolute; z-index: 2; pointer-events: none; padding: 3px 8px; border-radius: 4px; font-size: 12px; background: rgba(0, 0, 0, .8); color: #fff; white-space: nowrap }
 .rm-err { padding: 16px; color: var(--vp-c-text-2) }
