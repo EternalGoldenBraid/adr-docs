@@ -3,7 +3,6 @@ import { existsSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { commentAttention } from "../scripts/preview_comments/extension.mjs";
-import { startDocumentPreview } from "./preview.mjs";
 import { remoteBridge, remoteMachine } from "./remote-bridge.mjs";
 import { listDeadServers, listServers, recordExit, resolveStore } from "./servers.mjs";
 import { readBoard } from "./workstreams.mjs";
@@ -11,7 +10,7 @@ import { readBoard } from "./workstreams.mjs";
 const stateRoot = () => join(process.env.XDG_STATE_HOME || join(homedir(), ".local", "state"), "agent-doc-review");
 
 export async function connectDocumentReview({
-  joinSession: joinOverride, startPreview = startDocumentPreview,
+  joinSession: joinOverride, startPreview = async options => (await import("./preview.mjs")).startDocumentPreview(options), // loaded on demand: a client machine needs no preview dependencies
 } = {}) {
   const joinSession = joinOverride ?? (await import("@github/copilot-sdk/extension")).joinSession;
   let active;
