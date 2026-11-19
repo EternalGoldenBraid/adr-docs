@@ -448,3 +448,5 @@ One `card-test:` line per test: `card-test: Stage 1 | done | 2026-11-19` (status
 The card also reads a nested `card:` block (`gist`, `state` = badge, `evidence`, `next`, `owner`, `tests: [{name, state, date}]`), and is placed under the page title automatically.
 
 Test results: add `result: results/run-3.json` to a test (`{name: "…", state: running, result: results/run-3.json}`). The run script writes `{"status": "done", "finished_at": "2026-11-19T10:00:00Z"}` (status `running`, `done` or `failed`); ADR reads it and overrides the test's state and date. The page state is derived from the tests; the hand-written one is ignored when tests exist.
+
+Mandatory card fields: gist (`card-line`), owner and state. Missing ones show as a red chip; `adr-check <site-root>` prints them and exits 1 (use it in a build or pre-commit hook to block).
