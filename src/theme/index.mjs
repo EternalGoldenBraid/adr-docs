@@ -8,6 +8,7 @@ import WorkstreamLinks from "../components/WorkstreamLinks.vue";
 import ClassificationBanner from "../components/ClassificationBanner.vue";
 import WorkstreamBoard from "../components/WorkstreamBoard.vue";
 import WorkstreamNow from "../components/WorkstreamNow.vue";
+import PageCard from "../components/PageCard.vue";
 import PageTree from "../components/PageTree.vue";
 import { installSidebarToggle } from "./sidebar-toggle.mjs";
 import { enhanceTables } from "./table-tools.mjs";
@@ -42,5 +43,5 @@ export default {
       if (q) localStorage.setItem("adr-theme", q);
       document.documentElement.classList.toggle("company", localStorage.getItem("adr-theme") === "company");
     }
-    app.component("DocGraph", DocGraph); app.component("TeamGraph", TeamGraph); app.component("RerunViewer", RerunViewer); app.component("RouteMap", RouteMap); app.component("WorkstreamBoard", WorkstreamBoard); app.component("WorkstreamNow", WorkstreamNow); },
+    app.component("DocGraph", DocGraph); app.component("TeamGraph", TeamGraph); app.component("RerunViewer", RerunViewer); app.component("RouteMap", RouteMap); app.component("PageCard", PageCard); app.component("WorkstreamBoard", WorkstreamBoard); app.component("WorkstreamNow", WorkstreamNow); },
 };

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.98.0 - 2026-11-19
+
+- Page cards: a page's front matter can carry `card-line` (one line), `card-status` (idea / planned / building / shipped) and the slots `card-what`, `card-state`, `card-evidence`, `card-next`, `card-owner`. `<PageCard />` renders the card (every slot clipped to the same 120-character budget), `<PageCard board />` lists every page's one-liner by status. Three levels: line, card, page.
+
 ## 0.97.0 - 2026-11-19
 
 - `tools/related_eval.py`: offline test of related-page suggestions for threads (TF-IDF vs bge-small embeddings; precision@3, recall@3 and a threshold sweep), with the pages an agent linked in a thread as ground truth. Run niced, nothing is wired into the overlay yet.

@@ -126,6 +126,26 @@ function workstreamSummary(documentRoot) {
   return Object.fromEntries(readBoard(directory).items.map(i => [i.id, { status: i.status, owner: i.owner, machine: i.machine, priority: i.priority, done: i.steps.done, total: i.steps.total, title: i.title, summary: i.summary, date: i.date, depends_on: i.depends_on }]));
 }
 
+// Cards from front matter, so every page can be read at three levels (line, card, page):
+//   card-line: one line   card-status: idea | planned | building | shipped
+//   card-what / card-state / card-evidence / card-next / card-owner: one short line each
+export const CARD_SLOTS = ["what", "state", "evidence", "next", "owner"];
+export function pageCards(documentRoot, options) {
+  const out = {};
+  for (const file of markdownFiles(documentRoot)) {
+    const text = readFileSync(join(documentRoot, file), "utf8");
+    if (options?.publishedOnly && isUnpublished(text)) continue;
+    const front = frontOf(text);
+    const key = name => front.match(new RegExp(`^card-${name}:\\s*(.+)$`, "m"))?.[1].trim().replace(/^["']|["']$/g, "");
+    const card = Object.fromEntries(["line", "status", ...CARD_SLOTS].map(k => [k, key(k)]).filter(([, v]) => v));
+    if (!Object.keys(card).length) continue;
+    const slug = file.slice(0, -3);
+    out[slug === "index" ? "/" : "/" + slug.split("/").map(encodeURIComponent).join("/")] =
+      { ...card, title: front.match(/^nav:\s*(.+)$/m)?.[1].trim() ?? text.match(/^# (.+)$/m)?.[1].trim() ?? slug };
+  }
+  return out;
+}
+
 // One site-wide banner from the root index.md front matter:
 //   classification: "RESTRICTED · restricted-demo org only"
 //   classification-level: restricted | internal | public   (colour; inferred from the label's first word if omitted)
@@ -145,5 +165,5 @@ export function treeThemeConfig(documentRoot, options) {
   // The static build gets VitePress's built-in fuzzy search. The live preview keeps `/` for its own :grep.
   const search = options?.publishedOnly && process.argv.includes("build")
     ? { search: { provider: "local", options: { miniSearch: { searchOptions: { fuzzy: 0.2, prefix: true } } } } } : {};
-  return { nav: topBar(pages), pageTree: pages, workstreams: workstreamSummary(documentRoot), classification: classificationConfig(documentRoot), ...search };
+  return { nav: topBar(pages), pageTree: pages, workstreams: workstreamSummary(documentRoot), cards: pageCards(documentRoot, options), classification: classificationConfig(documentRoot), ...search };
 }
