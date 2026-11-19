@@ -521,6 +521,9 @@ test("an agent's addressed thread and reply are announced to the others over the
   assert.deepEqual(sent, [bob]);
   bridge.update({ id: randomUUID(), commentId: id, from: "bob", reply: "carol?" });
   assert.deepEqual(sent, [bob, carol]);
+  bridge.update({ id: randomUUID(), commentId: id, from: "bob", reply: "psst", to: ["owner"], whisper: true });
+  assert.deepEqual(bridge.read({ as: "carol", includeSeen: true }).flatMap(thread => thread.replies.map(r => r.comment)).includes("psst"), false);
+  assert.deepEqual(bridge.read({ as: "owner", includeSeen: true }).flatMap(thread => thread.replies.map(r => r.comment)).includes("psst"), true);
   await bridge.close();
   rmSync(directory, { recursive: true, force: true });
 });

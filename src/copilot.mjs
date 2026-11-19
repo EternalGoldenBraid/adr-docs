@@ -140,6 +140,8 @@ export async function connectDocumentReview({
           comment_id: { type: "string" }, reply: { type: "string" },
           as: { type: "string", description: "Your agent name; shown as the sender of the reply and used as the recipient when the user replies to it." },
           resolved: { type: "boolean" },
+          to: { type: "array", items: { type: "string" }, description: "Agent names this reply addresses; they get a mesh note, and a reply to someone who had resolved reopens the thread for them. Omit to address the thread's current recipients." },
+          whisper: { type: "boolean", description: "With to: only those named (and you) see this reply." },
           proposal: { type: "object", description: "Optional proposed edit shown as a diff card in this thread, with Accept/Reject buttons. Accepting replies to you; apply the edit yourself then.", properties: { before: { type: "string" }, after: { type: "string" } } },
           link_comment_ids: { type: "array", items: { type: "string" }, description: "Link this thread to other threads (ids); the user sees them as jumpable links with backlinks." },
           update_id: { type: "string", description: "UUID reused for an unchanged retry." },
@@ -152,6 +154,8 @@ export async function connectDocumentReview({
         if (args.as) input.from = args.as;
         input.fromSession = session.sessionId;
         if (args.resolved !== undefined) input.resolved = args.resolved;
+        if (args.to?.length) input.to = args.to;
+        if (args.whisper === true) input.whisper = true;
         if (args.proposal !== undefined) input.proposal = args.proposal;
         if (args.link_comment_ids !== undefined) input.addRefs = args.link_comment_ids;
         const store = remoteStore(args);

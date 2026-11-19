@@ -481,7 +481,7 @@ export async function startCommentBridge({
         }
       }
       // A new message that addresses someone who had resolved clears their mark and reopens the thread for them.
-      if (record.author === "user" && record.reply !== undefined && !record.note && record.resolved === undefined && record.to?.length && comment.resolvedBy) {
+      if (record.reply !== undefined && !record.note && record.resolved === undefined && record.to?.length && comment.resolvedBy) {
         const cleared = record.to.map(canon).filter(name => comment.resolvedBy[name]);
         for (const name of cleared) delete comment.resolvedBy[name];
         if (cleared.length && comment.resolved) { comment.resolved = false; delete comment.resolvedAt; }
@@ -602,8 +602,8 @@ export async function startCommentBridge({
       if (typeof input.resolved !== "boolean") throw new Error("Resolved must be a boolean.");
       value.resolved = input.resolved;
     }
-    if (author === "user" && names(input.to, "to")?.length) value.to = names(input.to, "to");
-    if (author === "user" && input.whisper === true && value.to?.length && value.reply !== undefined) value.whisper = true;
+    if (names(input.to, "to")?.length) value.to = names(input.to, "to");
+    if (input.whisper === true && value.to?.length && value.reply !== undefined) value.whisper = true;
     if (author === "user" && COLORS.includes(input.color)) value.color = input.color;
     if (author === "user" && input.clear === true) value.clear = true;
     if (author === "user" && value.reply !== undefined && input.images !== undefined) {
@@ -656,6 +656,15 @@ export async function startCommentBridge({
       throw new CommentConflict("This update ID already has different content.");
     }
     return value;
+  }
+
+  // An agent's reply is announced like a user's: to the addressees it names, else the thread's, never to the sender.
+  function agentUpdate(body) {
+    const value = normalizeUpdate(body, "copilot");
+    const fresh = !updates.has(value.id);
+    const result = saveUpdate(value);
+    if (fresh && value.reply !== undefined && !value.note) announce(comments.get(value.commentId), value.reply, false, value.to, value.from);
+    return result;
   }
 
   function saveUpdate(input) {
@@ -932,7 +941,7 @@ export async function startCommentBridge({
             revision++;
             return reply(response, 200, result);
           }
-          if (request.url === "/agent-update") return reply(response, 200, saveUpdate(normalizeUpdate(body, "copilot")));
+          if (request.url === "/agent-update") return reply(response, 200, agentUpdate(body));
           if (request.url === "/agent-add") return reply(response, 200, api.add(body));
           if (request.url === "/agent-status") return reply(response, 200, api.setStatus(body));
           const next = { ...settings };
@@ -1044,13 +1053,7 @@ export async function startCommentBridge({
       agentStatus = { state: String(state).slice(0, 24), text: String(text).slice(0, 120), at: new Date().toISOString() };
       return { saved: true };
     },
-    update: (input, author = "copilot") => {
-      const value = normalizeUpdate(input, author);
-      const fresh = !updates.has(value.id);
-      const result = saveUpdate(value);
-      if (fresh && author === "copilot" && value.reply !== undefined && !value.note) announce(comments.get(value.commentId), value.reply, false, undefined, value.from);
-      return result;
-    },
+    update: (input, author = "copilot") => author === "copilot" ? agentUpdate(input) : saveUpdate(normalizeUpdate(input, author)),
     pending: (as) => {
       const rows = unread(as);
       return { count: rows.length, latestId: rows.length ? latestFeedbackId : undefined };
