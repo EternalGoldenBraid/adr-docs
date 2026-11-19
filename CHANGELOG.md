@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.97.0 - 2026-11-19
+
+- `tools/related_eval.py`: offline test of related-page suggestions for threads (TF-IDF vs bge-small embeddings; precision@3, recall@3 and a threshold sweep), with the pages an agent linked in a thread as ground truth. Run niced, nothing is wired into the overlay yet.
+
 ## 0.96.1 - 2026-11-19
 
 - RouteMap popup: sits above the cursor so it no longer covers the path, stays inside the map box, wraps long names, and scales strip frames to 160 px.
