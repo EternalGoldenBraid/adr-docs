@@ -35,7 +35,7 @@ export async function startDocumentPreview({
 
   let server;
   let bridge;
-  let node;
+  let node, router;
   // Notes to addressed agents go out at high priority: they carry the human's words, and a quiet hint (70 characters, "may postpone") was being ignored.
   // They go out as a non-agent mesh node, joined on first use; absent mesh means no notes.
   const meshNode = async () => {
@@ -47,8 +47,18 @@ export async function startDocumentPreview({
   };
   // Faces (shared rooms) live in the mesh database; this node is the human's seat in them.
   const mesh = {
-    async send(session, content) {
-      const result = (await meshNode()).send({ recipient_session_id: session, content, priority: "high" });
+    // A session on a peer machine is sent through the mesh router (ssh), by its bare session id and machine name.
+    async send(session, content, machine) {
+      const sender = await meshNode();
+      let result;
+      if (machine) {
+        if (!router) {
+          const directory = join(homedir(), ".copilot", "extensions", "agent-mesh");
+          const [{ openStore }, { createRouter }, { loadMachines }] = await Promise.all(["store", "router", "network"].map(file => import(pathToFileURL(join(directory, `${file}.mjs`)).href)));
+          router = createRouter(openStore(process.env.ADR_MESH_DB ?? join(directory, "agent-mesh.db")), loadMachines());
+        }
+        result = await router.sendMessage(sender.sessionId, { machine, recipient_session_id: session, content, priority: "high" });
+      } else result = sender.send({ recipient_session_id: session, content, priority: "high" });
       if (result?.error) throw new Error(result.error);
     },
     async faces() { const n = await meshNode(); return { self: n.sessionId, ...n.faces }; },
