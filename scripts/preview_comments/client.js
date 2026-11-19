@@ -331,6 +331,20 @@
     tree: () => document.dispatchEvent(new KeyboardEvent("keydown", { key: "t", bubbles: true })),
     settings: () => loadSettings().then(() => message(`owner: ${settings.owner}\nteam: ${settings.team.join(", ") || "(none)"}\ndefault recipients: ${settings.default}\nread aloud auto-start: ${settings.tts === false ? "off" : "on"}\n:owner NAME · :team A B C · :default owner|last · :tts on|off`)),
     mesh: () => openMesh(),
+    labels: async () => {
+      try {
+        const text = await (await fetch("/__preview_comments/labels", { headers: { "X-Preview-Comment": "1" } })).text();
+        const link = Object.assign(document.createElement("a"), { href: URL.createObjectURL(new Blob([text], { type: "application/x-ndjson" })), download: "adr-labels.jsonl" });
+        link.click(); URL.revokeObjectURL(link.href);
+        message(`Exported ${text.split("\n").filter(Boolean).length} comments as labels (adr-labels.jsonl)`);
+      } catch (e) { message(e.message, true); }
+    },
+    me: arg => {
+      if (!arg) return message(localStorage.getItem("adr-person") ? `You are ${localStorage.getItem("adr-person")} (your highlights are ${agentLook(localStorage.getItem("adr-person")).icon} in your own colour). :me off clears it` : "No name set. :me NAME colours your new highlights and comments by name");
+      if (arg === "off") { localStorage.removeItem("adr-person"); return message("Name cleared; highlights use the colour you pick"); }
+      if (!/^[\w .-]{1,40}$/.test(arg)) return message("Name: up to 40 letters, digits, space, . _ -", true);
+      localStorage.setItem("adr-person", arg); message(`You are ${arg} ${agentLook(arg).icon}`);
+    },
     read: arg => {
       if (arg === "stop") { stopReading(); return message("Stopped reading"); }
       const thread = currentThread();
@@ -1274,6 +1288,7 @@
   }
   // Colour and icon come from the name alone, so a member looks the same in chats, the roster and the graph.
   const AGENT_ICONS = ["🦊", "🐙", "🦉", "🐢", "🦄", "🐝", "🦋", "🐳", "🦔", "🐧", "🦜", "🐞", "🦀", "🐺", "🦎", "🐘", "🦅", "🐬", "🦒", "🐿️", "🦓", "🐌", "🦈", "🐸"];
+  const personField = () => localStorage.getItem("adr-person") ? { person: localStorage.getItem("adr-person") } : {};
   function agentLook(name) {
     let hash = 0;
     for (const ch of String(name)) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
@@ -2890,7 +2905,7 @@
       noteRequested = false;
       const queued = queueRequested;
       queueRequested = false;
-      await api("comments", { ...target, id: draftId, sessionId, comment: submittedText, ...(draftImages.length ? { images: draftImages.map(shot => shot.id) } : {}), ...(draftImages[0]?.region ? { region: draftImages[0].region } : {}), ...(asNote ? { note: true } : {}), ...(queued ? { queued: true } : {}), ...(branchOf ? { refs: [branchOf] } : {}), ...toValue(composeTo, !find(".to-new").hidden) });
+      await api("comments", { ...target, id: draftId, sessionId, ...personField(), comment: submittedText, ...(draftImages.length ? { images: draftImages.map(shot => shot.id) } : {}), ...(draftImages[0]?.region ? { region: draftImages[0].region } : {}), ...(asNote ? { note: true } : {}), ...(queued ? { queued: true } : {}), ...(branchOf ? { refs: [branchOf] } : {}), ...toValue(composeTo, !find(".to-new").hidden) });
       branchOf = undefined;
       rememberTo(composeTo);
       message(asNote ? "Saved as private note" : queued ? "Queued · delivered when the agent is idle" : "Saved · awaiting review");
@@ -2918,6 +2933,16 @@
   markStyle.textContent = Object.entries(COLORS).map(([name, rgb]) =>
     `::highlight(preview-comment-${name}){background:rgba(${rgb},.4)}`).join("") +
     "";
+  const personKey = name => [...String(name)].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 0).toString(36);
+  const personStyle = document.createElement("style");
+  document.head.append(personStyle);
+  const people = new Map();
+  let paintedPeople = new Set();
+  const notePerson = name => {
+    if (people.has(name)) return;
+    people.set(name, agentLook(name));
+    personStyle.textContent = [...people].map(([n, look]) => `::highlight(preview-comment-p-${personKey(n)}){background:color-mix(in srgb,${look.color} 45%,transparent)}`).join("");
+  };
   markStyle.textContent += "[data-adr-point]{outline:2px solid #ff5a4f;outline-offset:4px;border-radius:6px}";
   document.head.append(markStyle);
   const popStyle = document.createElement("style");
@@ -3085,6 +3110,7 @@
         const tick = document.createElement("button");
         tick.type = "button";
         tick.className = `tick c-${mark.comment.color || "yellow"}`;
+        if (mark.comment.person) tick.style.setProperty("background", agentLook(mark.comment.person).color, "important");
         tick.title = (mark.comment.comment || mark.comment.quote || "Comment").slice(0, 80);
         tick.style.top = `${Math.min(innerHeight - 4, docY / total * innerHeight)}px`;
         tick.addEventListener("click", event => { event.stopPropagation(); scrollTo({ top: Math.max(0, docY - innerHeight / 3), behavior: "smooth" }); });
@@ -3111,6 +3137,7 @@
       const bubble = document.createElement("button");
       bubble.type = "button";
       bubble.className = `bubble c-${mark.comment.color || "yellow"}${hasFresh(mark.comment) ? " fresh" : ""}`;
+      if (mark.comment.person) bubble.style.setProperty("background", agentLook(mark.comment.person).color, "important");
       const count = mark.comment.replies.length + (mark.comment.comment ? 1 : 0);
       bubble.textContent = count ? String(count) : "";
       bubble.style.left = `${x}px`;
@@ -3153,12 +3180,16 @@
       }
     }
     if (!CSS.highlights) { placeBubbles(); return; }
-    for (const name of Object.keys(COLORS)) {
-      const ranges = marks.filter(mark => !mark.custom && (mark.comment.color || "yellow") === name)
-        .map(mark => mark.range);
+    for (const mark of marks) if (mark.comment.person) notePerson(mark.comment.person);
+    // A comment that carries its author's name (`:me`) is painted in that person's colour; the rest use the colour chosen.
+    const keyOf = mark => mark.comment.person ? `p-${personKey(mark.comment.person)}` : (mark.comment.color || "yellow");
+    const keys = new Set([...Object.keys(COLORS), ...marks.filter(mark => !mark.custom && mark.comment.person).map(keyOf)]);
+    for (const name of [...keys, ...paintedPeople].filter((v, i, a) => a.indexOf(v) === i)) {
+      const ranges = marks.filter(mark => !mark.custom && keyOf(mark) === name).map(mark => mark.range);
       if (ranges.length) CSS.highlights.set(`preview-comment-${name}`, new Highlight(...ranges));
       else CSS.highlights.delete(`preview-comment-${name}`);
     }
+    paintedPeople = new Set([...keys].filter(k => k.startsWith("p-")));
     const open = marks.filter(mark => !mark.comment.resolved || hasFresh(mark.comment)).length;
     const waiting = marks.some(mark => mark.comment.comment && !mark.comment.seen && !mark.comment.resolved);
     // Seen state lives on the server. The first browser to meet a store without it uploads what it knows
@@ -3258,7 +3289,7 @@
     if (!offeredTarget) return;
     try {
       if (!sessionId) sessionId = (await api("status")).sessionId;
-      await api("comments", { ...offeredTarget, id: crypto.randomUUID(), sessionId, highlight: true, color: name });
+      await api("comments", { ...offeredTarget, id: crypto.randomUUID(), sessionId, ...personField(), highlight: true, color: name });
       getSelection().removeAllRanges();
       contextual.hidden = true;
       await refreshHistory();

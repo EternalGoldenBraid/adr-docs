@@ -295,6 +295,12 @@ Which replies you have read is kept on the server, so every browser and port sho
 
 A link to `#anchor` scrolls the heading or passage clear of the nav bar and flashes it for 2 seconds. `/page#node-<id>` does the same for a graph node (opening its layer first). Reduced-motion preferences disable the animation.
 
+## People and labels
+
+`:me NAME` (stored in this browser; `:me off` clears it) puts your name on the comments and highlights you make from then on. A highlight with a name is painted in that person's own colour, and its bubble too, instead of the colour picked; the same name always gives the same colour and symbol, as for agents. Unnamed highlights keep the picked colour.
+
+`:labels` downloads every comment as a JSON line (`adr-labels.jsonl`) for use as labelled examples: `id`, `page`, `quote`, `text`, `person`, `version` (hash of the page source when commented), `at`, `resolved` and `fix` (the last agent reply, if any). The same lines are at `/__preview_comments/labels` (header `X-Preview-Comment: 1`).
+
 ## Route map
 
 `<RouteMap src="/data/routes.json" :height="560" />` draws a top-down map with switchable layers: **Routes** (the road centre lines), **Recordings** (each drive's true path, coloured by driver; click opens its `url`, for example the catalog's Rerun view) and **Datasets** (the same paths coloured by role: train, val, test). Drag pans, scroll zooms, hover names the line. The JSON, with world coordinates in metres:
