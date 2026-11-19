@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.108.0 - 2026-11-19
+
+- The card lists its tests: repeated `card-test: name | status | date` lines show "n/m done", per-test marks and the age of the last update.
+- The "may be stale" threshold is now `stale-days` in the root index.md (default 2, was 14), and also colours the card's update age.
+
 ## 0.107.1 - 2026-11-19
 
 - In-page links `[text](#section)` now render as links in messages and the quote box (they showed as raw Markdown) and scroll within the page instead of opening a new tab.

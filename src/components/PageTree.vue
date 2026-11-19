@@ -16,8 +16,7 @@ const trail = computed(() => {
   return out
 })
 const TENSE = { past: 'History: how we got here', present: 'Now: how things are', future: 'Plan: not built yet' }
-const STALE_DAYS = 14
-const stale = p => p?.tense === 'present' && p.asOf && (Date.now() - Date.parse(p.asOf)) / 864e5 > STALE_DAYS
+const stale = p => p?.tense === 'present' && p.asOf && (Date.now() - Date.parse(p.asOf)) / 864e5 > (theme.value.staleDays ?? 2)
 const tenseTitle = p => p.tense ? TENSE[p.tense] + (stale(p) ? ` (as of ${p.asOf}, may be stale)` : '') : undefined
 const children = computed(() => childrenOf(current.value))
 const hasTree = computed(() => pages.value.some(p => p.parent))
