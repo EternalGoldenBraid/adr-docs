@@ -18,7 +18,7 @@
       button:hover{background:#363e4b}button:focus-visible,textarea:focus-visible{outline:2px solid #74c0fc;outline-offset:3px}textarea[data-vmode=normal]{border-color:#ffb02e;caret-color:transparent}textarea[data-vmode=visual]{border-color:#b197fc;caret-color:transparent}textarea[data-vmode=normal]::selection,textarea[data-vmode=visual]::selection{background:#ffb02e88}
       button:disabled{opacity:.6;cursor:wait}button.primary{background:#164a75;border-color:#74c0fc}
       [hidden]{display:none!important}.panel{width:min(var(--pw,540px),calc(100vw - 48px));padding:20px;background:#1b1d22;border:1px solid #59616d;border-radius:12px;box-shadow:0 12px 40px #0008;margin-bottom:12px;position:relative;z-index:2}
-      h2{font-size:17px;margin:0 0 4px}small{color:#b7c1ce}.quote{margin:12px 0;padding:10px;border-left:3px solid #74c0fc;background:#252a32;max-height:120px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}
+      h2{font-size:17px;margin:0 0 4px}small{color:#b7c1ce}.quote a{color:#74c0fc}.quote p{margin:0;white-space:pre-wrap}.quote blockquote{margin:4px 0 0;padding:0 0 0 10px;border-left:3px solid #4a5260}.quote{margin:12px 0;padding:10px;border-left:3px solid #74c0fc;background:#252a32;max-height:120px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}
       label{display:block;margin:12px 0 6px}textarea{width:100%;min-height:110px;max-height:240px;resize:vertical;padding:10px;background:#111318;color:#eee;border:1px solid #59616d;border-radius:6px}
       .actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}.status{max-width:390px;margin:8px 0;padding:10px 12px;border:1px solid #59616d;border-radius:8px;background:#1b1d22;white-space:pre-wrap}.status:empty{display:none}.error{color:#ffb4a9}
       .hint{margin:10px 0 0;color:#b7c1ce}
@@ -1317,7 +1317,7 @@
     if (opts.ref) {
       const ref = document.createElement("button");
       ref.type = "button"; ref.className = "quote-ref"; ref.title = "Jump to the message (u)";
-      ref.textContent = `↩ ${opts.ref.author}: “${opts.ref.quote}”`;
+      ref.textContent = `↩ ${opts.ref.author}: “${opts.ref.quote.replace(/!?\[([^\]\n]*)\]\([^\s)]+\)/g, "$1")}”`;
       ref.addEventListener("click", () => {
         const target = find(`.thread-messages [data-mid="${opts.ref.id}"]`);
         if (target) { target.focus(); target.scrollIntoView({ block: "nearest" }); }
@@ -1515,10 +1515,15 @@
     if (!comment) return;
     find(".thread-title").textContent = comment.section;
     find(".thread-source").href = here(comment.url);
-    if (find(".thread-quote").textContent !== comment.quote) find(".thread-quote").textContent = comment.quote;
+    const quoteBox = find(".thread-quote");
+    if (quoteBox.dataset.q !== comment.quote) {
+      quoteBox.dataset.q = comment.quote;
+      if (/\]\((?:https?:\/\/|\.{1,2}\/|\/(?!\/))/.test(comment.quote)) quoteBox.replaceChildren(...blockMarkdown(comment.quote).childNodes);
+      else quoteBox.textContent = comment.quote;
+    }
     const state = find(".thread-state");
     state.textContent = `${isNote(comment) ? "Note" : comment.resolved ? "Resolved" : "Unresolved"} · ${comment.note ? "Private note" : comment.seen ? "Read by Copilot" : "Unread by Copilot"}`;
-    const quoteLine = (comment.quote || "").replace(/\s+/g, " ");
+    const quoteLine = (comment.quote || "").replace(/!?\[([^\]\n]*)\]\([^\s)]+\)/g, "$1").replace(/\s+/g, " ");
     find(".quote-summary").textContent = quoteLine ? `“${quoteLine.slice(0, 90)}${quoteLine.length > 90 ? "…" : ""}”` : "Selected content";
     state.classList.toggle("resolved", comment.resolved);
     find(".thread-resolve").textContent = isNote(comment) ? "Remove" : comment.resolved ? "Reopen" : "Resolve";

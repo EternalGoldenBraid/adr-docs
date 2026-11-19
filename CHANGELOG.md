@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.104.1 - 2026-11-19
+
+- A thread's "Selected content" box now renders Markdown links and quotes (was raw `[text](/path)`), and the summary and reply-target lines show the link text only.
+
 ## 0.104.0 - 2026-11-19
 
 - Package exports for site builds, so a site can `npm i github:EternalGoldenBraid/adr-docs` and import by name instead of through a symlink: `adr-docs/task-lists`, `/editable-tables`, `/build-info`, `/page-tree`, `/theme`.
