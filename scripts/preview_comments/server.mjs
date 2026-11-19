@@ -297,8 +297,8 @@ export async function startCommentBridge({
   }
   // Idle nudge: an agent that has been idle for NUDGE_AFTER with open work (queue items, or threads waiting on it) gets one mesh note,
   // then at most one per NUDGE_EVERY; none while it is working. Idle comes from the agent-notify hook or its status line (ticket|state|...).
-  const NUDGE_AFTER = Number(process.env.ADR_NUDGE_MINUTES ?? 5) * 60_000, NUDGE_EVERY = 30 * 60_000;
-  const idleSince = new Map(), nudgedAt = new Map();
+  const NUDGE_AFTER = Number(process.env.ADR_NUDGE_MINUTES ?? 5) * 60_000, NUDGE_EVERY = 30 * 60_000, NUDGE_AFTER_PROGRESS = 2 * 60_000;
+  const idleSince = new Map(), nudgedAt = new Map(), nudgedCount = new Map();
   const readQueues = () => { try { return JSON.parse(readFileSync(join(documentRoot, "queues.json"), "utf8")); } catch { return {}; } };
   const openWork = slug => {
     const items = (readQueues()[slug] ?? []).filter(item => item.state !== "done").sort((a, b) => a.rank - b.rank);
@@ -313,16 +313,20 @@ export async function startCommentBridge({
       if (!isIdle(row)) { idleSince.delete(row.slug); continue; }
       const since = idleSince.get(row.slug) ?? now;
       idleSince.set(row.slug, since);
-      if (now - since < NUDGE_AFTER || now - (nudgedAt.get(row.slug) ?? 0) < NUDGE_EVERY) continue;
       const { items, threads, toResolve } = openWork(row.slug);
-      if (!items.length && !threads.length && !toResolve.length) continue;
+      const count = items.length + threads.length + toResolve.length;
+      if (!count) { nudgedCount.delete(row.slug); continue; }
+      // Progress since the last nudge (the backlog shrank) earns the next one soon, so the queue drains one by one; otherwise keep the slow pace.
+      const progressed = count < (nudgedCount.get(row.slug) ?? 0);
+      if (now - since < (progressed ? NUDGE_AFTER_PROGRESS : NUDGE_AFTER) || now - (nudgedAt.get(row.slug) ?? 0) < (progressed ? NUDGE_AFTER_PROGRESS : NUDGE_EVERY)) continue;
       const first = items[0];
       const note = `ADR idle nudge (no reply needed): you have been idle ${Math.round((now - since) / 60000)} min with ${items.length} open queue item(s), ${threads.length} thread(s) waiting and ${toResolve.length} to resolve. ` +
         (!threads.length && toResolve.length ? `Thread ${toResolve[0].id.slice(0, 8)} on ${toResolve[0].page} needs your resolve vote (or a reply if you disagree). ` : "") +
         (threads.length ? `Thread ${threads[0].id.slice(0, 8)} on ${threads[0].page} is waiting on you. ` : "") +
         (first ? `Next in your queue: "${first.test}" (rank ${first.rank}${first.weight ? `, weight ${first.weight}` : ""}, ${first.page}). ` : "") +
-        "Start it, or post what blocks it.";
+        "Start it, or post what blocks it. When you finish one and go idle, the next one follows within 2 minutes.";
       nudgedAt.set(row.slug, now);
+      nudgedCount.set(row.slug, count);
       try { await mesh.send(meshAddress(row).session, note, meshAddress(row).machine); } catch (error) { nudgedAt.delete(row.slug); onError?.(error); }
     }
   }
