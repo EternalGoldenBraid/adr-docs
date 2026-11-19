@@ -39,6 +39,7 @@ const rows = computed(() => Object.entries(cards.value).filter(([, c]) => c.line
   <div v-else-if="here" class="pc-card">
     <div v-if="here['superseded-by']" class="pc-super">Superseded by <a :href="withBase(here['superseded-by'])">{{ here['superseded-by'] }}</a>. Kept as history.</div>
     <div class="pc-head"><b :class="['pc-tag', here.status]" v-if="here.status">{{ here.status }}</b><b v-if="here.missing" class="pc-tag bad" title="Mandatory card fields are empty">missing: {{ here.missing.join(', ') }}</b><b v-if="here.needsVerdict" class="pc-tag needs" title="Finished, but the Verdict and Learnings sections are missing or empty">needs verdict</b><span v-if="here.line">{{ clip(here.line) }}</span></div>
+    <div v-if="here.waitingOn" class="pc-slot"><i>waiting</i><span>{{ here.waitingOn.join(', ') }} have not resolved the open threads</span></div>
     <div v-if="tests.length" class="pc-slot"><i>tests</i><div>
       <div class="pc-count"><b>{{ summary.count }}</b><span v-if="summary.age !== null" :class="{ 'pc-old': summary.running && summary.age > staleDays }"> · last result {{ summary.age ? summary.age + ' d ago' : 'today' }}<template v-if="summary.running && summary.age > staleDays"> ⚠ stale</template></span></div>
       <ul class="pc-tests"><li v-for="t in tests" :key="t.name" :class="['pc-test', t.status]"><span class="pc-mark">{{ MARK[t.status] || '?' }}</span><span>{{ t.name }}</span><small>{{ t.at || '' }}{{ t.verified ? ' ·run' : '' }}</small></li></ul>

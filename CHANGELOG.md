@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.125.0 - 2026-11-19
+
+- **Unresolve** takes back only your mark; **Close for all** is its own button (with confirmation).
+- A new message addressed to someone who had resolved clears their mark and reopens the thread.
+- Images pasted or dropped on an open thread go with the reply being written; replies can carry images, shown in the thread and delivered to agents as files.
+- `threads.json` rows carry `unresolved_by`; the page card shows "waiting" with who has not resolved the open threads, for the queue generator to hold the page in their queues.
+
 ## 0.124.2 - 2026-11-19
 
 - Fix: the agents' status icons on the To: chips disappeared in 0.124.1, because the resolve chips refreshed the roster with a no-op redraw. Roster refreshes now redraw every waiting row.

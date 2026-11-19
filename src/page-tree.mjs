@@ -210,15 +210,16 @@ function openThreads(documentRoot) {
     const file = join(documentRoot, "threads.json");
     const stamp = statSync(file).mtimeMs;
     if (threadsCache?.file !== file || threadsCache.stamp !== stamp) {
-      const counts = {};
+      const counts = {}, waiting = {};
       for (const thread of JSON.parse(readFileSync(file, "utf8"))) {
         const key = String(thread.page ?? "").replace(/\.html$/, "").replace(/\/$/, "") || "/";
         counts[key] = (counts[key] ?? 0) + 1;
+        waiting[key] = [...new Set([...(waiting[key] ?? []), ...(thread.unresolved_by ?? [])])];
       }
-      threadsCache = { file, stamp, counts };
+      threadsCache = { file, stamp, counts, waiting };
     }
-    return threadsCache.counts;
-  } catch { return {}; }
+    return threadsCache;
+  } catch { return { counts: {}, waiting: {} }; }
 }
 export function pageCards(documentRoot, options) {
   const out = {};
@@ -245,8 +246,10 @@ export function pageCards(documentRoot, options) {
     const question = front.match(/^question:[ \t]*(.+)$/m)?.[1].trim().replace(/^["']|["']$/g, "");
     if (!card.line && question && Object.keys(card).length) card.line = question;
     // Open threads on the page hold a finished page in review; the page is done when they are resolved (threads.json is written by the preview server).
-    const open = openThreads(documentRoot)[pageKey(file)];
+    const { counts, waiting } = openThreads(documentRoot);
+    const open = counts[pageKey(file)];
     if (open && ["done", "shipped"].includes(card.status)) { card.reviewFrom = card.status; card.status = "review"; card.openThreads = open; }
+    if (open && Object.keys(card).length && waiting[pageKey(file)]?.length) card.waitingOn = waiting[pageKey(file)];
     // Done is blocked until the structured verdict is written; the page waits in review and says what blocks it.
     if (["done", "shipped"].includes(card.status) && !structuredVerdict(front)) { card.reviewFrom ??= card.status; card.status = "review"; card.blockedBy = ["verdict"]; }
     if (/^(?:card-)?status:\s*["']?review["']?\s*$/m.test(front)) card.status = "review";

@@ -542,6 +542,13 @@ test("the user's resolve is one mark among the addressees'; it closes when all h
   bridge.update({ id: randomUUID(), commentId: id, sessionId, resolved: true, closeAll: true }, "user");
   assert.equal(thread().resolved, true);
   bridge.update({ id: randomUUID(), commentId: id, sessionId, resolved: false }, "user");
+  bridge.update({ id: randomUUID(), commentId: id, sessionId, resolved: true, partial: true }, "user");
+  bridge.update({ id: randomUUID(), commentId: id, sessionId, resolved: false, partial: true }, "user");
+  assert.deepEqual([thread().resolved, thread().resolvedBy.you], [false, undefined], "unresolving clears only your own mark");
+  bridge.update({ id: randomUUID(), commentId: id, from: "bob", resolved: true });
+  bridge.update({ id: randomUUID(), commentId: id, sessionId, reply: "bob, one more thing", to: ["bob", "carol"] }, "user");
+  assert.equal(thread().resolvedBy?.bob, undefined, "addressing someone who resolved clears their mark");
+  bridge.update({ id: randomUUID(), commentId: id, sessionId, resolved: false }, "user");
   bridge.update({ id: randomUUID(), commentId: id, sessionId, resolved: true }, "user");
   assert.equal(thread().resolved, true, "a record without partial (as in old logs) still closes for all");
   await bridge.close();
