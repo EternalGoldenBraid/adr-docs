@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.109.0 - 2026-11-19
+
+- The card appears by itself directly under the page title (no `<PageCard />` needed) for every page that has one; a page that places `<PageCard />` itself keeps its own.
+- The nested `card:` front matter (`gist`, `state`, `evidence`, `next`, `owner`, `tests: [{name, state, date}]`) is read as well as the flat `card-*` keys.
+- Tests show as a list (✓ done, ◐ running, ○ planned, ✗ obsolete) with a count line and "last result N d ago", flagged stale when something is running and the newest result is older than `stale-days`.
+
 ## 0.108.0 - 2026-11-19
 
 - The card lists its tests: repeated `card-test: name | status | date` lines show "n/m done", per-test marks and the age of the last update.
