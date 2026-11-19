@@ -1057,7 +1057,9 @@
     const slug = String(name).toLowerCase().replace(/[^\w.-]+/g, "-");
     return recipients().find(r => r.toLowerCase() === slug);
   };
-  const defaultTo = () => settings.default === "last" && settings.last.length ? settings.last : [settings.owner];
+  // A page's front-matter `owner:` is the default recipient of new threads on it, when that name is a known recipient.
+  const pageOwner = () => { const o = pageLinks[pagePath(location.href)]?.owner; return o && recipientFor(o); };
+  const defaultTo = () => pageOwner() ? [pageOwner()] : settings.default === "last" && settings.last.length ? settings.last : [settings.owner];
   // Mesh status next to each recipient, so a busy agent is visible before you send.
   const STATUS_ICONS = { working: "🔨", waiting: "⏳", asking: "❓", idle: "💤", active: "👀", offline: "🌙" };
   const STATUS_HINT = { working: "busy: mid-task", waiting: "waiting on something", asking: "waiting for an answer", idle: "free", active: "online, state unknown", offline: "offline" };
@@ -2520,7 +2522,7 @@
     try {
       const ready = await api("status");
       sessionId = ready.sessionId;
-      await loadSettings();
+      await Promise.all([loadSettings(), loadPageLinks()]);
       composeTo = new Set(defaultTo());
       chipRow(find(".to-new"), composeTo);
       find(".receiver").textContent = `This conversation · ${sessionId.slice(0, 8)}`;

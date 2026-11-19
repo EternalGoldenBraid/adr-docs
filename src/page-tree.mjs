@@ -209,6 +209,8 @@ export function pageCards(documentRoot, options) {
     });
     if (tests.length) card.tests = tests;
     Object.assign(card, Object.fromEntries(Object.entries(nestedCard(front)).filter(([k]) => !(k in card))));
+    const pageOwner = front.match(/^owner:\s*(.+)$/m)?.[1].trim().replace(/^["']|["']$/g, "");
+    if (pageOwner) card.owner = pageOwner;
     if (card.tests) {
       applyResults(documentRoot, card.tests);
       const derived = derivedState(card.tests);
