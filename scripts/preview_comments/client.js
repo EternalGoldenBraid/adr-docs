@@ -1336,6 +1336,8 @@
     if (last < text.length) fragment.append(text.slice(last));
     return fragment;
   }
+  // The same inline syntax as plain text, for one-line previews inside a button (links, bold, italic and code lose their markers).
+  const plainMarkdown = text => (text || "").replace(/!?\[([^\]\n]*)\]\([^\s)]+\)/g, "$1").replace(/\*\*([^*\n]+?)\*\*/g, "$1").replace(/`([^`\n]+)`/g, "$1").replace(/(?<![\w*])\*([^*\s][^*\n]*?)\*(?![\w*])/g, "$1").replace(/^> ?/gm, "");
   // Block Markdown for messages: tables and "> " quotes (nested), the rest stays pre-wrapped text. Built from DOM nodes only.
   const tableCells = line => line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map(cell => cell.trim());
   const isRule = line => /^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?$/.test(line.trim());
@@ -1601,7 +1603,7 @@
       top.append(section, badge);
       const text = document.createElement("div");
       text.className = "preview";
-      text.textContent = comment.comment || "Highlight";
+      text.textContent = plainMarkdown(comment.comment) || "Highlight";
       card.append(top, text);
       card.addEventListener("click", () => selectThread(comment.id));
       (linkedHere(comment) ? groups.linked : groups.here).push(card);

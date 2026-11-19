@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.134.1 - 2026-11-20
+
+- Thread cards in the history list show their preview as plain text: `**bold**`, `[label](link)`, code and `> ` quote markers lose their markers, where they showed raw before (thread fca02c2d). The open thread itself already rendered them.
+
 ## 0.134.0 - 2026-11-19
 
 - The idle nudge is quick: an agent with a thread waiting on it (or needing its resolve vote) is pinged after 10 seconds idle, then at most every 5 minutes; other queue items after 1 minute idle (was 5), then every 30 minutes. After progress the next ping follows as soon as the idle wait has passed. The check runs every 5 seconds (was 60).
