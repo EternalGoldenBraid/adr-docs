@@ -86,3 +86,20 @@ test("effort votes: reveal gives mean, variance, convergence and the median weig
   for (const [agent, vote] of [["a", 1], ["b", 1], ["c", 2], ["d", 2]]) applyVote(dir, { page: "/p", item: "A", agent, vote });
   assert.equal(reveal(dir, { page: "/p", item: "A" }).weight, 2);
 });
+
+test("front-matter verdict and a 'What we learned' section satisfy a finished page", () => {
+  assert.equal(needsVerdict("---\nstatus: done\nverdict: stable at 0.012\n---\n# T\n## What we learned\nx\n"), false);
+});
+
+test("a finished page with open threads is in review until they are resolved", async () => {
+  const { mkdtempSync, writeFileSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { pageCards } = await import("../src/page-tree.mjs");
+  const dir = mkdtempSync(join(tmpdir(), "cards-"));
+  writeFileSync(join(dir, "c.md"), "---\nowner: lead\nquestion: Does it hold?\ncard:\n  tests:\n    - {name: \"Run 1\", state: done}\n---\n# C\n");
+  assert.deepEqual([pageCards(dir)["/c"].status, pageCards(dir)["/c"].line], ["done", "Does it hold?"]);
+  writeFileSync(join(dir, "threads.json"), JSON.stringify([{ id: "t1", page: "/c.html", addressees: ["lead"], answered_by: [], at: "x" }]));
+  const card = pageCards(dir)["/c"];
+  assert.deepEqual([card.status, card.openThreads], ["review", 1]);
+});
