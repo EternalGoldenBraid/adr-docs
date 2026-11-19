@@ -588,8 +588,10 @@ export async function startCommentBridge({
           const changed = Object.entries(now).filter(([link, row]) => seen[link] !== row.hash).map(([link, row]) => {
             const before = existsSync(snapFile(row)) ? readFileSync(snapFile(row), "utf8") : undefined;
             const rows = diffLines(seen[link] === undefined ? undefined : before, readFileSync(join(root, row.slug + ".md"), "utf8"));
+            const front = readFileSync(join(root, row.slug + ".md"), "utf8").match(/^---\n([\s\S]*?)\n---/)?.[1] ?? "";
+            const card = Object.fromEntries(["line", "state", "next"].map(k => [k, front.match(new RegExp(`^card-${k}:\\s*(.+)$`, "m"))?.[1].trim().replace(/^["']|["']$/g, "")]).filter(([, v]) => v));
             return {
-              link, slug: row.slug, state: seen[link] === undefined ? "new" : "changed", noCopy: seen[link] !== undefined && before === undefined,
+              card, link, slug: row.slug, state: seen[link] === undefined ? "new" : "changed", noCopy: seen[link] !== undefined && before === undefined,
               changedAt: statSync(join(root, row.slug + ".md")).mtime.toISOString(),
               added: rows.filter(r => r.op === "+").length, removed: rows.filter(r => r.op === "-").length,
               hunks: hunks(rows).slice(0, 40)

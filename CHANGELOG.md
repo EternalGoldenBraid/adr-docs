@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.100.0 - 2026-11-19
+
+- What's new: the highlighted row shows a preview (the page's `card-line`, `card-state`, `card-next`, then its first added lines), and reopening the list (`n`) puts the cursor back on the page you last opened from it.
+
 ## 0.99.0 - 2026-11-19
 
 - Past / present / future: `tense: past|present|future` in front matter (a page inherits its nearest ancestor's) colours the page tree (grey history, green now, blue plan) and shows a chip next to the breadcrumb. `as-of: YYYY-MM-DD` on a "present" page marks it "may be stale" after 14 days. `card-status: superseded` implies past, and `card-superseded-by: /page` adds a "Superseded by" banner on the card.
