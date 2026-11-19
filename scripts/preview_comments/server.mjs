@@ -334,7 +334,7 @@ export async function startCommentBridge({
       const addressees = [...new Set(c.to.map(canon))];
       const lastUser = [...c.replies].reverse().find(r => r.author === "user");
       const answered = addressees.filter(name => c.resolvedBy?.[name] || c.replies.some(r => r.author === "copilot" && r.from && canon(r.from) === name && (!lastUser || r.at > lastUser.at)));
-      return { id: c.id, page: new URL(c.url).pathname, addressees, answered_by: answered, at: lastUser?.at ?? c.at };
+      return { id: c.id, page: new URL(c.url).pathname, addressees, answered_by: answered, unresolved_by: addressees.filter(name => !c.resolvedBy?.[name]), at: lastUser?.at ?? c.at };
     }).filter(row => row.answered_by.length < row.addressees.length).sort((a, b) => a.at < b.at ? -1 : 1);
     const text = JSON.stringify(rows, null, 1) + "\n";
     try { if (!existsSync(join(documentRoot, "threads.json")) || readFileSync(join(documentRoot, "threads.json"), "utf8") !== text) writeFileSync(join(documentRoot, "threads.json"), text); } catch { /* read-only root */ }
@@ -380,6 +380,7 @@ export async function startCommentBridge({
           ...(record.to?.length ? { to: record.to } : {}),
           ...(record.whisper && record.to?.length ? { whisper: true } : {}),
           ...(record.proposal ? { proposal: record.proposal } : {}),
+          ...(record.images?.length ? { images: record.images } : {}),
         });
       }
       let wake = (record.reply !== undefined && !record.note) || record.resolved !== undefined;
@@ -418,11 +419,19 @@ export async function startCommentBridge({
         } else if (mark === who && who && !record.resolved) {
           delete comment.resolvedBy?.[who];
           comment.resolved = false;
+        } else if (!record.resolved && record.partial && !comment.resolved) {
+          delete comment.resolvedBy?.you;
         } else {
           if (record.resolved && !comment.resolved) comment.resolvedAt = record.at;
           comment.resolved = record.resolved;
           if (!record.resolved) delete comment.resolvedBy;
         }
+      }
+      // A new message that addresses someone who had resolved clears their mark and reopens the thread for them.
+      if (record.author === "user" && record.reply !== undefined && !record.note && record.resolved === undefined && record.to?.length && comment.resolvedBy) {
+        const cleared = record.to.map(canon).filter(name => comment.resolvedBy[name]);
+        for (const name of cleared) delete comment.resolvedBy[name];
+        if (cleared.length && comment.resolved) { comment.resolved = false; delete comment.resolvedAt; }
       }
       if (record.to) comment.to = record.to;
       if (record.color !== undefined) comment.color = record.color;
@@ -461,8 +470,9 @@ export async function startCommentBridge({
     if (!existsSync(imageFile(id))) writeFileSync(imageFile(id), bytes, { mode: 0o600 });
     return id;
   }
-  const withFiles = comment => comment.images?.length
-    ? { ...comment, imageFiles: comment.images.map(imageFile) } : comment;
+  const withFiles = comment => comment.images?.length || comment.replies?.some(reply => reply.images?.length)
+    ? { ...comment, ...(comment.images?.length ? { imageFiles: comment.images.map(imageFile) } : {}),
+        replies: comment.replies.map(reply => reply.images?.length ? { ...reply, imageFiles: reply.images.map(imageFile) } : reply) } : comment;
 
   function unread(as = ownerName()) {
     return [...comments.values()].filter(comment => comment.wake && addressed(comment, as) && !readBy(comment, as));
@@ -543,6 +553,10 @@ export async function startCommentBridge({
     if (author === "user" && input.whisper === true && value.to?.length && value.reply !== undefined) value.whisper = true;
     if (author === "user" && COLORS.includes(input.color)) value.color = input.color;
     if (author === "user" && input.clear === true) value.clear = true;
+    if (author === "user" && value.reply !== undefined && input.images !== undefined) {
+      const ids = imageIds(input.images);
+      if (ids.length) value.images = ids;
+    }
     if (author === "user" && input.closeAll === true) value.closeAll = true;
     if (author === "user" && input.partial === true) value.partial = true;
     if (author === "user" && input.note === true && value.reply !== undefined) value.note = true;

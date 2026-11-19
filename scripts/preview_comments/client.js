@@ -129,7 +129,7 @@
         <div class="thread-head"><button class="thread-back icon" type="button" title="Back (h)">‹</button>
         <span class="thread-title"></span>
         <a class="thread-source" title="Open page (o)">↗ page</a>
-        <button class="thread-resolve" type="button" title="Resolve / reopen (r)">Resolve</button></div>
+        <button class="thread-resolve" type="button" title="Resolve / reopen (r)">Resolve</button><button class="thread-closeall" type="button" title="Close the thread although others have not resolved" hidden>Close for all</button></div>
         <div class="thread-state"></div>
         <details class="quote-box"><summary class="quote-summary">Selected content</summary><div class="quote thread-quote"></div></details>
         <div class="thread-links"></div>
@@ -1542,6 +1542,7 @@
         onEdit: mine ? text => run({ editReply: { id: reply.id, text } }) : undefined,
         onDelete: () => run({ removeReply: reply.id }),
       }));
+      if (reply.images?.length) nodes.push(thumbnails(reply.images));
       if (reply.proposal) nodes.push(proposalCard(reply.proposal, comment, comment.replies.indexOf(reply) + 1, run));
     }
     return nodes;
@@ -1648,7 +1649,8 @@
     })));
     if (!resolveRow.nextElementSibling?.classList.contains("queue-lines")) { const row = document.createElement("span"); row.className = "queue-lines"; resolveRow.after(row); }
     queueLine(comment, resolveRow.nextElementSibling);
-    find(".thread-resolve").textContent = isNote(comment) ? "Remove" : comment.resolved ? "Reopen" : comment.resolvedBy?.you ? "Close for all" : "Resolve";
+    find(".thread-resolve").textContent = isNote(comment) ? "Remove" : comment.resolved ? "Reopen" : comment.resolvedBy?.you ? "Unresolve" : "Resolve";
+    find(".thread-closeall").hidden = Boolean(comment.resolved || isNote(comment) || !comment.resolvedBy?.you);
     markSeen(comment);
     renderLinks(comment);
     if (find(".to-reply").dataset.for !== comment.id) { setReplyTarget(null); find(".to-reply").dataset.for = comment.id; renderReplyTo(comment); }
@@ -1657,6 +1659,7 @@
   }
   function selectThread(id) {
     selectedThread = id;
+    replyShots = []; renderReplyShots();
     replyInput.value = replyDrafts.get(id)?.text || "";
     renderHistory();
     find(".thread-back").focus();
@@ -1688,7 +1691,7 @@
     const ids = [...find(".thread-list").children].map(card => card.dataset.commentId);
     const at = ids.indexOf(id);
     pendingFocus = selectedThread === id && comment.resolved ? id : ids[at + 1] ?? ids[at - 1];
-    if (!comment.resolved && comment.resolvedBy?.you) return confirmCloseAll(comment).then(ok => ok && updateThread({ id: crypto.randomUUID(), resolved: true, closeAll: true }, id));
+    if (!comment.resolved && comment.resolvedBy?.you) return updateThread({ id: crypto.randomUUID(), resolved: false, partial: true }, id);
     return updateThread({ id: crypto.randomUUID(), resolved: !comment.resolved, ...(comment.resolved ? {} : { partial: true }) }, id);
   }
   // Closing for all overrides whoever has not resolved; show who they are and whether they are reachable first.
@@ -1876,13 +1879,14 @@
   }
   async function updateThread(values, commentId = selectedThread) {
     historySaving = true;
-    for (const selector of [".reply-send", ".thread-resolve", ".thread-back", ".history-close", ".history-toggle", ".toggle"]) find(selector).disabled = true;
+    for (const selector of [".reply-send", ".thread-resolve", ".thread-closeall", ".thread-back", ".history-close", ".history-toggle", ".toggle"]) find(selector).disabled = true;
     find(".thread-source").setAttribute("aria-disabled", "true");
     replyInput.readOnly = true;
     try {
       const result = await api("updates", { ...values, sessionId, commentId });
       if (values.reply !== undefined) {
         replyDrafts.delete(commentId);
+        replyShots = []; renderReplyShots();
         keepDraft("reply:" + commentId, "");
         replyInput.value = "";
         fitReply();
@@ -1897,7 +1901,7 @@
       message(error.message + (values.reply !== undefined ? " Your reply draft is kept; press Reply to retry." : ""), true);
     } finally {
       historySaving = false;
-      for (const selector of [".reply-send", ".thread-resolve", ".thread-back", ".history-close", ".history-toggle", ".toggle"]) find(selector).disabled = false;
+      for (const selector of [".reply-send", ".thread-resolve", ".thread-closeall", ".thread-back", ".history-close", ".history-toggle", ".toggle"]) find(selector).disabled = false;
       find(".thread-source").removeAttribute("aria-disabled");
       replyInput.readOnly = false;
     }
@@ -2003,8 +2007,13 @@
       if (names.some(name => !name)) { message(`/w: unknown name in "${w[1]}". Use team names, e.g. /w sim-agent text`, true); return; }
       whisper = new Set(names); text = w[2];
     }
-    updateThread({ id: draft.id, reply: text, ...(whisper ? { whisper: true, to: [...whisper] } : {}), ...(queued ? { queued: true } : {}), ...(target ? { inReplyTo: { id: target.id, quote: target.quote } } : {}), ...(whisper ? {} : toValue(replyTo, !find(".to-reply").hidden)) });
+    const shots = replyShots.map(shot => shot.id);
+    updateThread({ id: draft.id, reply: text, ...(shots.length ? { images: shots } : {}), ...(whisper ? { whisper: true, to: [...whisper] } : {}), ...(queued ? { queued: true } : {}), ...(target ? { inReplyTo: { id: target.id, quote: target.quote } } : {}), ...(whisper ? {} : toValue(replyTo, !find(".to-reply").hidden)) });
     if (!whisper) rememberTo(replyTo);
+  });
+  find(".thread-closeall").addEventListener("click", async () => {
+    const comment = historyComments.find(c => c.id === selectedThread);
+    if (comment && await confirmCloseAll(comment)) updateThread({ id: crypto.randomUUID(), resolved: true, closeAll: true }, comment.id);
   });
   find(".thread-resolve").addEventListener("click", () => {
     const comment = historyComments.find(c => c.id === selectedThread);
@@ -2287,7 +2296,28 @@
     target.addEventListener("drop", event => take(imageFiles(event.dataTransfer), event));
   }
   acceptImages(find(".panel"), shots => { shots.forEach(addDraftImage); });
-  acceptImages(find(".history"), shots => !selectedThread ? message("Open a thread to attach images to it", true) : updateThread({ id: crypto.randomUUID(), addImages: shots.map(shot => shot.id) }));
+  // Images pasted or dropped on an open thread go with the reply being written, not onto the thread itself.
+  let replyShots = [];
+  const shotRow = (() => { const row = document.createElement("div"); row.className = "thumbs reply-shots"; replyInput.before(row); return row; })();
+  function renderReplyShots() {
+    shotRow.replaceChildren(...replyShots.map(shot => {
+      const item = document.createElement("div");
+      item.className = "shot";
+      const image = document.createElement("img");
+      image.src = shot.url; image.alt = "Attached to your reply";
+      const remove = document.createElement("button");
+      remove.type = "button"; remove.title = "Remove image"; remove.textContent = "×";
+      remove.addEventListener("click", () => { replyShots = replyShots.filter(other => other !== shot); renderReplyShots(); });
+      item.append(image, remove);
+      return item;
+    }));
+  }
+  acceptImages(find(".history"), shots => {
+    if (!selectedThread) return message("Open a thread to attach images to it", true);
+    replyShots = [...replyShots, ...shots].slice(0, 4);
+    renderReplyShots();
+    replyInput.focus();
+  });
   find(".thread-region").addEventListener("click", () => regionThread(ids => updateThread({ id: crypto.randomUUID(), addImages: ids })));
   document.addEventListener("keydown", event => {
     if (history.hidden || !vimEnabled || historySaving || event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
