@@ -32,5 +32,17 @@ test("the nested card: block gives the line, badge and tests", async () => {
   const dir = mkdtempSync(join(tmpdir(), "cards-"));
   writeFileSync(join(dir, "b.md"), "---\ncard:\n  gist: \"Why?\"\n  state: planned\n  owner: PC lead\n  tests:\n    - {name: \"Run 1\", state: running, date: 2026-11-19}\nstatus: running\n---\n# B\n");
   const card = pageCards(dir)["/b"];
-  assert.deepEqual([card.line, card.status, card.owner, card.tests], ["Why?", "planned", "PC lead", [{ name: "Run 1", status: "running", at: "2026-11-19" }]]);
+  assert.deepEqual([card.line, card.status, card.owner, card.tests], ["Why?", "running", "PC lead", [{ name: "Run 1", status: "running", at: "2026-11-19" }]]);
+});
+
+test("a test's result file drives its state and the page state is derived", async () => {
+  const { mkdtempSync, writeFileSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { pageCards } = await import("../src/page-tree.mjs");
+  const dir = mkdtempSync(join(tmpdir(), "res-"));
+  writeFileSync(join(dir, "r.json"), '{"status":"failed","finished_at":"2026-11-19T10:00:00Z"}');
+  writeFileSync(join(dir, "c.md"), "---\ncard:\n  state: planned\n  tests:\n    - {name: \"A\", state: running, result: r.json}\n    - {name: \"B\", state: done}\n---\n# C\n");
+  const card = pageCards(dir)["/c"];
+  assert.deepEqual([card.status, card.tests[0].status, card.tests[0].at, card.statusMismatch], ["failed", "failed", "2026-11-19", "planned"]);
 });
