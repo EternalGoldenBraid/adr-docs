@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.89.1 - 2026-11-19
+
+- Fixed: replying to (`q`) or branching from an agent's message failed with "to must list at most 12 short names". The message's display name ("ADR agent") was used as the recipient instead of its slug ("adr-agent"); it is now mapped to the team member, and dropped if unknown.
+
 ## 0.89.0 - 2026-11-19
 
 - What's new: status bar count of pages changed since you last left them; `n` (or `:new`) lists them newest first and opens the changed lines of a page, all with Vim keys (`j/k`, `l`, `h`, `m`, `M`). Pages keep a snapshot of the copy you last saw.
