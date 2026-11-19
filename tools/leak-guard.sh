@@ -9,11 +9,13 @@ if [ ! -s "$list" ]; then echo "leak-guard: no denylist at $list, nothing checke
 pattern=$(grep -v '^\s*\(#\|$\)' "$list" | paste -sd'|')
 [ -z "$pattern" ] && exit 0
 case ${1:-} in
-  staged) diff=$(git diff --cached -U0 --no-color); names=$(git diff --cached --name-only) ;;
-  range)  diff=$(git log -p -U0 --no-color "$2"); names=$(git diff --name-only "$2" 2>/dev/null) ;;
+  staged) who="$(git var GIT_AUTHOR_IDENT) $(git var GIT_COMMITTER_IDENT)"
+          if printf '%s\n' "$who" | grep -qiE "$pattern"; then echo "leak-guard: the commit identity matches the denylist: $who" >&2; exit 1; fi
+          diff=$(git diff --cached -U0 --no-color); names=$(git diff --cached --name-only) ;;
+  range)  diff=$(git log -p -U0 --no-color --format='%an <%ae> %cn <%ce>' "$2"); names=$(git diff --name-only "$2" 2>/dev/null) ;;
   *) echo "usage: $0 staged | range <rev-range>" >&2; exit 2 ;;
 esac
-hits=$({ printf '%s\n' "$diff" | grep -E '^\+[^+]' ; printf '%s\n' "$names"; } | grep -inE "$pattern" | cut -c1-140)
+hits=$({ printf '%s\n' "$diff" | grep -E '^(\+[^+]|[^ +@-])' ; printf '%s\n' "$names"; } | grep -inE "$pattern" | cut -c1-140)
 if [ -n "$hits" ]; then
   echo "leak-guard: private pattern found (see $list):" >&2
   printf '%s\n' "$hits" | head -10 >&2
