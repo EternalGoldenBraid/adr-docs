@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.119.1 - 2026-11-19
+
+- Fix: notes to agents on a peer machine (gpu-agent, sim-agent) now go through the mesh router (`machine` + session id). 0.116.1 addressed them as a `remote:[…]` id, which the mesh rejects as "not active" once its cached row goes stale, so those notes were silently retried and never delivered. The same path carries idle nudges.
+
 ## 0.119.0 - 2026-11-19
 
 - Threads as queue input: where `queues.json` exists, the server writes `threads.json` beside it (`[{id, page, addressees, answered_by, at}]`, open threads only, kept current as threads change).
