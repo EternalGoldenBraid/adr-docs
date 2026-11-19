@@ -679,7 +679,9 @@ export async function startCommentBridge({
           return reply(response, 200, { self: faces.self, ...log });
         } catch (error) { return reply(response, 503, { error: error.message }); }
       }
-      if (request.method === "GET" && request.url === "/mesh") return reply(response, 200, { members: await meshStatus(), edges: meshEdges, machines: await machines(), errors: Object.fromEntries(remoteErrors) });
+      if (request.method === "GET" && request.url === "/mesh") let queues = {};
+        try { queues = JSON.parse(readFileSync(join(documentRoot, "queues.json"), "utf8")); } catch { /* no queues.json */ }
+        return reply(response, 200, { queues, members: await meshStatus(), edges: meshEdges, machines: await machines(), errors: Object.fromEntries(remoteErrors) });
       const unansweredRoute = request.method === "GET" && /^\/unanswered\?(.*)$/.exec(request.url);
       if (unansweredRoute) {
         const as = nameFor(new URLSearchParams(unansweredRoute[1]).get("as") || ownerName());

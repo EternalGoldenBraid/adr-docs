@@ -452,3 +452,5 @@ Test results: add `result: results/run-3.json` to a test (`{name: "…", state: 
 Mandatory card fields: gist (`card-line`), owner and state. Missing ones show as a red chip; `adr-check <site-root>` prints them and exits 1 (use it in a build or pre-commit hook to block).
 
 Page owner: `owner: pc-lead` in a page's front matter fills the card's owner and makes that agent the default recipient of new threads on the page (a name that is not a known recipient is ignored). `participants:` lists extra recipients you can toggle on.
+
+Team queues: put `queues.json` at the site root (`{"mokki-agent": [{"rank": 2, "test": "…", "page": "…", "state": "planned", "run": ""}]}`). The team graph and table show each agent's running item, else the lowest rank; with an empty queue they fall back to the status ping.

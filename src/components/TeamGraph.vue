@@ -10,6 +10,13 @@ const view = ref((typeof localStorage !== 'undefined' && localStorage.getItem('t
 let timer = null
 const rows = ref([])
 let members = []
+let queues = {}
+// Current task from the agent's queue (queues.json: running first, else lowest rank); the status ping is only the fallback.
+const queued = m => {
+  const items = queues[m.slug] ?? []
+  const item = items.find(t => t.state === 'running') ?? [...items].sort((a, b) => a.rank - b.rank)[0]
+  return item ? `${item.test} (${item.state})` : ''
+}
 let edges = []
 
 // Indicators shared with the desktop mesh panel: blue working, pink waiting, yellow asking, green idle, hollow ring = active (state unknown).
@@ -23,8 +30,8 @@ const state = m => {
 }
 const ago = iso => { const m = Math.round((Date.now() - Date.parse(iso)) / 60000); return m < 1 ? 'now' : m < 60 ? m + 'm' : Math.round(m / 60) + 'h' }
 const rowOf = m => {
-  const l = m.statusLine, st = state(m)
-  return { key: id(m), name: m.name, st, status: st === 'offline' ? m.status : st, doing: l ? `${l.ticket ? l.ticket + ' · ' : ''}${l.state} · ${l.doing}${l.next ? ' → ' + l.next : ''} (${ago(l.at)})` : '—', machine: m.machine || '—' }
+  const l = m.statusLine, st = state(m), q = queued(m)
+  return { key: id(m), name: m.name, st, status: st === 'offline' ? m.status : st, doing: q ? q : l ? `${l.ticket ? l.ticket + ' · ' : ''}${l.state} · ${l.doing}${l.next ? ' → ' + l.next : ''} (${ago(l.at)})` : '—', machine: m.machine || '—' }
 }
 // The live table replaces the hand-written roster table on the page; the markdown source stays for the roster parser but is hidden.
 const hideSource = on => {
@@ -34,7 +41,7 @@ const hideSource = on => {
 }
 const hollow = s => s === 'active' || s === 'offline'
 const clip = (text, n) => text.length > n ? text.slice(0, n - 1) + '…' : text
-const slug = text => text.toLowerCase().replace(/[^a-z\d]+/g, '-')
+const slug = text => text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^a-z\d]+/g, '-')
 const id = m => m.session || 'h:' + m.slug
 
 // Positions in abstract grid units, then fitted to the SVG viewBox.
@@ -83,7 +90,7 @@ function layout() {
   const scale = Math.min(1.6, (W - 2 * pad) / Math.max(1, maxX - minX), (H - 2 * (pad + 30)) / Math.max(1, maxY - minY))
   const fit = q => ({ x: W / 2 + (q.x - (minX + maxX) / 2) * scale, y: H / 2 + (q.y - (minY + maxY) / 2) * scale })
   const nodes = members.map((m, i) => {
-    const q = fit(pos.get(id(m))), st = state(m), doing = m.statusLine?.doing || m.work
+    const q = fit(pos.get(id(m))), st = state(m), doing = queued(m) || m.statusLine?.doing || m.work
     return { key: id(m), name: m.name, doing: doing ? clip(doing, 34) : '', st, colour: COLOURS[st], solid: !hollow(st) && st !== 'human', human: st === 'human', x: q.x, y: q.y, i }
   })
   const at = new Map(nodes.map(n => [n.key, n]))
@@ -133,6 +140,7 @@ async function load() {
     if (!response.ok) throw new Error()
     const data = await response.json()
     members = data.members
+    queues = data.queues ?? {}
     edges = data.edges ?? []
     machines.value = (data.machines ?? []).map(machineOf)
     rows.value = members.filter(m => m.session).map(rowOf)
