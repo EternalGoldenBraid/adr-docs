@@ -56,3 +56,13 @@ test("a card without an owner lists the missing mandatory fields", async () => {
   writeFileSync(join(dir, "m.md"), "---\ncard:\n  gist: \"Why\"\n  state: planned\n---\n# M\n");
   assert.deepEqual(pageCards(dir)["/m"].missing, ["owner"]);
 });
+
+test("page front-matter owner becomes the card owner", async () => {
+  const { mkdtempSync, writeFileSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { pageCards } = await import("../src/page-tree.mjs");
+  const dir = mkdtempSync(join(tmpdir(), "own-"));
+  writeFileSync(join(dir, "o.md"), "---\nowner: pc-lead\ncard:\n  gist: \"G\"\n  state: planned\n---\n# O\n");
+  assert.equal(pageCards(dir)["/o"].owner, "pc-lead");
+});

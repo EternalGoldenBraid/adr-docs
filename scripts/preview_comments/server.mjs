@@ -640,13 +640,15 @@ export async function startCommentBridge({
           const from = (field("from") || "").split(/[ ,]+/).map(id => id.replace(/^["']|["']$/g, "")).filter(id => /^[0-9a-f-]{8,36}$/i.test(id));
           const author = (field("author") || "").replace(/^["']|["']$/g, "");
           const list = name => (field(name) || "").split(/\s*,\s*/).map(v => v.replace(/^["']|["']$/g, "")).filter(Boolean);
-          const people = new Set([...list("card-owner"), ...list("participants"), author].filter(Boolean));
+          const people = new Set([...list("owner"), ...list("card-owner"), ...list("participants"), author].filter(Boolean));
           for (const name of touchedBy.get(page.link) ?? []) people.add(name);
           for (const comment of comments.values()) {
             if (comment.removed || !comment.url || new URL(comment.url).pathname.replace(/\.html$/, "").replace(/\/index$/, "/") !== page.link) continue;
             for (const message of [comment, ...(comment.replies ?? [])]) if (message.from) people.add(message.from);
           }
-          if (from.length || author || people.size) result[page.link] = { title: page.title, author: author || undefined, from, participants: [...people] };
+          const owner = (field("owner") || list("card-owner")[0] || "").replace(/^["']|["']$/g, "");
+          const partners = list("participants");
+          if (from.length || author || people.size) result[page.link] = { title: page.title, author: author || undefined, owner: owner || undefined, partners: partners.length ? partners : undefined, from, participants: [...people] };
         }
         return reply(response, 200, { pages: result });
       }

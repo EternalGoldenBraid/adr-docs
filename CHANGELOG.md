@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.112.0 - 2026-11-19
+
+- Page front-matter `owner:` is shown on the card and is the default recipient of a new thread on that page (when it names a known recipient, e.g. `pc-lead`; matching ignores case and spaces). `participants:` stay selectable as extra recipients. `/pagelinks` returns `owner` and `partners`.
+
 ## 0.111.0 - 2026-11-19
 
 - Mandatory card fields: gist, owner, state. A page with a card that lacks one shows a red "missing: owner" chip on the card and a "card incomplete" chip in the tree.

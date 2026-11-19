@@ -450,3 +450,5 @@ The card also reads a nested `card:` block (`gist`, `state` = badge, `evidence`,
 Test results: add `result: results/run-3.json` to a test (`{name: "…", state: running, result: results/run-3.json}`). The run script writes `{"status": "done", "finished_at": "2026-11-19T10:00:00Z"}` (status `running`, `done` or `failed`); ADR reads it and overrides the test's state and date. The page state is derived from the tests; the hand-written one is ignored when tests exist.
 
 Mandatory card fields: gist (`card-line`), owner and state. Missing ones show as a red chip; `adr-check <site-root>` prints them and exits 1 (use it in a build or pre-commit hook to block).
+
+Page owner: `owner: pc-lead` in a page's front matter fills the card's owner and makes that agent the default recipient of new threads on the page (a name that is not a known recipient is ignored). `participants:` lists extra recipients you can toggle on.
