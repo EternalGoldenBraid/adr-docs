@@ -295,6 +295,18 @@ Which replies you have read is kept on the server, so every browser and port sho
 
 A link to `#anchor` scrolls the heading or passage clear of the nav bar and flashes it for 2 seconds. `/page#node-<id>` does the same for a graph node (opening its layer first). Reduced-motion preferences disable the animation.
 
+## Route map
+
+`<RouteMap src="/data/routes.json" :height="560" />` draws a top-down map with switchable layers: **Routes** (the road centre lines), **Recordings** (each drive's true path, coloured by driver; click opens its `url`, for example the catalog's Rerun view) and **Datasets** (the same paths coloured by role: train, val, test). Drag pans, scroll zooms, hover names the line. The JSON, with world coordinates in metres:
+
+```json
+{ "image": "/data/ue5/mosaic.png", "size": [860, 860], "metersPerPixel": 0.465, "origin": [430, 430],
+  "routes": [{ "id": "0", "name": "Training road", "seeds": [1, 2], "points": [[x, y], …] }],
+  "recordings": [{ "id": "r1", "name": "…", "route": "0", "driver": "teacher|student", "role": "train|val|test", "url": "/catalog#r1", "points": [[x, y], …] }] }
+```
+
+Image up is world +x and image right is world −y (the Sim mosaic's convention); `origin` is the pixel of world (0, 0), default the image centre. `image` is optional. A real map library is not needed until GPS arrives. `examples/map.md` shows it with synthetic data.
+
 ## Rerun viewer
 
 `<RerunViewer src="https://host/x.rrd" :height="560" />` embeds the hosted Rerun web viewer. Local files: put the `.rrd` in `public/` and use `src="/x.rrd"`. Comments attach to the page as usual; timestamp quoting is not implemented.
