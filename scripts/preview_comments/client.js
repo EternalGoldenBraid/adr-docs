@@ -209,9 +209,8 @@
   let serverSeenInit = false;
   let selectedThread;
   let historyFilter = "page";
-  let tabChord;
   let pendingFocus;
-  const FILTERS = [["page", "This page"], ["pagehist", "Page history"], ["chat", "Chat"], ["unresolved", "Open"], ["mine", "Not by me"], ["all", "All"], ["resolved", "Resolved"], ["notes", "Notes"]];
+  const FILTERS = [["page", "This page"], ["pagehist", "Page history"], ["unresolved", "Open"], ["resolved", "Resolved"]];
   // Highlights and notes carry no resolve state and stay out of triage.
   const isNote = comment => Boolean(comment.note || comment.highlight && !comment.comment);
   let historyTimer;
@@ -275,7 +274,7 @@
     bar.hidden = !vimEnabled && !find(".agent-status")?.classList.contains("blocked");
     find(".sb-hint").textContent = !history.hidden ? (selectedThread
       ? "j/k scroll messages · J/K next/prev thread · q reply to message · p read · r resolve · i reply · o page · h back · Esc"
-      : "j/k move · l open · o go to page · r resolve · [ ] tabs · A all P page O open M not by me · PA page history · Esc") : visual ? "c comment · Esc cancel · hjkl extend" : caretMode ? `hjklwb move caret · ${KM.page.visual} select · V paragraph · ${KM.page.comment} comment · Esc scroll mode` : `j/k scroll · i caret · ${KM.page.visual} select text · ${KM.page.comment} comment · ${KM.leader}${KM.leaderKeys.history} threads · ] next awaiting · : commands · :help`;
+      : "j/k move · l open · o go to page · r resolve · [ ] tabs · P page H page history O open · R resolved · Esc") : visual ? "c comment · Esc cancel · hjkl extend" : caretMode ? `hjklwb move caret · ${KM.page.visual} select · V paragraph · ${KM.page.comment} comment · Esc scroll mode` : `j/k scroll · i caret · ${KM.page.visual} select text · ${KM.page.comment} comment · ${KM.leader}${KM.leaderKeys.history} threads · ] next awaiting · : commands · :help`;
     find(".sb-mode").textContent = `-- ${mode}${prefix ? " " + prefix : ""} --`;
     vimButton.setAttribute("aria-pressed", String(vimEnabled));
   }
@@ -290,7 +289,7 @@
     ]],
     ["History", [
       "j/k move · l or Enter open · r resolve · p read aloud · o go to page · g/G ends",
-      "Tabs: [ ] switch · A all · P this page · O open · M not resolved by me · C chat · R resolved · N notes · P then A page history",
+      "Tabs: [ ] switch · P this page · H page history · O open (not resolved by you) · R resolved",
       "f toggles the history panel full screen · In a thread: j/k messages · J/K next/previous thread · r resolve · p read aloud (p pause · < > skip) · q reply to a message or selection · u jump to the quoted message · i reply · n new child thread · s attach region · h back",
     ]],
     ["Graph", [
@@ -1583,8 +1582,7 @@
       if (filter !== "notes" && (filter === "chat" ? closed || (comment.kind !== "page" && comment.kind !== "session")
         : filter === "page" ? closed || (comment.kind !== "session" && pagePath(comment.url) !== pagePath(location.href) && !linkedHere(comment))
         : filter === "pagehist" ? comment.kind === "session" || pagePath(comment.url) !== pagePath(location.href)
-        : filter === "unresolved" ? closed
-        : filter === "mine" ? closed || comment.resolvedBy?.you
+        : filter === "unresolved" ? closed || comment.resolvedBy?.you
         : filter === "resolved" ? !comment.resolved : false)) continue;
       const card = document.createElement("button");
       card.type = "button";
@@ -2346,13 +2344,9 @@
     let handled = true;
     const values = FILTERS.map(([value]) => value);
     if (key === "f") { event.preventDefault(); find(".history-full").click(); return; }
-    const tabKey = { A: "all", P: "page", O: "unresolved", M: "mine", C: "chat", R: "resolved", N: "notes" }[key];
+    const tabKey = { P: "page", H: "pagehist", O: "unresolved", R: "resolved" }[key];
     if (!selectedThread && tabKey && !event.ctrlKey && !event.metaKey && !event.altKey) {
-      // Capitals pick a tab; P with A (either order, within a moment) is the page's whole history.
-      const live = tabChord && Date.now() - tabChord.at < 800 ? tabChord.key : undefined;
-      const pair = tabKey === "page" && live === "all" || tabKey === "all" && live === "page";
-      setFilter(pair ? "pagehist" : tabKey);
-      tabChord = pair ? undefined : { key: tabKey, at: Date.now() };
+      setFilter(tabKey);
     } else if (!selectedThread && field?.classList.contains("tab")) {
       const i = values.indexOf(field.dataset.filter);
       if ((key === "l" || key === "ArrowRight") && i < values.length - 1) setFilter(values[i + 1]);

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.136.0 - 2026-11-20
+
+- History tabs are now This page, Page history, Open and Resolved. Open lists threads you have not resolved yourself (replacing the short-lived "Not by me" tab). The Chat, All and Notes tabs and their keys are gone; `H` opens Page history.
+
 ## 0.135.0 - 2026-11-20
 
 - History tab "Not by me" (key `M`): open threads you have not resolved yourself, so you can leave the others' votes to the nudges.
