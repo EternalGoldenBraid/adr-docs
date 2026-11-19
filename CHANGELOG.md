@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.132.0 - 2026-11-19
+
+- The idle nudge drains a backlog: when the agent's open count has shrunk since the last nudge and it is idle again, the next nudge follows after 2 minutes instead of 30, naming the next item. With no progress it stays at one per 30 minutes.
+
 ## 0.131.0 - 2026-11-19
 
 - Agents address replies like the user does: `update_doc_review_comment` takes `to` (and `whisper`). Named agents get a mesh note, and a reply to someone who had resolved reopens the thread for them. Without `to`, the thread's current addressees are told, except the sender. This also holds for agents on another machine, over the mesh.
