@@ -37,7 +37,8 @@ const px = ([x, y]) => `${(origin.value[0] - y / mpp.value).toFixed(1)},${(origi
 const line = pts => pts.map(px).join(' ')
 
 const routes = computed(() => (data.value?.routes ?? []).map(r => ({ ...r, pts: line(r.points) })))
-const recordings = computed(() => (data.value?.recordings ?? []).map(r => ({ ...r, pts: line(r.points) })))
+const xy = p => [origin.value[0] - p[1] / mpp.value, origin.value[1] - p[0] / mpp.value]
+const recordings = computed(() => (data.value?.recordings ?? []).map(r => ({ ...r, pts: line(r.points), px: r.points.map(xy) })))
 
 function colour(rec) {
   if (on.value.datasets && rec.role) return ROLE[rec.role] ?? '#adb5bd'
@@ -52,19 +53,23 @@ const box = computed(() => {
   return `${view.value.x} ${view.value.y} ${w / view.value.k} ${h / view.value.k}`
 })
 
-function toWorld(e) {
+// Pointer to image pixels. The viewBox is letterboxed ("meet"), so the drawing is centred in the element.
+function frame(k) {
   const r = svg.value.getBoundingClientRect()
   const [w, h] = size.value
-  const s = Math.min(r.width / w, r.height / h) * view.value.k
-  return { x: view.value.x + (e.clientX - r.left) / s, y: view.value.y + (e.clientY - r.top) / s, s }
+  const s = Math.min(r.width / (w / k), r.height / (h / k))
+  return { r, s, ox: (r.width - (w / k) * s) / 2, oy: (r.height - (h / k) * s) / 2 }
+}
+function toWorld(e) {
+  const { r, s, ox, oy } = frame(view.value.k)
+  return { x: view.value.x + (e.clientX - r.left - ox) / s, y: view.value.y + (e.clientY - r.top - oy) / s, s }
 }
 function wheel(e) {
   const p = toWorld(e)
   const k = Math.min(20, Math.max(1, view.value.k * (e.deltaY < 0 ? 1.25 : 0.8)))
   const [w, h] = size.value
-  const r = svg.value.getBoundingClientRect()
-  const s = Math.min(r.width / w, r.height / h) * k
-  view.value = { k, x: clamp(p.x - (e.clientX - r.left) / s, 0, w - w / k), y: clamp(p.y - (e.clientY - r.top) / s, 0, h - h / k) }
+  const { r, s, ox, oy } = frame(k)
+  view.value = { k, x: clamp(p.x - (e.clientX - r.left - ox) / s, 0, w - w / k), y: clamp(p.y - (e.clientY - r.top - oy) / s, 0, h - h / k) }
 }
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v))
 function down(e) { drag = { sx: e.clientX, sy: e.clientY, x: view.value.x, y: view.value.y, moved: false }; svg.value.setPointerCapture(e.pointerId) }
@@ -81,9 +86,19 @@ function open(rec) {
   if (!drag?.moved && rec.url) window.open(withBaseUrl(rec.url), '_blank', 'noopener')
 }
 function reset() { view.value = { x: 0, y: 0, k: 1 } }
-function hover(e, text) {
+function hover(e, text, rec) {
   const r = svg.value.getBoundingClientRect()
-  tip.value = text ? { x: e.clientX - r.left + 12, y: e.clientY - r.top + 12, text } : null
+  if (!text) { tip.value = null; return }
+  tip.value = { x: e.clientX - r.left + 12, y: e.clientY - r.top + 12, text, img: rec ? frameAt(e, rec) : null }
+}
+// With `frames: { src: "/data/thumbs/r1/{n}.jpg", count: 40 }` on a recording, the frame nearest the cursor along the path is shown (n counts from 0).
+function frameAt(e, rec) {
+  if (!rec.frames?.src || !rec.frames.count) return null
+  const p = toWorld(e)
+  let best = 0, bestD = Infinity
+  rec.px.forEach(([x, y], i) => { const d = (x - p.x) ** 2 + (y - p.y) ** 2; if (d < bestD) { bestD = d; best = i } })
+  const n = Math.round(best / Math.max(1, rec.px.length - 1) * (rec.frames.count - 1))
+  return withBaseUrl(rec.frames.src.replace('{n}', n))
 }
 const recText = r => [r.name ?? r.id, r.driver, r.role && `${r.role}`, r.route && `route ${r.route}`].filter(Boolean).join(' · ')
 </script>
@@ -107,10 +122,10 @@ const recText = r => [r.name ?? r.id, r.driver, r.role && `${r.role}`, r.route &
         </g>
         <g v-if="on.recordings" class="rm-recs">
           <polyline v-for="r in recordings" :key="r.id" :points="r.pts" :stroke="colour(r)" :class="{ link: r.url }"
-            @click="open(r)" @pointermove="hover($event, recText(r))" @pointerleave="hover($event, '')" />
+            @click="open(r)" @pointermove="hover($event, recText(r), r)" @pointerleave="hover($event, '')" />
         </g>
       </svg>
-      <div v-if="tip" class="rm-tip" :style="{ left: `${tip.x}px`, top: `${tip.y}px` }">{{ tip.text }}</div>
+      <div v-if="tip" class="rm-tip" :style="{ left: `${tip.x}px`, top: `${tip.y}px` }"><img v-if="tip.img" :src="tip.img" alt="" />{{ tip.text }}</div>
     </template>
     <p v-else class="rm-err">Loading map…</p>
   </div>
@@ -131,6 +146,7 @@ svg:active { cursor: grabbing }
 .rm-recs polyline { fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; opacity: .95 }
 .rm-recs polyline.link { cursor: pointer }
 .rm-recs polyline:hover { stroke-width: 5 }
-.rm-tip { position: absolute; pointer-events: none; padding: 3px 8px; border-radius: 4px; font-size: 12px; background: rgba(0, 0, 0, .8); color: #fff; white-space: nowrap }
+.rm-tip img { display: block; width: 200px; margin-bottom: 4px; border-radius: 3px }
+.rm-tip { position: absolute; z-index: 2; pointer-events: none; padding: 3px 8px; border-radius: 4px; font-size: 12px; background: rgba(0, 0, 0, .8); color: #fff; white-space: nowrap }
 .rm-err { padding: 16px; color: var(--vp-c-text-2) }
 </style>

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.95.0 - 2026-11-19
+
+- RouteMap: a recording with `frames: {src, count}` shows the frame nearest the cursor as you move along its path. Fixed the pointer position when the map is letterboxed.
+
 ## 0.94.0 - 2026-11-19
 
 - `:me NAME`: new comments and highlights carry your name; a named highlight (and its bubble) is painted in that person's own colour.
