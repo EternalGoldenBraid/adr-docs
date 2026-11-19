@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.96.1 - 2026-11-19
+
+- RouteMap popup: sits above the cursor so it no longer covers the path, stays inside the map box, wraps long names, and scales strip frames to 160 px.
+
 ## 0.96.0 - 2026-11-19
 
 - RouteMap: a recording may carry `thumbs: {src, size, at}`, one horizontal strip of frames with the point index of each; hovering shows the nearest frame.
