@@ -27,7 +27,7 @@ Copilot; the reply box stays at the bottom.
 
 A resolved thread stays closed, with its bubble hidden, until Copilot replies *after* it was resolved; it then returns to the open tabs, marked "new reply", until you open it (or press `r` on it). A sign-off sent together with the resolution does not count.
 
-Tab shortcuts in the list: `A` All, `P` This page, `O` Open, `M` Not by me (open threads you have not resolved), `C` Chat, `R` Resolved, `N` Notes, and `P` then `A` (either order) for Page history.
+The list has four tabs: `P` This page, `H` Page history, `O` Open and `R` Resolved. Open lists the threads you have not resolved yourself, so one you resolved drops out even when others still owe a vote.
 
 Keyboard triage: in the list `j`/`k` move, `l` or Enter opens, `r` resolves the
 row and moves to the next, `[`/`]` (or `k` from the first row, then `h`/`l`) switch tabs, `g`/`G` jump to the ends. In a
@@ -291,7 +291,7 @@ Open a thread and use **Link to another thread…** to reference another thread.
 Which replies you have read is kept on the server, so every browser and port shows the same unread badges. If the plugin is updated while a preview is running, the status bar says `ADR x.y.z installed · restart preview`.
 
 
-`]` / `[` (page level, vim mode) jump to the next / previous thread awaiting you, across pages. Highlights without text and private notes are not threads: they have no resolved state, stay off the Open/This page/Chat/Resolved tabs, and are listed on the **Notes** tab. Open one and press **Remove** to delete it; `r` never deletes.
+`]` / `[` (page level, vim mode) jump to the next / previous thread awaiting you, across pages. Highlights without text and private notes are not threads: they have no resolved state, stay off the tabs. Open one from the page and press **Remove** to delete it; `r` never deletes.
 
 ## Landing on a link target
 
