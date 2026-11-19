@@ -522,3 +522,28 @@ test("an update accepts a unique 8-character thread id prefix, and blocked needs
     rmSync(dir, { recursive: true });
   }
 });
+
+test("the user's resolve is one mark among the addressees'; it closes when all have resolved, or for all on closeAll", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "preview-comments-"));
+  writeFileSync(join(directory, "page.md"), "# Page\n\nText.");
+  const sessionId = randomUUID();
+  const bridge = await startCommentBridge({ sessionId, documentRoot: directory, storageRoot: directory, previewOrigin: "http://127.0.0.1:8771", onError: error => assert.fail(error.message), notify: async () => {} });
+  const id = bridge.add({ page: "/page", kind: "page", quote: "Page", comment: "a" }).id;
+  const thread = () => bridge.list().find(c => c.id === id);
+  bridge.update({ id: randomUUID(), commentId: id, sessionId, reply: "hi", to: ["bob", "carol"] }, "user");
+  bridge.update({ id: randomUUID(), commentId: id, sessionId, resolved: true, partial: true }, "user");
+  assert.deepEqual([thread().resolved, Boolean(thread().resolvedBy.you)], [false, true]);
+  bridge.update({ id: randomUUID(), commentId: id, from: "bob", resolved: true });
+  assert.equal(thread().resolved, false);
+  bridge.update({ id: randomUUID(), commentId: id, from: "carol", resolved: true });
+  assert.equal(thread().resolved, true);
+  bridge.update({ id: randomUUID(), commentId: id, sessionId, resolved: false }, "user");
+  assert.deepEqual([thread().resolved, thread().resolvedBy], [false, undefined]);
+  bridge.update({ id: randomUUID(), commentId: id, sessionId, resolved: true, closeAll: true }, "user");
+  assert.equal(thread().resolved, true);
+  bridge.update({ id: randomUUID(), commentId: id, sessionId, resolved: false }, "user");
+  bridge.update({ id: randomUUID(), commentId: id, sessionId, resolved: true }, "user");
+  assert.equal(thread().resolved, true, "a record without partial (as in old logs) still closes for all");
+  await bridge.close();
+  rmSync(directory, { recursive: true, force: true });
+});

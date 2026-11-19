@@ -406,18 +406,22 @@ export async function startCommentBridge({
       if (record.removeRefs) comment.refs = (comment.refs || []).filter(id => !record.removeRefs.includes(id));
       if (record.removeReply) comment.replies = comment.replies.filter(item => item.id !== record.removeReply);
       if (record.resolved !== undefined) {
-        // With several addressees, an agent's resolve counts only for itself; the thread closes when every addressee has resolved. The user's click closes it for all.
+        // Each addressee resolves for itself, and so does the user (`you`); the thread closes when every addressee has. The user's mark is recorded only with `partial` (older records, which replay on start, closed for all); `closeAll` closes it for all, and reopening clears everyone's mark.
         const who = record.author === "copilot" && record.from ? canon(record.from) : null;
         const need = (comment.to ?? []).map(canon);
-        if (who && need.length > 1 && need.includes(who)) {
-          comment.resolvedBy = { ...comment.resolvedBy, [who]: record.resolved ? record.at : undefined };
-          if (!record.resolved) delete comment.resolvedBy[who];
+        const mark = who && need.includes(who) ? who : record.author === "user" && record.partial && need.length ? "you" : null;
+        if (mark && record.resolved) {
+          comment.resolvedBy = { ...comment.resolvedBy, [mark]: record.at };
           const done = need.every(name => comment.resolvedBy[name]);
           if (done && !comment.resolved) comment.resolvedAt = record.at;
           comment.resolved = done;
+        } else if (mark === who && who && !record.resolved) {
+          delete comment.resolvedBy?.[who];
+          comment.resolved = false;
         } else {
           if (record.resolved && !comment.resolved) comment.resolvedAt = record.at;
           comment.resolved = record.resolved;
+          if (!record.resolved) delete comment.resolvedBy;
         }
       }
       if (record.to) comment.to = record.to;
@@ -539,6 +543,8 @@ export async function startCommentBridge({
     if (author === "user" && input.whisper === true && value.to?.length && value.reply !== undefined) value.whisper = true;
     if (author === "user" && COLORS.includes(input.color)) value.color = input.color;
     if (author === "user" && input.clear === true) value.clear = true;
+    if (author === "user" && input.closeAll === true) value.closeAll = true;
+    if (author === "user" && input.partial === true) value.partial = true;
     if (author === "user" && input.note === true && value.reply !== undefined) value.note = true;
     if (author === "user" && input.promote === true) value.promote = true;
     if (author === "user" && input.queued === true) value.queued = true;

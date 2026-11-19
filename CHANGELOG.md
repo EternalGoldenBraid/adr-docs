@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.124.0 - 2026-11-19
+
+- Resolve is per participant: the user's Resolve is one mark among the addressees', and a thread closes when everyone has resolved. The thread state shows a pie of who has and "waiting on …". **Close for all** (after you have resolved) asks for confirmation and lists the remaining agents with their mesh state. Old log records still close for all on replay.
+
 ## 0.123.0 - 2026-11-19
 
 - The verdict is now structured: a front-matter `verdict:` block with `result` (supported | not-supported | inconclusive), `claim` and `confidence` (hypothesis | confirmed). Free text or a `## Verdict` heading no longer satisfies it, and a page that would be done without it is held in `review` with `blockedBy: [verdict]`.
