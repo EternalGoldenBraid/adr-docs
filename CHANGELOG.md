@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.107.0 - 2026-11-19
+
+- "Needs verdict": a finished page (`card-status: shipped` or `status: done`) without non-empty "Verdict" and "Learnings" sections gets an amber chip in the page tree and on its card, and `<PageCard board />` lists those pages first.
+
 ## 0.106.0 - 2026-11-19
 
 - Page participants, derived: `card-owner`, `participants:`, `author:`, agents who commented on threads about the page, and harness footprints. New `POST /__preview_comments/touch {path, agent}` lets a harness record that its agent touched a page; `/pagelinks` returns `participants`, and the thread panel shows them.

@@ -3,6 +3,18 @@ import { basename, dirname, join, relative, sep } from "node:path";
 import { readBoard } from "./workstreams.mjs";
 
 const frontOf = text => text.match(/^---\n([\s\S]*?)\n---/)?.[1] ?? "";
+// A finished page (card-status shipped, or status done) must have non-empty "Verdict" and "Learnings" sections.
+export function needsVerdict(text) {
+  const front = text.match(/^---\n([\s\S]*?)\n---/)?.[1] ?? "";
+  const done = /^card-status:\s*["']?shipped["']?\s*$/m.test(front) || /^status:\s*["']?done["']?\s*$/mi.test(front);
+  if (!done) return false;
+  const body = text.slice(front.length ? text.indexOf("\n---", 3) + 4 : 0);
+  const filled = name => {
+    const m = new RegExp(`^#{1,6}\\s*${name}\\b[^\\n]*\\n([\\s\\S]*?)(?=^#{1,6}\\s|(?![\\s\\S]))`, "mi").exec(body);
+    return Boolean(m && m[1].replace(/<!--[\s\S]*?-->/g, "").trim());
+  };
+  return !(filled("verdict") && filled("learnings?"));
+}
 const isUnpublished = text => /^publish:\s*false\s*$/m.test(frontOf(text));
 
 // Markdown files (any depth) marked `publish: false`, as paths relative to the root for srcExclude.
@@ -51,6 +63,7 @@ export function readPageTree(documentRoot, { publishedOnly = false, grouped = tr
       parent: key("parent") || (slug.includes("/") ? folderParent(slug) : null),
       order: Number.isFinite(order) ? order : 1000,
       tense: ["past", "present", "future"].includes(key("tense")?.toLowerCase()) ? key("tense").toLowerCase() : (key("card-status") === "superseded" ? "past" : undefined),
+      needsVerdict: needsVerdict(text) || undefined,
       asOf: /^\d{4}-\d{2}-\d{2}$/.test(key("as-of") ?? "") ? key("as-of") : undefined,
       status: key("status")?.toLowerCase(), groupBy: key("group-by")?.toLowerCase(),
     };
@@ -145,10 +158,11 @@ export function pageCards(documentRoot, options) {
     const front = frontOf(text);
     const key = name => front.match(new RegExp(`^card-${name}:\\s*(.+)$`, "m"))?.[1].trim().replace(/^["']|["']$/g, "");
     const card = Object.fromEntries(["line", "status", "superseded-by", ...CARD_SLOTS].map(k => [k, key(k)]).filter(([, v]) => v));
-    if (!Object.keys(card).length) continue;
+    const verdict = needsVerdict(text);
+    if (!Object.keys(card).length && !verdict) continue;
     const slug = file.slice(0, -3);
     out[slug === "index" ? "/" : "/" + slug.split("/").map(encodeURIComponent).join("/")] =
-      { ...card, title: front.match(/^nav:\s*(.+)$/m)?.[1].trim() ?? text.match(/^# (.+)$/m)?.[1].trim() ?? slug };
+      { ...card, ...(verdict ? { needsVerdict: true } : {}), title: front.match(/^nav:\s*(.+)$/m)?.[1].trim() ?? text.match(/^# (.+)$/m)?.[1].trim() ?? slug };
   }
   return out;
 }
