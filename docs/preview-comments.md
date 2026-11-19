@@ -27,7 +27,7 @@ Copilot; the reply box stays at the bottom.
 
 A resolved thread stays closed, with its bubble hidden, until Copilot replies *after* it was resolved; it then returns to the open tabs, marked "new reply", until you open it (or press `r` on it). A sign-off sent together with the resolution does not count.
 
-Tab shortcuts in the list: `A` All, `P` This page, `O` Open, `C` Chat, `R` Resolved, `N` Notes, and `P` then `A` (either order) for Page history.
+Tab shortcuts in the list: `A` All, `P` This page, `O` Open, `M` Not by me (open threads you have not resolved), `C` Chat, `R` Resolved, `N` Notes, and `P` then `A` (either order) for Page history.
 
 Keyboard triage: in the list `j`/`k` move, `l` or Enter opens, `r` resolves the
 row and moves to the next, `[`/`]` (or `k` from the first row, then `h`/`l`) switch tabs, `g`/`G` jump to the ends. In a

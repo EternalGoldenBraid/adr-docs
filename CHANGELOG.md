@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.135.0 - 2026-11-20
+
+- History tab "Not by me" (key `M`): open threads you have not resolved yourself, so you can leave the others' votes to the nudges.
+
 ## 0.134.1 - 2026-11-20
 
 - Thread cards in the history list show their preview as plain text: `**bold**`, `[label](link)`, code and `> ` quote markers lose their markers, where they showed raw before (thread fca02c2d). The open thread itself already rendered them.
