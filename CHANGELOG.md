@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.89.0 - 2026-11-19
+
+- What's new: status bar count of pages changed since you last left them; `n` (or `:new`) lists them newest first and opens the changed lines of a page, all with Vim keys (`j/k`, `l`, `h`, `m`, `M`). Pages keep a snapshot of the copy you last saw.
+- **↳ New thread** now addresses the child thread to whoever wrote the quoted message and quotes the last message when nothing is selected or focused (it was addressed to the default recipient).
+
 ## 0.88.2 - 2026-11-19
 
 - Comments and replies now render relative links (`[x](./page)`, `../page`) as links; before only `http(s)` and `/path` links did.

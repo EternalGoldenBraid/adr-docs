@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { createServer } from "node:http";
 import {
-  appendFileSync, closeSync, cpSync, existsSync, fsyncSync, mkdirSync, openSync,
+  appendFileSync, closeSync, copyFileSync, cpSync, statSync, existsSync, fsyncSync, mkdirSync, openSync,
   readdirSync, readFileSync, realpathSync, renameSync, rmSync, unlinkSync, writeFileSync,
 } from "node:fs";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
@@ -19,6 +19,7 @@ function meshDataDirectory() {
 import { readCell, writeCell } from "./table-edit.mjs";
 import { readRoster } from "../../src/roster.mjs";
 import { readPageTree } from "../../src/page-tree.mjs";
+import { diffLines, hunks } from "./page-diff.mjs";
 
 function append(file, record) {
   const fd = openSync(file, "a", 0o600);
@@ -566,22 +567,41 @@ export async function startCommentBridge({
         const recent = all.filter(c => !c.resolved || Date.parse(c.updatedAt || c.at) >= cutoff);
         return reply(response, 200, { sessionId, revision, seenInit, comments: recent, archived: all.length - recent.length });
       }
-      if (request.url === "/viewed" && (request.method === "GET" || request.method === "POST")) {
+      if ((request.url === "/viewed" || request.url === "/whatsnew") && (request.method === "GET" || (request.method === "POST" && request.url === "/viewed"))) {
         const pages = readPageTree(root, { grouped: false });
         const now = Object.fromEntries(pages.map(page => [page.link, { slug: page.slug, hash: createHash("sha1").update(readFileSync(join(root, page.slug + ".md"))).digest("hex") }]));
         const file = join(data, "viewed.json");
         let seen = {};
         try { seen = JSON.parse(readFileSync(file, "utf8")); } catch { /* first use: everything now counts as viewed */ }
         const save = () => writeFileSync(file, JSON.stringify(seen), { mode: 0o600 });
-        if (!existsSync(file)) { seen = Object.fromEntries(Object.entries(now).map(([link, row]) => [link, row.hash])); save(); }
+        // The copy you last viewed, so "What's new" can show what changed since then.
+        const snapDir = join(data, "snapshots");
+        const snapFile = row => join(snapDir, row.slug.replace(/[^\w.-]+/g, "__") + ".md");
+        const snapshot = row => { mkdirSync(snapDir, { recursive: true }); copyFileSync(join(root, row.slug + ".md"), snapFile(row)); };
+        if (!existsSync(file)) { seen = Object.fromEntries(Object.entries(now).map(([link, row]) => [link, row.hash])); save(); Object.values(now).forEach(snapshot); }
+        if (request.method === "GET" && request.url === "/whatsnew") {
+          const changed = Object.entries(now).filter(([link, row]) => seen[link] !== row.hash).map(([link, row]) => {
+            const before = existsSync(snapFile(row)) ? readFileSync(snapFile(row), "utf8") : undefined;
+            const rows = diffLines(seen[link] === undefined ? undefined : before, readFileSync(join(root, row.slug + ".md"), "utf8"));
+            return {
+              link, slug: row.slug, state: seen[link] === undefined ? "new" : "changed", noCopy: seen[link] !== undefined && before === undefined,
+              changedAt: statSync(join(root, row.slug + ".md")).mtime.toISOString(),
+              added: rows.filter(r => r.op === "+").length, removed: rows.filter(r => r.op === "-").length,
+              hunks: hunks(rows).slice(0, 40)
+            };
+          }).sort((x, y) => y.changedAt.localeCompare(x.changedAt));
+          return reply(response, 200, { pages: changed });
+        }
         if (request.method === "POST") {
           const body = [];
           for await (const chunk of request) { body.push(chunk); if (body.length > 64) break; }
-          let link;
-          try { link = JSON.parse(Buffer.concat(body).toString("utf8")).path; } catch { return reply(response, 400, { error: "Invalid JSON." }); }
+          let link, all;
+          try { ({ path: link, all } = JSON.parse(Buffer.concat(body).toString("utf8"))); } catch { return reply(response, 400, { error: "Invalid JSON." }); }
+          if (all === true) for (const [key, row] of Object.entries(now)) { seen[key] = row.hash; snapshot(row); }
           const key = typeof link === "string" ? link.replace(/\.html$/, "").replace(/\/index$/, "/") || "/" : "";
           const hit = now[key] ? key : now[key + "/"] ? key + "/" : undefined;
-          if (hit) { seen[hit] = now[hit].hash; save(); }
+          if (hit) { seen[hit] = now[hit].hash; snapshot(now[hit]); }
+          save();
         }
         return reply(response, 200, { pages: Object.fromEntries(Object.entries(now).flatMap(([link, row]) => seen[link] === undefined ? [[link, "new"]] : seen[link] !== row.hash ? [[link, "changed"]] : [])) });
       }
