@@ -17,7 +17,7 @@ function meshDataDirectory() {
   return existsSync(join(moved, "agent-mesh.db")) ? moved : meshCodeDirectory;
 }
 import { readCell, writeCell } from "./table-edit.mjs";
-import { readRoster } from "../../src/roster.mjs";
+import { readRoster, slugify } from "../../src/roster.mjs";
 import { addNote, applyVote, publicVotes, readVotes, reveal } from "../../src/votes.mjs";
 import { pageCards, readPageTree } from "../../src/page-tree.mjs";
 import { diffLines, hunks } from "./page-diff.mjs";
@@ -270,7 +270,7 @@ export async function startCommentBridge({
   // Without a hosting agent session (ownerViaMesh), the owner is also told this way, including of unaddressed comments.
   // Agent-authored threads and replies pass `only` (their recipients) and `sender`, who is not told of their own message.
   function announce(comment, text, queued = false, only, sender) {
-    const names = (only?.length ? only.map(canon) : comment.to?.length ? comment.to.map(canon) : ownerViaMesh ? [ownerName()] : []).filter(who => !sender || who !== canon(sender));
+    const names = (only?.length ? only.map(canon) : comment.to?.length ? comment.to.map(canon) : ownerViaMesh ? [ownerName()] : []).filter(who => !sender || (who !== canon(sender) && who !== canon(slugify(sender))));
     if (!mesh) return;
     for (const who of names) {
       const target = agents().find(row => row.slug === who);

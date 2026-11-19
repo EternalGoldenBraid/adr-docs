@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.132.1 - 2026-11-19
+
+- A reply sent under a display name ("Site manager") no longer notifies its own sender: the sender is matched by slug too.
+
 ## 0.132.0 - 2026-11-19
 
 - The idle nudge drains a backlog: when the agent's open count has shrunk since the last nudge and it is idle again, the next nudge follows after 2 minutes instead of 30, naming the next item. With no progress it stays at one per 30 minutes.
