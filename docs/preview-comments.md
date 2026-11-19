@@ -282,6 +282,8 @@ Click the quote of a video comment to jump to its time. Pages with `publish: fal
 
 Open a thread and use **Link to another thread…** to reference another thread. Links (`→`) and backlinks (`←`) are clickable and jump across pages. To branch a discussion, select text inside a thread's messages and press **↳ New thread**: the composer opens with that text as the quote, and the new thread is saved with a `→` link back to its parent. Agents pass `refs` when adding a thread or `link_comment_ids` when updating one.
 
+**Threads and the pages they led to.** A page that was written in answer to a thread says so in its front matter: `from: <thread id>` (the first 8 or more characters, or a list), and optionally `author: <name>`. No other step is needed. The thread then shows a `📄` link to the page, and the page's **This page** history lists its own threads under *Written on this page* and the threads it came from under *Led to this page*, with *Page by …* on top.
+
 ## Next awaiting thread and notes
 
 Which replies you have read is kept on the server, so every browser and port shows the same unread badges. If the plugin is updated while a preview is running, the status bar says `ADR x.y.z installed · restart preview`.

@@ -605,6 +605,19 @@ export async function startCommentBridge({
         }
         return reply(response, 200, { pages: Object.fromEntries(Object.entries(now).flatMap(([link, row]) => seen[link] === undefined ? [[link, "new"]] : seen[link] !== row.hash ? [[link, "changed"]] : [])) });
       }
+      // Pages that say which threads they came from (`from: <thread id, 8+ chars>` or a list) and who wrote them (`author:`).
+      if (request.method === "GET" && request.url === "/pagelinks") {
+        const result = {};
+        for (const page of readPageTree(root, { grouped: false })) {
+          let head = "";
+          try { head = (/^---\n([\s\S]*?)\n---/.exec(readFileSync(join(root, page.slug + ".md"), "utf8")) || [])[1] || ""; } catch { continue; }
+          const field = name => (new RegExp(`^${name}:[ \\t]*(.*)$`, "m").exec(head) || [])[1]?.trim().replace(/^\[|\]$/g, "");
+          const from = (field("from") || "").split(/[ ,]+/).map(id => id.replace(/^["']|["']$/g, "")).filter(id => /^[0-9a-f-]{8,36}$/i.test(id));
+          const author = (field("author") || "").replace(/^["']|["']$/g, "");
+          if (from.length || author) result[page.link] = { title: page.title, author: author || undefined, from };
+        }
+        return reply(response, 200, { pages: result });
+      }
       if (request.method === "GET" && request.url === "/settings") return reply(response, 200, effective());
       const faceRoute = request.method === "GET" && /^\/faces(?:\/([\w-]{1,64}))?$/.exec(request.url);
       if (faceRoute) {
