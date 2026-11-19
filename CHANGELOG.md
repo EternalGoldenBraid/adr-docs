@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.129.0 - 2026-11-19
+
+- A thread stays in `threads.json` (and so in an agent's queue) until that agent has **resolved** it, not just answered it. Before, an addressee who had replied dropped out, and the thread never came back to ask for their resolve vote.
+- `unanswered_threads` also returns `toResolve`: open threads addressed to you whose last word is an agent's and that you have not resolved. The idle nudge and the team table count them and say "needs your resolve vote".
+
 ## 0.128.1 - 2026-11-19
 
 - The plugin's tools load the preview (VitePress) only when a preview starts, so a client machine without `node_modules` can use them over the mesh.

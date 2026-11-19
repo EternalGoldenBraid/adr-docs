@@ -554,3 +554,23 @@ test("the user's resolve is one mark among the addressees'; it closes when all h
   await bridge.close();
   rmSync(directory, { recursive: true, force: true });
 });
+
+test("threads.json keeps a thread whose addressee answered but has not resolved, so it stays in their queue", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "preview-comments-"));
+  writeFileSync(join(directory, "page.md"), "# Page\n\nText.");
+  writeFileSync(join(directory, "queues.json"), "{}");
+  const sessionId = randomUUID();
+  const bridge = await startCommentBridge({ sessionId, documentRoot: directory, storageRoot: directory, previewOrigin: "http://127.0.0.1:8772", onError: error => assert.fail(error.message), notify: async () => {} });
+  const id = bridge.add({ page: "/page", kind: "page", quote: "Page", comment: "a" }).id;
+  bridge.update({ id: randomUUID(), commentId: id, sessionId, reply: "bob?", to: ["bob"] }, "user");
+  await new Promise(done => setTimeout(done, 20));
+  bridge.update({ id: randomUUID(), commentId: id, from: "bob", reply: "answered" });
+  await new Promise(done => setTimeout(done, 2200));
+  const rows = JSON.parse(readFileSync(join(directory, "threads.json"), "utf8"));
+  assert.deepEqual(rows.map(row => [row.answered_by, row.unresolved_by]), [[["bob"], ["bob"]]]);
+  bridge.update({ id: randomUUID(), commentId: id, from: "bob", resolved: true });
+  await new Promise(done => setTimeout(done, 2200));
+  assert.deepEqual(JSON.parse(readFileSync(join(directory, "threads.json"), "utf8")), []);
+  await bridge.close();
+  rmSync(directory, { recursive: true, force: true });
+});

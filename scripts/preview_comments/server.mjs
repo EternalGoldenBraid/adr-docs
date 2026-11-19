@@ -301,7 +301,8 @@ export async function startCommentBridge({
   const readQueues = () => { try { return JSON.parse(readFileSync(join(documentRoot, "queues.json"), "utf8")); } catch { return {}; } };
   const openWork = slug => {
     const items = (readQueues()[slug] ?? []).filter(item => item.state !== "done").sort((a, b) => a.rank - b.rank);
-    return { items, threads: unansweredFor(slug).threads };
+    const { threads, toResolve } = unansweredFor(slug);
+    return { items, threads, toResolve };
   };
   const isIdle = row => (row.activity ?? (row.statusLine?.state === "idle" ? "idle" : null)) === "idle";
   async function nudgeIdle() {
@@ -312,10 +313,11 @@ export async function startCommentBridge({
       const since = idleSince.get(row.slug) ?? now;
       idleSince.set(row.slug, since);
       if (now - since < NUDGE_AFTER || now - (nudgedAt.get(row.slug) ?? 0) < NUDGE_EVERY) continue;
-      const { items, threads } = openWork(row.slug);
-      if (!items.length && !threads.length) continue;
+      const { items, threads, toResolve } = openWork(row.slug);
+      if (!items.length && !threads.length && !toResolve.length) continue;
       const first = items[0];
-      const note = `ADR idle nudge (no reply needed): you have been idle ${Math.round((now - since) / 60000)} min with ${items.length} open queue item(s) and ${threads.length} thread(s) waiting. ` +
+      const note = `ADR idle nudge (no reply needed): you have been idle ${Math.round((now - since) / 60000)} min with ${items.length} open queue item(s), ${threads.length} thread(s) waiting and ${toResolve.length} to resolve. ` +
+        (!threads.length && toResolve.length ? `Thread ${toResolve[0].id.slice(0, 8)} on ${toResolve[0].page} needs your resolve vote (or a reply if you disagree). ` : "") +
         (threads.length ? `Thread ${threads[0].id.slice(0, 8)} on ${threads[0].page} is waiting on you. ` : "") +
         (first ? `Next in your queue: "${first.test}" (rank ${first.rank}${first.weight ? `, weight ${first.weight}` : ""}, ${first.page}). ` : "") +
         "Start it, or post what blocks it.";
@@ -385,7 +387,7 @@ export async function startCommentBridge({
       const lastUser = [...c.replies].reverse().find(r => r.author === "user");
       const answered = addressees.filter(name => c.resolvedBy?.[name] || c.replies.some(r => r.author === "copilot" && r.from && canon(r.from) === name && (!lastUser || r.at > lastUser.at)));
       return { id: c.id, page: new URL(c.url).pathname, addressees, answered_by: answered, unresolved_by: addressees.filter(name => !c.resolvedBy?.[name]), at: lastUser?.at ?? c.at };
-    }).filter(row => row.answered_by.length < row.addressees.length).sort((a, b) => a.at < b.at ? -1 : 1);
+    }).filter(row => row.unresolved_by.length).sort((a, b) => a.at < b.at ? -1 : 1);
     const text = JSON.stringify(rows, null, 1) + "\n";
     try { if (!existsSync(join(documentRoot, "threads.json")) || readFileSync(join(documentRoot, "threads.json"), "utf8") !== text) writeFileSync(join(documentRoot, "threads.json"), text); } catch { /* read-only root */ }
   };
@@ -676,7 +678,10 @@ export async function startCommentBridge({
       const text = (last.reply ?? last.comment ?? "").replace(/\s+/g, " ");
       return [{ id: comment.id, page: new URL(comment.url).pathname, ageMinutes: Math.round((now - Date.parse(last.at || comment.at)) / 60000), quote: text.length > 140 ? `${text.slice(0, 140)}…` : text }];
     }).sort((a, b) => b.ageMinutes - a.ageMinutes);
-    return { checked: `${rows.length} unanswered`, as, threads: rows };
+    // Open threads addressed to this agent whose last word is an agent's, so nothing is left to answer but its resolve vote is still missing.
+    const toResolve = [...comments.values()].filter(comment => !comment.removed && !comment.resolved && !comment.note && !comment.highlight && comment.to?.length && addressed(comment, as) && !comment.resolvedBy?.[as] && !rows.some(row => row.id === comment.id))
+      .map(comment => ({ id: comment.id, page: new URL(comment.url).pathname }));
+    return { checked: `${rows.length} unanswered, ${toResolve.length} to resolve`, as, threads: rows, toResolve };
   }
   function readAs(as, includeSeen = false) {
     const rows = unread(as);
@@ -831,7 +836,7 @@ export async function startCommentBridge({
         try { queues = JSON.parse(readFileSync(join(documentRoot, "queues.json"), "utf8")); } catch { /* no queues.json */ }
         const members = (await meshStatus()).map(row => {
           if (!row.session) return row;
-          const open = (queues[row.slug] ?? []).filter(item => item.state !== "done").length + unansweredFor(row.slug).threads.length;
+          const open = (queues[row.slug] ?? []).filter(item => item.state !== "done").length + unansweredFor(row.slug).threads.length + unansweredFor(row.slug).toResolve.length;
           return { ...row, open, idleMinutes: isIdle(row) && idleSince.has(row.slug) ? Math.round((Date.now() - idleSince.get(row.slug)) / 60000) : 0 };
         });
         return reply(response, 200, { queues, members, edges: meshEdges, machines: await machines(), errors: Object.fromEntries(remoteErrors) });
