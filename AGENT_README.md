@@ -1,4 +1,4 @@
-# agent-doc-review (ADR doc-review agent)
+# adr-docs (ADR doc-review agent; the repo was agent-doc-review)
 
 - Mesh name: `agent-doc-review` on machine `nicklas-lenovo`
 - Session ID: `76b012f3-9cef-43da-a036-2bd3cf80566d`
