@@ -2195,7 +2195,7 @@
     whats.sorted = sorted;
     whats.i = Math.min(whats.i, Math.max(0, sorted.length - 1));
     if (whats.view === "list") {
-      whatsHint.textContent = `j/k move · l or Enter see changes · m seen · M all seen · s sort (${whats.byName ? "name" : "newest"}) · Esc`;
+      whatsHint.textContent = `j/k move · l or Enter see changes · O new tab · m seen · M all seen · s sort (${whats.byName ? "name" : "newest"}) · Esc`;
       whatsBody.replaceChildren(...(sorted.length ? sorted.map((page, index) => {
         const row = document.createElement("div");
         row.className = "whats-row" + (index === whats.i ? " on" : "");
@@ -2211,7 +2211,7 @@
       return;
     }
     const page = sorted[whats.i];
-    whatsHint.textContent = `${page.slug} · j/k next change · l open page · h back · m seen · Esc`;
+    whatsHint.textContent = `${page.slug} · j/k next change · l open page and glow changes · O new tab · h back · m seen · Esc`;
     const nodes = page.noCopy ? [Object.assign(document.createElement("div"), { textContent: "No earlier copy was kept for this page; it will be from now on. Open it with l." })] : page.hunks.map((hunk, index) => {
       const box = document.createElement("div");
       box.className = "whats-hunk" + (index === whats.hunk ? " on" : "");
@@ -2245,6 +2245,15 @@
       whatsDraw();
     } catch (error) { message(error.message, true); }
   };
+  // Opening a page from here glows the passages that changed; the list of them travels in localStorage so a new tab gets it too.
+  function whatsGo(newTab) {
+    const page = whats.sorted[whats.i];
+    const lines = page.hunks.flatMap(hunk => hunk.rows.filter(row => row.op === "+").map(row => row.text)).filter(text => text.trim()).slice(0, 300);
+    localStorage.setItem("adr-glow", JSON.stringify({ link: page.link.replace(/\/$/, "") || "/", lines, at: Date.now() }));
+    if (newTab) { window.open(page.link, "_blank"); return; }
+    whatsPanel.hidden = true;
+    location.assign(page.link);
+  }
   find(".whats-close").addEventListener("click", () => { whatsPanel.hidden = true; });
   commands.new = () => whatsOpen();
   document.addEventListener("keydown", event => {
@@ -2266,11 +2275,63 @@
     else if (key === "M") whatsMark(true);
     else if ((key === "l" || key === "ArrowRight" || key === "Enter") && whats.sorted[whats.i]) {
       if (whats.view === "list") { whats.view = "diff"; whats.hunk = 0; whatsDraw(); }
-      else { const page = whats.sorted[whats.i]; whatsPanel.hidden = true; location.assign(page.link); }
-    } else if ((key === "h" || key === "ArrowLeft") && whats.view === "diff") { whats.view = "list"; whatsDraw(); }
+      else whatsGo(false);
+    } else if (key === "O" && whats.sorted[whats.i]) whatsGo(true);
+    else if ((key === "h" || key === "ArrowLeft") && whats.view === "diff") { whats.view = "list"; whatsDraw(); }
     else return;
     event.preventDefault(); event.stopImmediatePropagation();
   }, true);
+  // Changed passages glow on the page: } and { move between them, Space marks one read and moves on.
+  const glow = { items: [], at: -1 };
+  function glowStart() {
+    let saved;
+    try { saved = JSON.parse(localStorage.getItem("adr-glow") || "null"); } catch { saved = null; }
+    if (!saved || Date.now() - saved.at > 600000 || saved.link !== (pagePath(location.href).replace(/\/$/, "") || "/")) return;
+    const doc = document.querySelector(".vp-doc");
+    if (!doc) return;
+    const plain = text => text.replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/[`*_>#|{}\[\]]|^\s*[-+]\s|^\s*\d+\.\s/g, "").replace(/\s+/g, " ").trim().toLowerCase();
+    const blocks = [...doc.querySelectorAll("p, li, h1, h2, h3, h4, h5, h6, tr, pre, blockquote")].filter(el => !el.querySelector("p, li, tr"));
+    const found = new Set();
+    for (const line of saved.lines) {
+      const needle = plain(line).slice(0, 48);
+      if (needle.length < 6) continue;
+      const hit = blocks.find(el => !found.has(el) && plain(el.textContent).includes(needle));
+      if (hit) found.add(hit);
+    }
+    localStorage.removeItem("adr-glow");
+    glow.items = [...found].sort((a, b) => a.compareDocumentPosition(b) & 4 ? -1 : 1);
+    if (!glow.items.length) return;
+    if (!document.getElementById("adr-glow-style")) {
+      const style = document.createElement("style");
+      style.id = "adr-glow-style";
+      style.textContent = ".adr-glow{border-radius:6px;background:rgba(194,177,255,.10);box-shadow:0 0 0 1px rgba(194,177,255,.35),0 0 22px 4px rgba(194,177,255,.35);transition:box-shadow .4s,background .4s}.adr-glow.on{background:rgba(255,214,102,.14);box-shadow:0 0 0 1px rgba(255,214,102,.6),0 0 28px 8px rgba(255,214,102,.45)}.adr-glow.read{background:none;box-shadow:none}";
+      document.head.append(style);
+    }
+    glow.items.forEach(el => el.classList.add("adr-glow"));
+    glowGo(0);
+    message(`${glow.items.length} changed passage${glow.items.length === 1 ? "" : "s"} · } next · { previous · Space read`);
+  }
+  function glowGo(index) {
+    glow.at = Math.max(0, Math.min(glow.items.length - 1, index));
+    glow.items.forEach((el, i) => el.classList.toggle("on", i === glow.at));
+    glow.items[glow.at].scrollIntoView({ block: "center", behavior: "smooth" });
+  }
+  document.addEventListener("keydown", event => {
+    if (!glow.items.length || event.isComposing || event.ctrlKey || event.metaKey || event.altKey || !vimEnabled) return;
+    if (!history.hidden || !panel.hidden || !helpPanel.hidden || !whatsPanel.hidden) return;
+    if (shadow.activeElement?.matches?.("textarea, input, select") || document.activeElement?.matches?.("input, textarea, select, button, a, [contenteditable]")) return;
+    if (event.key === "}") glowGo(glow.at + 1);
+    else if (event.key === "{") glowGo(glow.at - 1);
+    else if (event.key === " ") {
+      glow.items[glow.at].classList.add("read");
+      glow.items[glow.at].classList.remove("on");
+      const next = glow.items.findIndex((el, i) => i > glow.at && !el.classList.contains("read"));
+      const any = next >= 0 ? next : glow.items.findIndex(el => !el.classList.contains("read"));
+      if (any >= 0) glowGo(any); else { message("All changes read"); glow.items = []; }
+    } else return;
+    event.preventDefault(); event.stopImmediatePropagation();
+  }, true);
+  setTimeout(glowStart, 1200);
   let popComment;
   document.addEventListener("keydown", event => {
     if (event.key !== KM.page.region || event.isComposing || event.repeat || !vimEnabled || event.ctrlKey || event.metaKey || event.altKey ||

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.91.0 - 2026-11-19
+
+- What's new: opening a page now glows the passages that changed instead of showing a diff first. `}` / `{` jump between them, `Space` marks one read; `O` opens the page in a new tab.
+
 ## 0.90.0 - 2026-11-19
 
 - Threads and pages are linked both ways. A page with `from: <thread id>` (and optionally `author:`) in its front matter shows up on that thread as a `📄` link, and in the page's history as *Led to this page*, apart from the threads *Written on this page*. New `GET /pagelinks`.
