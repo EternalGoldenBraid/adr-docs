@@ -1223,7 +1223,8 @@
         continue;
       }
       const el = document.createElement(href ? "a" : bold ? "strong" : code ? "code" : "em");
-      el.textContent = label || href || bold || code || italic;
+      if (bold || italic) el.append(inlineMarkdown(bold || italic));
+      else el.textContent = label || href || code;
       if (href) { el.href = href; el.target = "_blank"; el.rel = "noopener"; }
       fragment.append(el);
       last = pattern.lastIndex;
