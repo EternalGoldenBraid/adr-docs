@@ -50,10 +50,17 @@ export function readPageTree(documentRoot, { publishedOnly = false, grouped = tr
       title: key("nav") ?? text.match(/^# (.+)$/m)?.[1].trim() ?? key("title") ?? slug,
       parent: key("parent") || (slug.includes("/") ? folderParent(slug) : null),
       order: Number.isFinite(order) ? order : 1000,
+      tense: ["past", "present", "future"].includes(key("tense")?.toLowerCase()) ? key("tense").toLowerCase() : (key("card-status") === "superseded" ? "past" : undefined),
+      asOf: /^\d{4}-\d{2}-\d{2}$/.test(key("as-of") ?? "") ? key("as-of") : undefined,
       status: key("status")?.toLowerCase(), groupBy: key("group-by")?.toLowerCase(),
     };
   });
   for (const page of pages) if (page.parent === page.slug || !slugs.has(page.parent)) page.parent = null;
+  // A page without its own `tense:` takes the nearest ancestor's.
+  const bySlug = new Map(pages.map(p => [p.slug, p]));
+  for (const page of pages) {
+    for (let up = page, n = 0; !page.tense && up.parent && n < 20; n++) { up = bySlug.get(up.parent); if (up?.tense) page.tense = up.tense; if (!up) break; }
+  }
   const groups = [];
   for (const index of grouped ? pages.filter(p => p.groupBy === "status") : []) {
     const order = ["active", "queued", "proposed", "blocked", "done", "declined"];
@@ -137,7 +144,7 @@ export function pageCards(documentRoot, options) {
     if (options?.publishedOnly && isUnpublished(text)) continue;
     const front = frontOf(text);
     const key = name => front.match(new RegExp(`^card-${name}:\\s*(.+)$`, "m"))?.[1].trim().replace(/^["']|["']$/g, "");
-    const card = Object.fromEntries(["line", "status", ...CARD_SLOTS].map(k => [k, key(k)]).filter(([, v]) => v));
+    const card = Object.fromEntries(["line", "status", "superseded-by", ...CARD_SLOTS].map(k => [k, key(k)]).filter(([, v]) => v));
     if (!Object.keys(card).length) continue;
     const slug = file.slice(0, -3);
     out[slug === "index" ? "/" : "/" + slug.split("/").map(encodeURIComponent).join("/")] =

@@ -15,6 +15,10 @@ const trail = computed(() => {
   for (let i = 0; p && p.parent && i < 20; i++) { p = bySlug.value[p.parent]; if (p) out.unshift(p) }
   return out
 })
+const TENSE = { past: 'History: how we got here', present: 'Now: how things are', future: 'Plan: not built yet' }
+const STALE_DAYS = 14
+const stale = p => p?.tense === 'present' && p.asOf && (Date.now() - Date.parse(p.asOf)) / 864e5 > STALE_DAYS
+const tenseTitle = p => p.tense ? TENSE[p.tense] + (stale(p) ? ` (as of ${p.asOf}, may be stale)` : '') : undefined
 const children = computed(() => childrenOf(current.value))
 const hasTree = computed(() => pages.value.some(p => p.parent))
 
@@ -151,7 +155,7 @@ onUnmounted(() => {
 <div v-if="hasTree && bySlug[current]" class="pt-bar" :class="{ pad }">
   <nav v-if="trail.length" class="pt-crumbs" aria-label="Breadcrumb">
     <template v-for="p in trail" :key="p.slug"><a :href="withBase(p.link)">{{ p.title }}</a><b v-if="waits(p.slug)" class="pt-dot" :style="tint(p.slug)" title="Threads with something new for you">{{ waits(p.slug) }}</b><i v-if="changed(p.slug)" class="pt-new" :title="newTitle(p.slug)"></i><span>›</span></template>
-    <strong>{{ bySlug[current].title }}</strong><b v-if="waits(current)" class="pt-dot" :style="tint(current)" title="Threads with something new for you">{{ waits(current) }}</b><i v-if="changed(current)" class="pt-new" :title="newTitle(current)"></i>
+    <strong>{{ bySlug[current].title }}</strong><em v-if="bySlug[current].tense" :class="['pt-tense', 'tense-' + bySlug[current].tense]" :title="tenseTitle(bySlug[current])">{{ bySlug[current].tense }}{{ stale(bySlug[current]) ? ' · may be stale' : '' }}</em><b v-if="waits(current)" class="pt-dot" :style="tint(current)" title="Threads with something new for you">{{ waits(current) }}</b><i v-if="changed(current)" class="pt-new" :title="newTitle(current)"></i>
   </nav>
   <span v-if="children.length" class="pt-children">
     Pages below: <a v-for="c in children" :key="c.slug" :href="withBase(c.link)">{{ c.title }}<b v-if="waits(c.slug)" class="pt-dot" :style="tint(c.slug)">{{ waits(c.slug) }}</b><i v-if="changed(c.slug)" class="pt-new" :title="newTitle(c.slug)"></i></a>
@@ -164,7 +168,7 @@ onUnmounted(() => {
       <button v-if="canExport" tabindex="-1" :class="{ on: selecting }" title="Select pages to export (v)" @click="selecting = !selecting">{{ selecting ? 'Done selecting' : 'Select' }}</button>
       <span v-if="selecting" class="pt-mode">-- SELECT --</span>
     </div>
-    <div v-for="(r, i) in rows" :key="r.slug" class="pt-row" :class="{ cur: r.slug === current, at: i === cursor }"
+    <div v-for="(r, i) in rows" :key="r.slug" class="pt-row" :class="[{ cur: r.slug === current, at: i === cursor }, r.tense && 'tense-' + r.tense]" :title="tenseTitle(r)"
       :style="{ paddingLeft: 10 + r.depth * 18 + 'px' }" role="treeitem" @click="rowClick($event, r.link)" @auxclick.middle.prevent="goNewTab(r.link)">
       <button v-if="r.kids" class="pt-fold" tabindex="-1" @click.stop="fold(r, !collapsed.has(r.slug))">{{ collapsed.has(r.slug) ? '▸' : '▾' }}</button>
       <span v-else class="pt-fold"></span><input v-if="selecting" type="checkbox" class="pt-check" tabindex="-1" :checked="picked.has(r.slug)" title="Select this page for export" @click.stop="pick(r)">{{ r.title }}<button v-if="selecting && r.kids" class="pt-kids" tabindex="-1" title="Select or clear this page and all pages below it" @click.stop="pick(r, true)">+ below</button><b v-if="waits(r.slug)" class="pt-dot" :style="tint(r.slug)" title="Threads with something new for you">{{ waits(r.slug) }}</b><i v-if="changed(r.slug)" class="pt-new" :title="newTitle(r.slug)"></i><b v-if="opens(r.slug)" class="pt-ring" title="Open threads waiting on the agent">{{ opens(r.slug) }}</b><b v-if="collapsed.has(r.slug) && hidden(r.slug)" class="pt-dot" :style="hiddenTint(r.slug)" title="Something new on pages folded below">↓{{ hidden(r.slug) }}</b>
@@ -191,6 +195,11 @@ onUnmounted(() => {
 .pt-open { margin-left: auto; padding: 2px 10px; border: 1px solid var(--vp-c-divider); border-radius: 8px; font-size: 12px; }
 .pt-pop { position: absolute; top: 100%; right: 0; z-index: 40; min-width: 260px; max-height: 60vh; overflow: auto; padding: 6px 0; background: var(--vp-c-bg-elv); border: 1px solid var(--vp-c-divider); border-radius: 10px; box-shadow: 0 8px 30px #0008; outline: none; }
 .pt-row { display: flex; gap: 4px; align-items: center; padding: 4px 12px; cursor: pointer; }
+.pt-row.tense-past { border-left: 3px solid #868e96; opacity: .8 }
+.pt-row.tense-present { border-left: 3px solid #51cf66 }
+.pt-row.tense-future { border-left: 3px solid #74c0fc }
+.pt-tense { font-style: normal; font-size: 11px; text-transform: uppercase; margin-left: 8px; padding: 0 6px; border-radius: 4px; background: var(--vp-c-default-soft) }
+.pt-tense.tense-present { background: #51cf6633 } .pt-tense.tense-future { background: #74c0fc33 } .pt-tense.tense-past { background: #adb5bd44 }
 .pt-row.cur { font-weight: 700; color: var(--vp-c-brand-1); }
 .pt-row.at { background: var(--vp-c-default-soft); }
 .pt-new { display: inline-block; width: 8px; height: 8px; margin-left: 6px; border-radius: 50%; background: #4dabf7; vertical-align: middle; }

@@ -416,3 +416,7 @@ card-owner: ...
 ```
 
 `<PageCard />` shows the card (put it at the top of the page); `<PageCard board />` lists every page with a `card-line`, grouped by status. Each slot is clipped to 120 characters (`budget="N"` changes it; the full text is in the tooltip), so cards are equally quick to read. The card is level 1, the line level 0, the page itself level 2.
+
+### Past, present, future
+
+`tense: past | present | future` in front matter (inherited from the parent page) separates history (experiment narratives), the current state, and plans: the page tree gets a grey, green or blue edge and the page a chip. A "present" page with `as-of: YYYY-MM-DD` older than 14 days is flagged "may be stale". `card-status: superseded` counts as past; `card-superseded-by: /page` adds a banner linking to the page that replaced it.

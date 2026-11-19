@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.99.0 - 2026-11-19
+
+- Past / present / future: `tense: past|present|future` in front matter (a page inherits its nearest ancestor's) colours the page tree (grey history, green now, blue plan) and shows a chip next to the breadcrumb. `as-of: YYYY-MM-DD` on a "present" page marks it "may be stale" after 14 days. `card-status: superseded` implies past, and `card-superseded-by: /page` adds a "Superseded by" banner on the card.
+
 ## 0.98.0 - 2026-11-19
 
 - Page cards: a page's front matter can carry `card-line` (one line), `card-status` (idea / planned / building / shipped) and the slots `card-what`, `card-state`, `card-evidence`, `card-next`, `card-owner`. `<PageCard />` renders the card (every slot clipped to the same 120-character budget), `<PageCard board />` lists every page's one-liner by status. Three levels: line, card, page.
