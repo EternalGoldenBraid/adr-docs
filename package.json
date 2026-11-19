@@ -1,6 +1,6 @@
 {
   "name": "adr-docs",
-  "version": "0.103.1",
+  "version": "0.104.0",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -12,6 +12,11 @@
   "exports": {
     ".": "./src/preview.mjs",
     "./copilot": "./src/copilot.mjs",
+    "./task-lists": "./src/task-lists.mjs",
+    "./editable-tables": "./src/editable-tables.mjs",
+    "./build-info": "./src/build-info.mjs",
+    "./page-tree": "./src/page-tree.mjs",
+    "./theme": "./src/theme/index.mjs",
     "./vite-plugin": "./scripts/preview_comments/vite-plugin.mjs",
     "./comment-bridge": "./scripts/preview_comments/server.mjs"
   },
