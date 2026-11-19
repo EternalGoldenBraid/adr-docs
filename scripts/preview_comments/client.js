@@ -75,6 +75,7 @@
       .reply-form{position:sticky;bottom:0;margin:0!important;padding:10px 20px 14px;background:#1b1d22;border-top:1px solid #3a404a}
       textarea{field-sizing:content}.reply-form textarea{min-height:56px;max-height:240px}.reply-form .actions{margin-top:8px}
       .thread-messages{padding-bottom:6px}
+      .note.whisper.mine,.note.whisper.copilot{border:1px dashed #b197fc;background:#2a2538}
       .note{margin:8px 0;padding:8px 12px;background:#252a32;border-radius:10px}.note.copilot{background:#1e2a3a;margin-right:36px}.note.mine{margin-left:36px}
       .note .tools{opacity:0;transition:opacity .1s}.note:hover .tools,.note:focus-within .tools{opacity:1}
       .note p{margin:6px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}.note blockquote{margin:6px 0 0;padding:0 0 0 10px;border-left:3px solid #4a5260;color:#b7c1ce}.note .table-wrap{overflow-x:auto;margin:6px 0 0}.note table{border-collapse:collapse;font-size:12px}.note th,.note td{border:1px solid #3a404a;padding:3px 8px;text-align:left;white-space:nowrap}.note th{background:#1b1f27}.note .speak{background:none;border:0;padding:0 2px;cursor:pointer;opacity:.5;font-size:12px}.note .speak:hover{opacity:1}.reader{display:flex;align-items:center;gap:6px;max-width:390px;margin:8px 0;padding:6px 10px;border:1px solid #74c0fc;border-radius:8px;background:#1b1d22}.reader[hidden]{display:none}.reader button{background:#2a2f38;border:1px solid #3a404a;border-radius:6px;color:inherit;padding:2px 8px;cursor:pointer}.reader button:focus-visible{outline:2px solid #74c0fc}.reader .reader-pos{margin-left:auto;font-size:12px;opacity:.8}.reply-target{display:flex;gap:8px;align-items:baseline;margin:0 0 6px;padding:4px 8px;border-left:3px solid #74c0fc;background:#23272e;font-size:12px}.reply-target[hidden]{display:none}.reply-target span{flex:1;overflow-wrap:anywhere}.reply-target button,.note .quote-ref{background:none;border:0;color:inherit;cursor:pointer;padding:0}.note .quote-ref{display:block;text-align:left;margin-top:6px;padding:2px 8px;border-left:3px solid #74c0fc;opacity:.8;font-size:12px;overflow-wrap:anywhere}.note .quote-ref:hover{opacity:1}.note a{color:#74c0fc}.note p img{display:block;max-width:100%;border-radius:6px;margin:6px 0}.note code{background:#2a2f38;padding:0 4px;border-radius:3px;font:12px ui-monospace,monospace}
@@ -133,7 +134,7 @@
         <details class="quote-box"><summary class="quote-summary">Selected content</summary><div class="quote thread-quote"></div></details>
         <div class="thread-links"></div>
         <div class="thread-messages"></div>
-        <form class="reply-form"><div class="reply-target" hidden><span></span><button type="button" title="Drop (Esc in the field, or click)">✕</button></div><div class="to to-reply" hidden></div><textarea id="thread-reply" aria-label="Your reply" placeholder="Reply (i to focus · Ctrl+Enter sends · Ctrl+Shift+Enter queues until the agent is idle · Esc/jk normal mode, again leaves)" required maxlength="4000"></textarea>
+        <form class="reply-form"><div class="reply-target" hidden><span></span><button type="button" title="Drop (Esc in the field, or click)">✕</button></div><div class="to to-reply" hidden></div><textarea id="thread-reply" aria-label="Your reply" placeholder="Reply (i to focus · /w name text whispers · Ctrl+Enter sends · Ctrl+Shift+Enter queues until the agent is idle · Esc/jk normal mode, again leaves)" required maxlength="4000"></textarea>
         <div class="actions"><button class="thread-region" type="button" title="Attach a screenshot of a region (s)">Region</button>
         <button class="thread-branch" type="button" title="Start a linked child thread from the selected text or focused message (n)">↳ New thread</button>
         <button class="primary reply-send" type="submit">Reply</button></div></form>
@@ -1291,7 +1292,8 @@
       who.textContent = `${look.icon} ${author}`;
       who.style.color = look.color;
     } else who.textContent = author;
-    label.append(who, `${opts.to?.length ? ` → ${opts.to.join(", ")}` : ""}${opts.note ? " · private note" : ""} · ${new Date(at).toLocaleString()}${opts.edited ? " · edited" : ""}`);
+    if (opts.whisper) note.classList.add("whisper");
+    label.append(who, `${opts.whisper ? " 🤫 whisper" : ""}${opts.to?.length ? ` → ${opts.to.join(", ")}` : ""}${opts.note ? " · private note" : ""} · ${new Date(at).toLocaleString()}${opts.edited ? " · edited" : ""}`);
     const body = blockMarkdown(text);
     const speak = document.createElement("button");
     speak.type = "button"; speak.className = "speak"; speak.textContent = "🔊"; speak.title = "Read aloud (:read)";
@@ -1416,7 +1418,7 @@
       const target = reply.inReplyTo;
       const targetAuthor = target && (target.id === comment.id ? comment : comment.replies.find(r => r.id === target.id));
       nodes.push(renderNote(mine ? "You" : sender, target ? reply.comment.replace(/^> [^\n]*\n\n/, "") : reply.comment, reply.at, {
-        note: reply.note, edited: reply.edited, mid: reply.id, from: reply.from, to: mine ? reply.to : undefined,
+        note: reply.note, edited: reply.edited, mid: reply.id, from: reply.from, to: mine ? reply.to : undefined, whisper: reply.whisper,
         ref: target && { id: target.id, quote: (target.quote || "").slice(0, 140), author: targetAuthor?.author === "copilot" ? targetAuthor.from || "Copilot" : "You" },
         onEdit: mine ? text => run({ editReply: { id: reply.id, text } }) : undefined,
         onDelete: () => run({ removeReply: reply.id }),
@@ -1834,8 +1836,16 @@
     const target = replyTarget;
     const queued = queueRequested;
     queueRequested = false;
-    updateThread({ id: draft.id, reply: replyInput.value, ...(queued ? { queued: true } : {}), ...(target ? { inReplyTo: { id: target.id, quote: target.quote } } : {}), ...toValue(replyTo, !find(".to-reply").hidden) });
-    rememberTo(replyTo);
+    // "/w name[,name] text" whispers: only those agents get it.
+    let text = replyInput.value, whisper;
+    const w = /^\/w[ \t]+([\w.,-]+)[ \t]+([\s\S]+)$/.exec(text);
+    if (w) {
+      const names = w[1].split(",").filter(Boolean).map(recipientFor);
+      if (names.some(name => !name)) { message(`/w: unknown name in "${w[1]}". Use team names, e.g. /w sim-agent text`, true); return; }
+      whisper = new Set(names); text = w[2];
+    }
+    updateThread({ id: draft.id, reply: text, ...(whisper ? { whisper: true, to: [...whisper] } : {}), ...(queued ? { queued: true } : {}), ...(target ? { inReplyTo: { id: target.id, quote: target.quote } } : {}), ...(whisper ? {} : toValue(replyTo, !find(".to-reply").hidden)) });
+    if (!whisper) rememberTo(replyTo);
   });
   find(".thread-resolve").addEventListener("click", () => {
     const comment = historyComments.find(c => c.id === selectedThread);
