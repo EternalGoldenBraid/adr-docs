@@ -258,6 +258,14 @@ export async function startCommentBridge({
       return { ...row, status: !row.session ? "human" : seen ? seen.status : "unknown", lastSeen: seen?.last_heartbeat ?? null, kind: seen?.kind ?? (row.session ? "agent" : "human"), statusLine: statusLines.get(row.session) ?? null, activity: activity.get(seen?.cwd)?.state ?? null };
     });
   }
+  // Sessions on enrolled peer machines are addressed as remote:["machine","session"]; a bare session id never reaches them.
+  function meshAddress(row) {
+    try {
+      const peers = JSON.parse(readFileSync(join(meshDataDirectory(), "machines.json"), "utf8")).peers ?? {};
+      if (row.machine && Object.hasOwn(peers, row.machine)) return `remote:${JSON.stringify([row.machine, row.session])}`;
+    } catch { /* no machines.json: local only */ }
+    return row.session;
+  }
   // Quiet mesh note to each addressed agent other than the owner; they pull the thread when they choose.
   // Without a hosting agent session (ownerViaMesh), the owner is also told this way, including of unaddressed comments.
   function announce(comment, text, queued = false) {
@@ -278,7 +286,7 @@ export async function startCommentBridge({
           setTimeout(() => { const live = comments.get(comment.id); if (live && !live.resolved && !readBy(live, target.slug)) attempt(tries + 1); }, 5_000).unref();
           return;
         }
-        try { await mesh.send(target.session, note); } catch (error) {
+        try { await mesh.send(meshAddress(target), note); } catch (error) {
           if (!tries) onError?.(error);
           if (tries < 360) setTimeout(() => { const live = comments.get(comment.id); if (live && !live.resolved && !readBy(live, target.slug)) attempt(tries + 1); }, 60_000).unref();
         }
