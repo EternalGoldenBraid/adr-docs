@@ -1036,6 +1036,11 @@
   let settings = { owner: "owner", team: [], default: "owner", last: [] };
   const loadSettings = () => api("settings").then(value => { settings = value; }).catch(() => {});
   const recipients = () => [...new Set([settings.owner, ...settings.team])];
+  // A message's `from` is a display name ("ADR agent"); recipients are slugs ("adr-agent"). Unknown names are dropped.
+  const recipientFor = name => {
+    const slug = String(name).toLowerCase().replace(/[^\w.-]+/g, "-");
+    return recipients().find(r => r.toLowerCase() === slug);
+  };
   const defaultTo = () => settings.default === "last" && settings.last.length ? settings.last : [settings.owner];
   // Mesh status next to each recipient, so a busy agent is visible before you send.
   const STATUS_ICONS = { working: "🔨", waiting: "⏳", asking: "❓", idle: "💤", active: "👀", offline: "🌙" };
@@ -1794,7 +1799,7 @@
     if (!replyTarget) setReplyTarget({ id: note.dataset.mid, author, quote });
     // Address the reply like the quoted message. Agent replies don't record which agent wrote them, so use whoever the message before it was sent to.
     const thread = currentThread(), items = thread ? [thread, ...thread.replies] : [], at = items.findIndex(m => m.id === note.dataset.mid);
-    let to = items[at]?.from ? [items[at].from] : undefined;
+    let to = recipientFor(items[at]?.from ?? "") ? [recipientFor(items[at].from)] : undefined;
     for (let i = author === "You" ? at : at - 1; i >= 0 && !to; i--) if (items[i].author !== "copilot" && items[i].to?.length) to = items[i].to;
     if (to) { replyTo = new Set(to); chipRow(find(".to-reply"), replyTo); }
     replyInput.focus();
@@ -2056,7 +2061,7 @@
     // The child thread goes to whoever wrote the quoted message, and links back to this thread.
     const items = [parent, ...parent.replies];
     const at = items.findIndex(m => m.id === note?.dataset.mid);
-    let to = items[at]?.from ? [items[at].from] : undefined;
+    let to = recipientFor(items[at]?.from ?? "") ? [recipientFor(items[at].from)] : undefined;
     for (let i = at; i >= 0 && !to; i--) if (items[i].author !== "copilot" && items[i].to?.length) to = items[i].to;
     await open({ kind: parent.kind, url: parent.url, section: parent.section, anchor: parent.anchor, quote: quote.slice(0, 1000) }, undefined);
     branchOf = parent.id;
