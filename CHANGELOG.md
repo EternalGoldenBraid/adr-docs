@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.116.0 - 2026-11-19
+
+- The team page now shows a task graph (`TaskGraph.vue`, inside `<TeamGraph />`): one lane per agent from `queues.json`, arrows from each item's `after` ids (same page, or `page#id`) to the item that waits, pink for blocked, blue for running. Independent tests are grouped on the left. A dependency missing from the queues counts as done.
+- Agents whose queue is `[]` get an orange "queue empty" chip in the live table and a "queue empty" lane, so an agent with no allocated tests is visible instead of absent.
+
 ## 0.115.0 - 2026-11-19
 
 - Effort votes: `votes.json` at the site root holds every vote round. `adr-vote [--root DIR] PAGE ITEM AGENT N` casts a vote (Fibonacci 1 2 3 5 8 13 21); `--reveal PAGE ITEM` closes the round and stores mean, variance and whether it converged (max and min within one step), and sets the weight (median, the higher value on an even count) when it did; `--note PAGE ITEM AGENT-or-owner "text"` adds a min/max justification or the owner's reply. `POST /vote` and `GET /votes` do the same for scripts and agents. Votes stay hidden (only who voted) until the round is revealed.
