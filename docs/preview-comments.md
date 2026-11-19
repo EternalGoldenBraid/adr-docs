@@ -444,3 +444,5 @@ A page with `card-status: shipped` (or `status: done`) must have non-empty `## V
 ### Tests on the card
 
 One `card-test:` line per test: `card-test: Stage 1 | done | 2026-11-19` (status `planned`, `running`, `done` or `obsolete`; the date of the last update is optional). The card shows "1/3 done · 1 running", each test with ✓ ▶ ○ ✗, and the age of the newest update, in amber once it is older than `stale-days`.
+
+The card also reads a nested `card:` block (`gist`, `state` = badge, `evidence`, `next`, `owner`, `tests: [{name, state, date}]`), and is placed under the page title automatically.

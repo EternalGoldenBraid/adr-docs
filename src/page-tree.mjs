@@ -150,6 +150,28 @@ function workstreamSummary(documentRoot) {
 //   card-line: one line   card-status: idea | planned | building | shipped
 //   card-what / card-state / card-evidence / card-next / card-owner: one short line each
 export const CARD_SLOTS = ["what", "state", "evidence", "next", "owner"];
+// The nested form:  card:\n  gist: "…"\n  state: planned\n  evidence/next/owner/what: "…"\n  tests:\n    - {name: "…", state: done, date: 2026-11-19}
+// `gist` is the one-liner and `state` the badge; tests normalise to {name, status, at}.
+function nestedCard(front) {
+  const head = /^card:[ \t]*$/m.exec(front);
+  if (!head) return {};
+  const block = front.slice(head.index + head[0].length).split("\n").slice(1);
+  const out = {}, tests = [];
+  const unquote = v => v.trim().replace(/^["']|["']$/g, "");
+  for (const line of block) {
+    if (line && !/^\s/.test(line)) break;
+    const item = /^\s+-\s*\{(.*)\}\s*$/.exec(line);
+    if (item) {
+      const f = Object.fromEntries([...item[1].matchAll(/(\w+):\s*("[^"]*"|'[^']*'|[^,}]*)/g)].map(m => [m[1], unquote(m[2])]));
+      if (f.name) tests.push({ name: f.name, status: (f.state ?? f.status ?? "planned").toLowerCase(), ...(/^\d{4}-\d{2}-\d{2}$/.test(f.date ?? f.at ?? "") ? { at: f.date ?? f.at } : {}) });
+      continue;
+    }
+    const kv = /^\s+(gist|state|what|evidence|next|owner|line|status):\s*(.+)$/.exec(line);
+    if (kv) out[{ gist: "line", state: "status" }[kv[1]] ?? kv[1]] = unquote(kv[2]);
+  }
+  if (tests.length) out.tests = tests;
+  return out;
+}
 export function pageCards(documentRoot, options) {
   const out = {};
   for (const file of markdownFiles(documentRoot)) {
@@ -164,6 +186,7 @@ export function pageCards(documentRoot, options) {
       return { name, status: status.toLowerCase(), ...(/^\d{4}-\d{2}-\d{2}$/.test(at ?? "") ? { at } : {}) };
     });
     if (tests.length) card.tests = tests;
+    Object.assign(card, Object.fromEntries(Object.entries(nestedCard(front)).filter(([k]) => !(k in card))));
     const verdict = needsVerdict(text);
     if (!Object.keys(card).length && !verdict) continue;
     const slug = file.slice(0, -3);

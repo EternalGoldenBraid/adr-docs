@@ -10,6 +10,7 @@ import WorkstreamBoard from "../components/WorkstreamBoard.vue";
 import WorkstreamNow from "../components/WorkstreamNow.vue";
 import PageCard from "../components/PageCard.vue";
 import PageTree from "../components/PageTree.vue";
+import AutoPageCard from "../components/AutoPageCard.vue";
 import { installSidebarToggle } from "./sidebar-toggle.mjs";
 import { enhanceTables } from "./table-tools.mjs";
 import { installPublishing } from "./publish.mjs";
@@ -21,7 +22,7 @@ import "./layout.css";
 const tree = pad => () => h(PageTree, { pad });
 export default {
   extends: DefaultTheme,
-  Layout: () => h(DefaultTheme.Layout, null, { "doc-before": tree(false), "page-top": tree(true), "home-hero-before": tree(true), "layout-top": () => h(ClassificationBanner), "layout-bottom": () => h(WorkstreamLinks) }),
+  Layout: () => h(DefaultTheme.Layout, null, { "doc-before": () => [tree(false)(), h(AutoPageCard)], "page-top": tree(true), "home-hero-before": tree(true), "layout-top": () => h(ClassificationBanner), "layout-bottom": () => h(WorkstreamLinks) }),
   enhanceApp({ app, router }) {
     if (typeof window !== "undefined") {
       const run = () => setTimeout(() => enhanceTables(document, location.pathname), 150);

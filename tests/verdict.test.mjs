@@ -23,3 +23,14 @@ test("cards list each card-test with its status and date", async () => {
   writeFileSync(join(dir, "a.md"), "---\ncard-line: x\ncard-test: Stage 1 | done | 2026-11-19\ncard-test: Stage 2 | running\n---\n# A\n");
   assert.deepEqual(pageCards(dir)["/a"].tests, [{ name: "Stage 1", status: "done", at: "2026-11-19" }, { name: "Stage 2", status: "running" }]);
 });
+
+test("the nested card: block gives the line, badge and tests", async () => {
+  const { mkdtempSync, writeFileSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { pageCards } = await import("../src/page-tree.mjs");
+  const dir = mkdtempSync(join(tmpdir(), "cards-"));
+  writeFileSync(join(dir, "b.md"), "---\ncard:\n  gist: \"Why?\"\n  state: planned\n  owner: PC lead\n  tests:\n    - {name: \"Run 1\", state: running, date: 2026-11-19}\nstatus: running\n---\n# B\n");
+  const card = pageCards(dir)["/b"];
+  assert.deepEqual([card.line, card.status, card.owner, card.tests], ["Why?", "planned", "PC lead", [{ name: "Run 1", status: "running", at: "2026-11-19" }]]);
+});
