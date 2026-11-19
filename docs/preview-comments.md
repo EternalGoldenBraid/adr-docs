@@ -18,6 +18,8 @@ appear in **History**; document edits appear through the existing hot preview.
 
 ## Comment history and replies
 
+**Unsent text is kept.** What you type in the comment box (per page) and in each thread's reply box is saved in the browser as you type, so a refresh or a server restart does not lose it. The last 30 drafts are kept for 3 days; sending clears the draft.
+
 **History** lists this session's saved comments as compact rows, with tabs
 **This page**, **Page history** (every thread on this page, resolved ones included), **Chat**, **Open**, **All** and **Resolved**. Open a thread to see
 its selected content, page link, link chips and dated replies from you and
