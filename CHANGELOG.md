@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.94.0 - 2026-11-19
+
+- `:me NAME`: new comments and highlights carry your name; a named highlight (and its bubble) is painted in that person's own colour.
+- `:labels` exports all comments as JSON lines (text, quote, person, page version, last agent reply) for labelled examples; also `GET /labels`.
+
 ## 0.93.0 - 2026-11-19
 
 - `<RouteMap src="…/routes.json" />`: a pan and zoom top-down map with Routes, Recordings and Datasets layers; recordings link to their `url`. Data format in the docs; `examples/map.md` has a demo. Needs the data feed from the site manager and Sim.

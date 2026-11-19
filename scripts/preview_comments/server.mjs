@@ -425,6 +425,7 @@ export async function startCommentBridge({
       ...(input.highlight === true ? { highlight: true } : {}),
       ...(input.note === true && input.highlight !== true ? { note: true } : {}),
       color: COLORS.includes(input.color) ? input.color : "yellow",
+      ...(typeof input.person === "string" && /^[\w .-]{1,40}$/.test(input.person) ? { person: input.person } : {}),
       ...(images.length ? { images } : {}),
       ...(input.queued === true ? { queued: true } : {}),
       ...(regionField(input.region) ? { region: regionField(input.region) } : {}),
@@ -608,6 +609,16 @@ export async function startCommentBridge({
           save();
         }
         return reply(response, 200, { pages: Object.fromEntries(Object.entries(now).flatMap(([link, row]) => seen[link] === undefined ? [[link, "new"]] : seen[link] !== row.hash ? [[link, "changed"]] : [])) });
+      }
+      // Comments as labelled examples: the passage, what was said, by whom, on which version of the page, and the last agent answer (the fix).
+      if (request.method === "GET" && request.url === "/labels") {
+        const rows = [...comments.values()].filter(c => !c.removed && c.comment).map(c => ({
+          id: c.id, page: c.url ? new URL(c.url).pathname : "", quote: c.quote, text: c.comment, person: c.person ?? null,
+          version: c.sourceHash ?? null, at: c.at, resolved: Boolean(c.resolved),
+          fix: [...(c.replies ?? [])].reverse().find(r => r.author !== "user")?.reply ?? null,
+        }));
+        response.writeHead(200, { "content-type": "application/x-ndjson" });
+        return response.end(rows.map(row => JSON.stringify(row)).join("\n") + "\n");
       }
       // Pages that say which threads they came from (`from: <thread id, 8+ chars>` or a list) and who wrote them (`author:`).
       if (request.method === "GET" && request.url === "/pagelinks") {
