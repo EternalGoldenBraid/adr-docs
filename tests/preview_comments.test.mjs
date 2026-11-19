@@ -507,6 +507,24 @@ test("without a hosting agent, the store's owner is told over the mesh too, incl
   rmSync(directory, { recursive: true, force: true });
 });
 
+test("an agent's addressed thread and reply are announced to the others over the mesh, not to the sender", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "preview-comments-"));
+  const owner = randomUUID(), bob = randomUUID(), carol = randomUUID();
+  writeFileSync(join(directory, "page.md"), "# Page\n\nText.");
+  writeFileSync(join(directory, "team.md"), `| Who | Session |\n|---|---|\n| Owner | ${owner} |\n| Bob | ${bob} |\n| Carol | ${carol} |\n`);
+  const sent = [];
+  const bridge = await startCommentBridge({
+    sessionId: owner, documentRoot: directory, storageRoot: directory, previewOrigin: "http://127.0.0.1:8773",
+    onError: error => assert.fail(error.message), notify: async () => {}, mesh: { send: async session => { sent.push(session); } },
+  });
+  const id = bridge.add({ page: "/page", kind: "page", quote: "Page", comment: "hi", to: ["bob", "carol"], from: "carol" }).id;
+  assert.deepEqual(sent, [bob]);
+  bridge.update({ id: randomUUID(), commentId: id, from: "bob", reply: "carol?" });
+  assert.deepEqual(sent, [bob, carol]);
+  await bridge.close();
+  rmSync(directory, { recursive: true, force: true });
+});
+
 test("an update accepts a unique 8-character thread id prefix, and blocked needs a reason", async () => {
   const dir = mkdtempSync(join(tmpdir(), "adr-prefix-"));
   writeFileSync(join(dir, "page.md"), "# Page\n\nBody text.\n");
