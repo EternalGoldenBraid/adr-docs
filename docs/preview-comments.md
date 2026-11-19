@@ -92,7 +92,7 @@ The agent can show a status line (`set_doc_review_status`) and attach a before/a
 
 ## Command line
 
-`:` opens a command line at the bottom of the page (Tab completes command names): `:help`, `:history`, `:chat`, `:comment`, `:tree`, `:keys`, `:vim on|off`.
+`:` opens a command line at the bottom of the page (Tab completes command names): `:help`, `:history`, `:chat`, `:comment`, `:tree`, `:new`, `:keys`, `:vim on|off`.
 
 ## Resizing and key bindings
 
@@ -310,6 +310,11 @@ With a team configured, the **To:** recipients in a comment box form a grid; pre
 ## Viewed marks
 
 Like a pull request's "viewed" state: a blue dot in the page tree, the breadcrumb and the "Pages below" row marks pages that changed, or are new, since you last left them. It sits beside the comment marks (red dot: something new for you; ring: open thread waiting on the agent), so one glance covers both kinds of change. A page counts as viewed when you navigate away from it or close the tab; on a first visit all existing pages count as viewed. The state is a hash of each page's source, kept in `<site>/.adr-data/viewed.json` (`GET`/`POST /viewed` on the comment server), so it belongs to the site, not the browser.
+
+
+## What's new
+
+The status bar shows `N changed · n` when pages changed since you last left them. Press `n` (or `:new`) for the list, newest first: `j`/`k` move, `s` sorts by name, `l` or Enter shows the changed lines of the page (added in green, removed struck through, with context), `j`/`k` there jump between changes, `l` opens the page, `h` goes back, `m` marks the page seen, `M` marks all seen, Esc closes. The copy you last saw is kept in `<site>/.adr-data/snapshots/`; pages that were already marked seen before this existed show no diff until you next leave them. Preview only; the published site has no server to keep this.
 
 ## Replying to one message
 
