@@ -11,7 +11,7 @@ hero:
       link: graph
     - theme: alt
       text: GitHub
-      link: https://github.com/EternalGoldenBraid/agent-doc-review
+      link: https://github.com/EternalGoldenBraid/adr-docs
 features:
   - icon: 💬
     title: Comment on anything

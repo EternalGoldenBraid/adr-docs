@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.102.0 - 2026-11-19
+
+- Renamed the package and plugin to `adr-docs` (repo `EternalGoldenBraid/adr-docs`); the history was rewritten to drop a company theme that should never have been in this repo. State, config and mesh names (`~/.local/state/agent-doc-review`, `~/.config/agent-doc-review`, `agent-doc-review-site`) are unchanged so existing sites and key maps keep working.
+
 ## 0.101.0 - 2026-11-19
 
 - Removed the company (company) theme and the π/N theme picker from the package; branding stays local to the site that wants it. Earlier entries below still describe the removed feature.

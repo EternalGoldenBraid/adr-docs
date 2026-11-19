@@ -191,7 +191,7 @@ Use the extension authoring tools to scaffold a **session-scoped** extension.
 Its `extension.mjs` imports this package's adapter:
 
 ```js
-import { connectPreviewComments } from "/absolute/agent-doc-review/scripts/preview_comments/extension.mjs";
+import { connectPreviewComments } from "/absolute/adr-docs/scripts/preview_comments/extension.mjs";
 
 await connectPreviewComments({
   documentRoot: "/absolute/documentation/directory",
@@ -207,7 +207,7 @@ ephemeral local access token; do not commit it or share it.
 Add the plugin to the existing VitePress configuration:
 
 ```js
-import { previewComments } from "/absolute/agent-doc-review/scripts/preview_comments/vite-plugin.mjs";
+import { previewComments } from "/absolute/adr-docs/scripts/preview_comments/vite-plugin.mjs";
 
 // Inside defineConfig({ ... }):
 vite: {
