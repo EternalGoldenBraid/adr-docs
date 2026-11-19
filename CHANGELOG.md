@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.123.0 - 2026-11-19
+
+- The verdict is now structured: a front-matter `verdict:` block with `result` (supported | not-supported | inconclusive), `claim` and `confidence` (hypothesis | confirmed). Free text or a `## Verdict` heading no longer satisfies it, and a page that would be done without it is held in `review` with `blockedBy: [verdict]`.
+
 ## 0.122.0 - 2026-11-19
 
 - New page status `review` (between running and done), with its own tag colour. A finished page shows it automatically while threads on it are open (from `threads.json`) and returns to done when they are resolved; an explicit `status: review` / `card-status: review` is respected.

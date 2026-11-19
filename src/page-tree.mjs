@@ -4,7 +4,14 @@ import { readBoard } from "./workstreams.mjs";
 import { publicVotes, readVotes } from "./votes.mjs";
 
 const frontOf = text => text.match(/^---\n([\s\S]*?)\n---/)?.[1] ?? "";
-// A finished page (card-status shipped, or status done) must have a verdict and learnings: a non-empty section ("Verdict"; "Learnings", "What we learned" or "Lessons") or the front-matter field.
+// A finished page (card-status shipped, or status done) needs a structured verdict, a front-matter block with a result (supported | not-supported | inconclusive), a claim and a confidence (hypothesis | confirmed), plus learnings: a non-empty section ("Learnings", "What we learned" or "Lessons") or the front-matter field. Free text no longer counts as a verdict.
+const VERDICT_RESULTS = ["supported", "not-supported", "inconclusive"];
+export function structuredVerdict(front) {
+  const block = front.match(/^verdict:[ \t]*\n((?:[ \t]+\S.*\n?)+)/m)?.[1];
+  if (!block) return false;
+  const field = name => block.match(new RegExp(`^[ \\t]+${name}:[ \\t]*["']?([^"'\\n]+?)["']?[ \\t]*$`, "m"))?.[1];
+  return VERDICT_RESULTS.includes(field("result")) && Boolean(field("claim")) && ["hypothesis", "confirmed"].includes(field("confidence"));
+}
 export function needsVerdict(text) {
   const front = text.match(/^---\n([\s\S]*?)\n---/)?.[1] ?? "";
   const done = /^card-status:\s*["']?shipped["']?\s*$/m.test(front) || /^status:\s*["']?done["']?\s*$/mi.test(front);
@@ -15,7 +22,7 @@ export function needsVerdict(text) {
     const m = new RegExp(`^#{1,6}\\s*${name}\\b[^\\n]*\\n([\\s\\S]*?)(?=^#{1,6}\\s|(?![\\s\\S]))`, "mi").exec(body);
     return Boolean(m && m[1].replace(/<!--[\s\S]*?-->/g, "").trim());
   };
-  return !((fronted("verdict") || filled("verdict")) && (fronted("learnings?") || filled("(?:learnings?|what we learned|lessons)")));
+  return !(structuredVerdict(front) && (fronted("learnings?") || filled("(?:learnings?|what we learned|lessons)")));
 }
 const isUnpublished = text => /^publish:\s*false\s*$/m.test(frontOf(text));
 
@@ -240,6 +247,8 @@ export function pageCards(documentRoot, options) {
     // Open threads on the page hold a finished page in review; the page is done when they are resolved (threads.json is written by the preview server).
     const open = openThreads(documentRoot)[pageKey(file)];
     if (open && ["done", "shipped"].includes(card.status)) { card.reviewFrom = card.status; card.status = "review"; card.openThreads = open; }
+    // Done is blocked until the structured verdict is written; the page waits in review and says what blocks it.
+    if (["done", "shipped"].includes(card.status) && !structuredVerdict(front)) { card.reviewFrom ??= card.status; card.status = "review"; card.blockedBy = ["verdict"]; }
     if (/^(?:card-)?status:\s*["']?review["']?\s*$/m.test(front)) card.status = "review";
     const missing = ["line", "owner", "status"].filter(k => !card[k]);
     if (Object.keys(card).length && missing.length) card.missing = missing.map(k => ({ line: "gist", status: "state" }[k] ?? k));
