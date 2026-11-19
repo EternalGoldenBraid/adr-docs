@@ -1,8 +1,9 @@
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, extname, isAbsolute, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createServer } from "vitepress";
+import { ALLOWED, encodeResponse, loadMesh } from "./mesh-rpc.mjs";
 import { startCommentBridge } from "../scripts/preview_comments/server.mjs";
 
 const packageRoot = fileURLToPath(new URL("../", import.meta.url));
@@ -45,6 +46,45 @@ export async function startDocumentPreview({
     }
     return node;
   };
+  const meshRouter = async () => {
+    if (!router) {
+      const { store, router: routerModule, network, databasePath } = await loadMesh();
+      router = routerModule.createRouter(store.openStore(databasePath), network.loadMachines());
+    }
+    return router;
+  };
+  // Agents on another machine reach this preview's bridge through the mesh: "ADR-REQ {id, store, path, method, body}" in, "ADR-RES" chunks back.
+  let serveTimer;
+  const serveBridgeRequests = async () => {
+    const self = await meshNode();
+    const handle = async message => {
+      let request;
+      try { request = JSON.parse(message.content.slice("ADR-REQ ".length)); } catch { return; }
+      let payload;
+      if (typeof request.path !== "string" || !ALLOWED.test(request.path)) payload = { status: 400, body: { error: "Path not allowed over the mesh." } };
+      else if (request.store && ![name, sessionId, basename(documentRoot)].includes(request.store)) payload = { status: 404, body: { error: `This preview serves ${name ?? sessionId}, not ${request.store}.` } };
+      else {
+        try {
+          const { port: bridgePort, token } = JSON.parse(readFileSync(connectionFile, "utf8"));
+          const response = await fetch(`http://127.0.0.1:${bridgePort}${request.path}`, { method: request.method ?? "GET", body: request.body, headers: { authorization: `Bearer ${token}`, "content-type": "application/json" } });
+          payload = { status: response.status, body: await response.json() };
+        } catch (error) { payload = { status: 502, body: { error: error.message } }; }
+      }
+      const routed = await meshRouter().catch(() => undefined);
+      for (const content of encodeResponse(request.id, payload)) {
+        const result = routed ? await routed.replyToMessage(self.sessionId, { message_id: message.message_id, content }) : self.reply({ message_id: message.message_id, content });
+        if (result?.error) { onError(new Error(`Mesh bridge reply failed: ${result.error}`)); break; }
+      }
+    };
+    serveTimer = setInterval(() => {
+      for (const message of self.inbox().messages ?? []) {
+        if (!message.content.startsWith("ADR-REQ ")) continue;
+        self.read(message.message_id);
+        handle(message).catch(onError);
+      }
+    }, 2000);
+    serveTimer.unref();
+  };
   // Faces (shared rooms) live in the mesh database; this node is the human's seat in them.
   const mesh = {
     // A session on a peer machine is sent through the mesh router (ssh), by its bare session id and machine name.
@@ -52,12 +92,7 @@ export async function startDocumentPreview({
       const sender = await meshNode();
       let result;
       if (machine) {
-        if (!router) {
-          const directory = join(homedir(), ".copilot", "extensions", "agent-mesh");
-          const [{ openStore }, { createRouter }, { loadMachines }] = await Promise.all(["store", "router", "network"].map(file => import(pathToFileURL(join(directory, `${file}.mjs`)).href)));
-          router = createRouter(openStore(process.env.ADR_MESH_DB ?? join(directory, "agent-mesh.db")), loadMachines());
-        }
-        result = await router.sendMessage(sender.sessionId, { machine, recipient_session_id: session, content, priority: "high" });
+        result = await (await meshRouter()).sendMessage(sender.sessionId, { machine, recipient_session_id: session, content, priority: "high" });
       } else result = sender.send({ recipient_session_id: session, content, priority: "high" });
       if (result?.error) throw new Error(result.error);
     },
@@ -71,6 +106,7 @@ export async function startDocumentPreview({
       ...(server ? [server.close()] : []),
       ...(bridge ? [bridge.close()] : []),
     ]);
+    clearInterval(serveTimer);
     try { node?.close(); } catch { /* ignore */ }
     rmSync(workspace, { recursive: true });
     const errors = results.filter(result => result.status === "rejected").map(result => result.reason);
@@ -100,6 +136,7 @@ export async function startDocumentPreview({
     listenPort = address.port;
     const origin = `http://127.0.0.1:${address.port}`;
     bridge = await startCommentBridge({ sessionId, documentRoot, storageRoot, dataDirectory: inSite ? join(documentRoot, ".adr-data") : undefined, previewOrigin: origin, notify, onError, mesh, ownerViaMesh, name, onRestart });
+    if (name && process.env.ADR_MESH_SERVE !== "off") serveBridgeRequests().catch(() => { /* no mesh on this machine */ });
     const stem = basename(document, ".md");
     const url = origin + (stem === "index" ? "/" : "/" + encodeURIComponent(stem));
     return { url, origin, document, documentRoot, workspace, bridge, close };
