@@ -5,5 +5,6 @@ zero=0000000000000000000000000000000000000000
 while read -r _ local_sha _ remote_sha; do
   [ "$local_sha" = "$zero" ] && continue
   range=$([ "$remote_sha" = "$zero" ] && echo "$local_sha" || echo "$remote_sha..$local_sha")
+  [ "$remote_sha" != "$zero" ] && ! git cat-file -e "$remote_sha" 2>/dev/null && range=$local_sha
   "$root/tools/leak-guard.sh" range "$range" || exit 1
 done
