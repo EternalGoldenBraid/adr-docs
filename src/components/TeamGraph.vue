@@ -1,5 +1,6 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
+import TaskGraph from './TaskGraph.vue'
 
 // Live team graph with three views of the roster (Topic, Machine, Command), nodes coloured by mesh status.
 // Needs the preview's comment bridge; the built site shows a note instead.
@@ -11,12 +12,14 @@ let timer = null
 const rows = ref([])
 let members = []
 let queues = {}
+const queueData = ref({})
 // Current task from the agent's queue (queues.json: running first, else lowest rank); the status ping is only the fallback.
 const queued = m => {
   const items = queues[m.slug] ?? []
   const item = items.find(t => t.state === 'running') ?? [...items].sort((a, b) => a.rank - b.rank)[0]
   return item ? `${item.test} (${item.state}${item.weight ? ', weight ' + item.weight : ''})` : ''
 }
+const emptyQueue = m => Array.isArray(queues[m.slug]) && !queues[m.slug].length
 let edges = []
 
 // Indicators shared with the desktop mesh panel: blue working, pink waiting, yellow asking, green idle, hollow ring = active (state unknown).
@@ -31,7 +34,7 @@ const state = m => {
 const ago = iso => { const m = Math.round((Date.now() - Date.parse(iso)) / 60000); return m < 1 ? 'now' : m < 60 ? m + 'm' : Math.round(m / 60) + 'h' }
 const rowOf = m => {
   const l = m.statusLine, st = state(m), q = queued(m)
-  return { key: id(m), name: m.name, st, status: st === 'offline' ? m.status : st, doing: q ? q : l ? `${l.ticket ? l.ticket + ' · ' : ''}${l.state} · ${l.doing}${l.next ? ' → ' + l.next : ''} (${ago(l.at)})` : '—', machine: m.machine || '—' }
+  return { key: id(m), name: m.name, st, status: st === 'offline' ? m.status : st, doing: q ? q : l ? `${l.ticket ? l.ticket + ' · ' : ''}${l.state} · ${l.doing}${l.next ? ' → ' + l.next : ''} (${ago(l.at)})` : '—', machine: m.machine || '—', noQueue: emptyQueue(m) }
 }
 // The live table replaces the hand-written roster table on the page; the markdown source stays for the roster parser but is hidden.
 const hideSource = on => {
@@ -141,6 +144,7 @@ async function load() {
     const data = await response.json()
     members = data.members
     queues = data.queues ?? {}
+    queueData.value = queues
     edges = data.edges ?? []
     machines.value = (data.machines ?? []).map(machineOf)
     rows.value = members.filter(m => m.session).map(rowOf)
@@ -200,10 +204,11 @@ onUnmounted(() => { hideSource(false); clearInterval(timer) })
         <tr v-for="r in rows" :key="r.key">
           <td>{{ r.name }}</td>
           <td class="st"><span class="d" :class="[r.st === 'active' || r.st === 'offline' ? 'ring' : r.st, { off: r.st === 'offline' }]"></span>{{ r.status }}</td>
-          <td>{{ r.doing }}</td><td>{{ r.machine }}</td>
+          <td>{{ r.doing }} <span v-if="r.noQueue" class="noq" title="No tests with this agent as doer on any card">queue empty</span></td><td>{{ r.machine }}</td>
         </tr>
       </tbody>
     </table>
+    <TaskGraph :queues="queueData" />
     <div v-if="machines.length" class="team-machines">
       <p class="mach-title">Machines: load average last hour (line), per-core load now (bars: green <50 %, orange 50–80 %, red >80 %), GPUs</p>
       <div v-for="m in machines" :key="m.name" class="mach-block">
@@ -273,6 +278,7 @@ onUnmounted(() => { hideSource(false); clearInterval(timer) })
 .d.working { background: #6fb7e8 } .d.waiting { background: #f38ba8 } .d.asking { background: #ffd500 } .d.idle { background: #9ccc65 } .d.ring { background: none; border: 2px solid #9399b2; box-sizing: border-box } .d.ring.off { opacity: .4 }
 .team-live { width: 100%; border-collapse: collapse; font-size: 14px; margin: 14px 0 }
 .team-live th, .team-live td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--vp-c-divider) }
+.noq { font-size: 11px; padding: 1px 7px; border-radius: 9px; border: 1px solid #ff8c1a; color: #ff8c1a; white-space: nowrap }
 .team-live td.st { white-space: nowrap } .team-live .d { margin: 0 6px 0 0 }
 .box { fill: rgba(42,47,56,.45); stroke: #59616d } .box-label { fill: #aab; font: bold 13px sans-serif }
 .tie { stroke: #59616d; stroke-width: 1.5 } .msg { stroke: #adb5bd; stroke-width: 1; opacity: .25 }

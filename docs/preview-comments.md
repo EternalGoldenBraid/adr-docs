@@ -453,6 +453,6 @@ Mandatory card fields: gist (`card-line`), owner and state. Missing ones show as
 
 Page owner: `owner: pc-lead` in a page's front matter fills the card's owner and makes that agent the default recipient of new threads on the page (a name that is not a known recipient is ignored). `participants:` lists extra recipients you can toggle on.
 
-Team queues: put `queues.json` at the site root (`{"demo-agent": [{"rank": 2, "test": "…", "page": "…", "state": "planned", "run": ""}]}`). The team graph and table show each agent's running item, else the lowest rank; with an empty queue they fall back to the status ping.
+Team queues: put `queues.json` at the site root (`{"demo-agent": [{"rank": 2, "test": "…", "page": "…", "state": "planned", "run": ""}]}`). The team graph and table show each agent's running item, else the lowest rank; with an empty queue they fall back to the status ping. Items may carry `id` and `after` (ids of tests that must finish first, `id` or `page#id`); the team page then draws a task graph with one lane per agent and arrows for `after`. An agent listed with `[]` shows a "queue empty" chip.
 
 Effort votes: `adr-vote` writes `votes.json` (see the changelog, 0.115.0) and `<VoteHistory />` renders it with plots. Example: `adr-vote --root . /experiments/x A demo-agent 5`, then `adr-vote --root . --reveal /experiments/x A`.
