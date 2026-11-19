@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.134.0 - 2026-11-19
+
+- The idle nudge is quick: an agent with a thread waiting on it (or needing its resolve vote) is pinged after 10 seconds idle, then at most every 5 minutes; other queue items after 1 minute idle (was 5), then every 30 minutes. After progress the next ping follows as soon as the idle wait has passed. The check runs every 5 seconds (was 60).
+
 ## 0.133.0 - 2026-11-19
 
 - **Threads about this page** (thread f379e1a8): the **This page** filter now also lists threads whose text links to the page. `:threads` opens it; in the What's new list (`n`) each page shows `💬 N` open threads and `t` opens the page with them.
