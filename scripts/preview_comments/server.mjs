@@ -325,6 +325,21 @@ export async function startCommentBridge({
   }
   const nudgeTimer = mesh && process.env.ADR_NUDGE !== "off" ? setInterval(() => nudgeIdle().catch(error => onError?.(error)), 60_000) : undefined;
   nudgeTimer?.unref();
+  // threads.json at the site root (only where queues.json is): open threads with who they wait on, for the queue generator to merge as thread items.
+  let threadsTimer;
+  const writeThreads = () => {
+    threadsTimer = undefined;
+    if (!existsSync(join(documentRoot, "queues.json"))) return;
+    const rows = [...comments.values()].filter(c => !c.removed && !c.resolved && !c.note && !c.highlight && c.to?.length).map(c => {
+      const addressees = [...new Set(c.to.map(canon))];
+      const lastUser = [...c.replies].reverse().find(r => r.author === "user");
+      const answered = addressees.filter(name => c.resolvedBy?.[name] || c.replies.some(r => r.author === "copilot" && r.from && canon(r.from) === name && (!lastUser || r.at > lastUser.at)));
+      return { id: c.id, page: new URL(c.url).pathname, addressees, answered_by: answered, at: lastUser?.at ?? c.at };
+    }).filter(row => row.answered_by.length < row.addressees.length).sort((a, b) => a.at < b.at ? -1 : 1);
+    const text = JSON.stringify(rows, null, 1) + "\n";
+    try { if (!existsSync(join(documentRoot, "threads.json")) || readFileSync(join(documentRoot, "threads.json"), "utf8") !== text) writeFileSync(join(documentRoot, "threads.json"), text); } catch { /* read-only root */ }
+  };
+  const scheduleThreads = () => { threadsTimer ??= setTimeout(writeThreads, 1500); threadsTimer.unref?.(); };
   let api;
   let revision = 0;
   let latestFeedbackId;
@@ -391,8 +406,19 @@ export async function startCommentBridge({
       if (record.removeRefs) comment.refs = (comment.refs || []).filter(id => !record.removeRefs.includes(id));
       if (record.removeReply) comment.replies = comment.replies.filter(item => item.id !== record.removeReply);
       if (record.resolved !== undefined) {
-        if (record.resolved && !comment.resolved) comment.resolvedAt = record.at;
-        comment.resolved = record.resolved;
+        // With several addressees, an agent's resolve counts only for itself; the thread closes when every addressee has resolved. The user's click closes it for all.
+        const who = record.author === "copilot" && record.from ? canon(record.from) : null;
+        const need = (comment.to ?? []).map(canon);
+        if (who && need.length > 1 && need.includes(who)) {
+          comment.resolvedBy = { ...comment.resolvedBy, [who]: record.resolved ? record.at : undefined };
+          if (!record.resolved) delete comment.resolvedBy[who];
+          const done = need.every(name => comment.resolvedBy[name]);
+          if (done && !comment.resolved) comment.resolvedAt = record.at;
+          comment.resolved = done;
+        } else {
+          if (record.resolved && !comment.resolved) comment.resolvedAt = record.at;
+          comment.resolved = record.resolved;
+        }
       }
       if (record.to) comment.to = record.to;
       if (record.color !== undefined) comment.color = record.color;
@@ -406,6 +432,7 @@ export async function startCommentBridge({
       }
     } else throw new Error(`Unknown comment-log event: ${record.event}`);
     revision++;
+    scheduleThreads();
   }
   for (const record of records) apply(record);
   const token = randomUUID();
@@ -573,7 +600,7 @@ export async function startCommentBridge({
   // Threads whose last word is the user's, with nothing from an agent since. Read-only: leaves read receipts alone.
   function unansweredFor(as) {
     const now = Date.now();
-    const rows = [...comments.values()].filter(comment => !comment.removed && !comment.resolved && !comment.note && !comment.highlight && addressed(comment, as)).flatMap(comment => {
+    const rows = [...comments.values()].filter(comment => !comment.removed && !comment.resolved && !comment.note && !comment.highlight && addressed(comment, as) && !comment.resolvedBy?.[as]).flatMap(comment => {
       const last = comment.replies.at(-1) ?? { author: comment.author ?? "user", comment: comment.comment, at: comment.at };
       if (last.author !== "user") return [];
       const text = (last.reply ?? last.comment ?? "").replace(/\s+/g, " ");

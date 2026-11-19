@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.119.0 - 2026-11-19
+
+- Threads as queue input: where `queues.json` exists, the server writes `threads.json` beside it (`[{id, page, addressees, answered_by, at}]`, open threads only, kept current as threads change).
+- Per-participant resolve: on a thread with several addressees, an agent's resolve counts only for that agent and the thread closes when every addressee has resolved; the user's Resolve still closes it for everyone. A thread an agent has resolved leaves that agent's unanswered list.
+
 ## 0.118.0 - 2026-11-19
 
 - Idle nudge: an agent idle for 5 minutes (`ADR_NUDGE_MINUTES`; `ADR_NUDGE=off` disables) with open queue items or threads waiting on it gets one mesh note naming its next item, then at most one per 30 minutes, never while working. Idle is read from the agent-notify hook or the agent's status line. `/mesh` members carry `open` and `idleMinutes`; the team table shows a red "idle N min with K open" chip.
