@@ -419,7 +419,7 @@ card-owner: ...
 
 ### Past, present, future
 
-`tense: past | present | future` in front matter (inherited from the parent page) separates history (experiment narratives), the current state, and plans: the page tree gets a grey, green or blue edge and the page a chip. A "present" page with `as-of: YYYY-MM-DD` older than 14 days is flagged "may be stale". `card-status: superseded` counts as past; `card-superseded-by: /page` adds a banner linking to the page that replaced it.
+`tense: past | present | future` in front matter (inherited from the parent page) separates history (experiment narratives), the current state, and plans: the page tree gets a grey, green or blue edge and the page a chip. A "present" page with `as-of: YYYY-MM-DD` older than `stale-days` (root index.md front matter, default 2 days) is flagged "may be stale". `card-status: superseded` counts as past; `card-superseded-by: /page` adds a banner linking to the page that replaced it.
 
 The What's new list (`n`) previews the highlighted page (its card fields and first added lines) and remembers which page you opened last, so reopening it puts you back there.
 
@@ -440,3 +440,7 @@ Footprints are stored in `<site>/.adr-data/touches.jsonl`.
 ### Needs verdict
 
 A page with `card-status: shipped` (or `status: done`) must have non-empty `## Verdict` and `## Learnings` sections. Otherwise the tree and the card show an amber "needs verdict" chip and the board lists the page first.
+
+### Tests on the card
+
+One `card-test:` line per test: `card-test: Stage 1 | done | 2026-11-19` (status `planned`, `running`, `done` or `obsolete`; the date of the last update is optional). The card shows "1/3 done · 1 running", each test with ✓ ▶ ○ ✗, and the age of the newest update, in amber once it is older than `stale-days`.

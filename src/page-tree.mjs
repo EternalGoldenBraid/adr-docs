@@ -158,6 +158,12 @@ export function pageCards(documentRoot, options) {
     const front = frontOf(text);
     const key = name => front.match(new RegExp(`^card-${name}:\\s*(.+)$`, "m"))?.[1].trim().replace(/^["']|["']$/g, "");
     const card = Object.fromEntries(["line", "status", "superseded-by", ...CARD_SLOTS].map(k => [k, key(k)]).filter(([, v]) => v));
+    // One line per test: `card-test: Stage 1 | done | 2026-11-19` (status: planned, running, done, obsolete; date optional).
+    const tests = [...front.matchAll(/^card-test:[ \t]*(.+)$/gm)].map(m => {
+      const [name, status = "planned", at] = m[1].split("|").map(v => v.trim().replace(/^["']|["']$/g, ""));
+      return { name, status: status.toLowerCase(), ...(/^\d{4}-\d{2}-\d{2}$/.test(at ?? "") ? { at } : {}) };
+    });
+    if (tests.length) card.tests = tests;
     const verdict = needsVerdict(text);
     if (!Object.keys(card).length && !verdict) continue;
     const slug = file.slice(0, -3);
@@ -181,10 +187,17 @@ export function classificationConfig(documentRoot) {
   return { label, level: ["restricted", "internal", "public"].includes(level) ? level : "internal" };
 }
 
+// How many days a "present" page or a running test may go without an update before it is flagged. `stale-days:` in the root index.md front matter; default 2.
+function staleDays(documentRoot) {
+  try {
+    const n = Number(frontOf(readFileSync(join(documentRoot, "index.md"), "utf8")).match(/^stale-days:\s*(\d+(?:\.\d+)?)\s*$/m)?.[1]);
+    return n > 0 ? n : 2;
+  } catch { return 2; }
+}
 export function treeThemeConfig(documentRoot, options) {
   const pages = readPageTree(documentRoot, options);
   // The static build gets VitePress's built-in fuzzy search. The live preview keeps `/` for its own :grep.
   const search = options?.publishedOnly && process.argv.includes("build")
     ? { search: { provider: "local", options: { miniSearch: { searchOptions: { fuzzy: 0.2, prefix: true } } } } } : {};
-  return { nav: topBar(pages), pageTree: pages, workstreams: workstreamSummary(documentRoot), cards: pageCards(documentRoot, options), classification: classificationConfig(documentRoot), ...search };
+  return { staleDays: staleDays(documentRoot), nav: topBar(pages), pageTree: pages, workstreams: workstreamSummary(documentRoot), cards: pageCards(documentRoot, options), classification: classificationConfig(documentRoot), ...search };
 }
