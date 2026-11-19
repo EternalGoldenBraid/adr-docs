@@ -446,3 +446,5 @@ A page with `card-status: shipped` (or `status: done`) must have non-empty `## V
 One `card-test:` line per test: `card-test: Stage 1 | done | 2026-11-19` (status `planned`, `running`, `done` or `obsolete`; the date of the last update is optional). The card shows "1/3 done · 1 running", each test with ✓ ▶ ○ ✗, and the age of the newest update, in amber once it is older than `stale-days`.
 
 The card also reads a nested `card:` block (`gist`, `state` = badge, `evidence`, `next`, `owner`, `tests: [{name, state, date}]`), and is placed under the page title automatically.
+
+Test results: add `result: results/run-3.json` to a test (`{name: "…", state: running, result: results/run-3.json}`). The run script writes `{"status": "done", "finished_at": "2026-11-19T10:00:00Z"}` (status `running`, `done` or `failed`); ADR reads it and overrides the test's state and date. The page state is derived from the tests; the hand-written one is ignored when tests exist.

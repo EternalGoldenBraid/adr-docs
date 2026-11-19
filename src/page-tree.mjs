@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, readFileSync, utimesSync } from "node:fs";
-import { basename, dirname, join, relative, sep } from "node:path";
+import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { readBoard } from "./workstreams.mjs";
 
 const frontOf = text => text.match(/^---\n([\s\S]*?)\n---/)?.[1] ?? "";
@@ -163,7 +163,7 @@ function nestedCard(front) {
     const item = /^\s+-\s*\{(.*)\}\s*$/.exec(line);
     if (item) {
       const f = Object.fromEntries([...item[1].matchAll(/(\w+):\s*("[^"]*"|'[^']*'|[^,}]*)/g)].map(m => [m[1], unquote(m[2])]));
-      if (f.name) tests.push({ name: f.name, status: (f.state ?? f.status ?? "planned").toLowerCase(), ...(/^\d{4}-\d{2}-\d{2}$/.test(f.date ?? f.at ?? "") ? { at: f.date ?? f.at } : {}) });
+      if (f.name) tests.push({ ...(f.result ? { result: f.result } : {}), name: f.name, status: (f.state ?? f.status ?? "planned").toLowerCase(), ...(/^\d{4}-\d{2}-\d{2}$/.test(f.date ?? f.at ?? "") ? { at: f.date ?? f.at } : {}) });
       continue;
     }
     const kv = /^\s+(gist|state|what|evidence|next|owner|line|status):\s*(.+)$/.exec(line);
@@ -171,6 +171,28 @@ function nestedCard(front) {
   }
   if (tests.length) out.tests = tests;
   return out;
+}
+// A test with `result: path` is driven by a file the run script writes: {"status": "running|done|failed", "finished_at": "…"}.
+// The file overrides the hand-written status and date; a missing file leaves the test as written.
+function applyResults(documentRoot, tests) {
+  for (const t of tests) {
+    if (!t.result) continue;
+    try {
+      const r = JSON.parse(readFileSync(resolve(documentRoot, t.result.replace(/^\//, "")), "utf8"));
+      if (["running", "done", "failed"].includes(r.status)) t.status = r.status;
+      const at = String(r.finished_at ?? r.at ?? "").slice(0, 10);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(at)) t.at = at;
+      t.verified = true;
+    } catch { /* result not written yet */ }
+  }
+}
+// Page state from its tests: failed > running > done (none open) > planned.
+export function derivedState(tests) {
+  const open = tests.filter(t => t.status !== "obsolete");
+  if (!open.length) return undefined;
+  if (open.some(t => t.status === "failed")) return "failed";
+  if (open.some(t => t.status === "running")) return "running";
+  return open.every(t => t.status === "done") ? "done" : "planned";
 }
 export function pageCards(documentRoot, options) {
   const out = {};
@@ -187,6 +209,11 @@ export function pageCards(documentRoot, options) {
     });
     if (tests.length) card.tests = tests;
     Object.assign(card, Object.fromEntries(Object.entries(nestedCard(front)).filter(([k]) => !(k in card))));
+    if (card.tests) {
+      applyResults(documentRoot, card.tests);
+      const derived = derivedState(card.tests);
+      if (derived) { if (card.status && card.status !== derived) card.statusMismatch = card.status; card.status = derived; }
+    }
     const verdict = needsVerdict(text);
     if (!Object.keys(card).length && !verdict) continue;
     const slug = file.slice(0, -3);

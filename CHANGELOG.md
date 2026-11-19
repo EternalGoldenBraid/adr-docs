@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.110.0 - 2026-11-19
+
+- A test can name `result: path` (relative to the site root): a JSON file `{"status": "running|done|failed", "finished_at": "…"}` written by the run script. It overrides the test's hand-written state and date, so a crash shows as a red ✕ with no manual edit; those rows are marked "·run".
+- The page state is derived from its tests (failed, running, done when none is open, else planned). A hand-written state that disagrees is kept as `statusMismatch`.
+
 ## 0.109.0 - 2026-11-19
 
 - The card appears by itself directly under the page title (no `<PageCard />` needed) for every page that has one; a page that places `<PageCard />` itself keeps its own.
