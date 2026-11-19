@@ -66,7 +66,7 @@
       .thread-head{display:flex;gap:8px;align-items:center;margin:0 0 8px!important;padding:10px 20px;position:sticky;top:44px;background:#1b1d22;z-index:1;border-bottom:1px solid #3a404a}
       .thread-title{flex:1;min-width:0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
       .thread-head a{white-space:nowrap}.thread-head button{padding:4px 10px}
-      .thread-state{display:block;width:max-content;margin:2px 20px 8px;padding:1px 10px;border-radius:999px;background:#2a2f38;color:#b7c1ce;font-size:12px}.thread-state.resolved{color:#a2d8b1}
+      .thread-state{display:block;width:max-content;margin:2px 20px 8px;padding:1px 10px;border-radius:999px;background:#2a2f38;color:#b7c1ce;font-size:12px}.thread-state.resolved{color:#a2d8b1}.thread-state[data-marks]::before{content:"";display:inline-block;width:10px;height:10px;margin-right:6px;border-radius:50%;background:var(--pie,none)}
       .thread-links{display:flex;flex-wrap:wrap;gap:6px;margin:4px 20px 8px}
       .chip{padding:2px 10px;border-radius:999px;font-size:12px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
       .chip-x{margin-left:-6px;padding:2px 7px}
@@ -1628,9 +1628,14 @@
     const quoteLine = (comment.quote || "").replace(/!?\[([^\]\n]*)\]\([^\s)]+\)/g, "$1").replace(/\s+/g, " ");
     find(".quote-summary").textContent = quoteLine ? `“${quoteLine.slice(0, 90)}${quoteLine.length > 90 ? "…" : ""}”` : "Selected content";
     state.classList.toggle("resolved", comment.resolved);
+    const marks = resolveMarks(comment);
+    if (marks.length && !comment.resolved) state.textContent += ` · resolved by ${marks.filter(m => m.done).map(m => m.name).join(", ") || "nobody"} · waiting on ${marks.filter(m => !m.done).map(m => m.name).join(", ") || "nobody"}`;
+    delete state.dataset.marks;
+    if (marks.length) state.dataset.marks = marks.map(m => `${m.done ? "✓" : "○"}${m.name}`).join(" ");
+    state.style.setProperty("--pie", marks.length ? `conic-gradient(${marks.map((m, i) => `${m.done ? "#6fcf97" : "#f2c94c"} ${i * 360 / marks.length}deg ${(i + 1) * 360 / marks.length}deg`).join(",")})` : "none");
     if (!state.nextElementSibling?.classList.contains("queue-lines")) { const row = document.createElement("span"); row.className = "queue-lines"; state.after(row); }
     queueLine(comment, state.nextElementSibling);
-    find(".thread-resolve").textContent = isNote(comment) ? "Remove" : comment.resolved ? "Reopen" : "Resolve";
+    find(".thread-resolve").textContent = isNote(comment) ? "Remove" : comment.resolved ? "Reopen" : comment.resolvedBy?.you ? "Close for all" : "Resolve";
     markSeen(comment);
     renderLinks(comment);
     if (find(".to-reply").dataset.for !== comment.id) { setReplyTarget(null); find(".to-reply").dataset.for = comment.id; renderReplyTo(comment); }
@@ -1670,8 +1675,20 @@
     const ids = [...find(".thread-list").children].map(card => card.dataset.commentId);
     const at = ids.indexOf(id);
     pendingFocus = selectedThread === id && comment.resolved ? id : ids[at + 1] ?? ids[at - 1];
-    return updateThread({ id: crypto.randomUUID(), resolved: !comment.resolved }, id);
+    if (!comment.resolved && comment.resolvedBy?.you) return confirmCloseAll(comment).then(ok => ok && updateThread({ id: crypto.randomUUID(), resolved: true, closeAll: true }, id));
+    return updateThread({ id: crypto.randomUUID(), resolved: !comment.resolved, ...(comment.resolved ? {} : { partial: true }) }, id);
   }
+  // Closing for all overrides whoever has not resolved; show who they are and whether they are reachable first.
+  async function confirmCloseAll(comment) {
+    const { members = [] } = await api("mesh").catch(() => ({}));
+    const lines = (comment.to ?? []).filter(name => !comment.resolvedBy?.[name]).map(name => {
+      const m = members.find(x => x.slug === name);
+      return `  ${name}: ${m ? meshState(m) : "unknown"}${m?.open ? `, ${m.open} open` : ""}`;
+    });
+    return confirm(`Close for all?\n\nThese have not resolved:\n${lines.join("\n") || "  (nobody)"}\n\nThey will not be asked again.`);
+  }
+  // Who has resolved: the user and each addressee, as the sectors of a small pie before the thread state.
+  const resolveMarks = comment => (comment.to?.length ? [{ name: "you", done: Boolean(comment.resolvedBy?.you || comment.resolved) }, ...comment.to.map(name => ({ name, done: Boolean(comment.resolvedBy?.[name] || comment.resolved) }))] : []);
   // Awaiting: a thread the agent started, still open, with the agent's message last.
   const awaiting = comment => !comment.resolved && !comment.removed && !isNote(comment) && comment.author === "copilot" &&
     (comment.replies.at(-1)?.author ?? "copilot") === "copilot";
