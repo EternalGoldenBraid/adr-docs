@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.147.0 - 2026-11-20
+
+- `<CeremonyRows />`: the daily ceremony as one row per ticket (read-only, build 1). Each row shows the ticket, planned → observed effort, a surprise chip when they differ by one Fibonacci step or more, the owner's note as the observation, a chip per voter (✓ agree, ⚑ challenge, ○ not yet) with challenge lines, and open, challenged or settled. A row is settled when every voter agreed; silence never counts as agree. It reads `ceremony.json` at the site root through the new bridge route `GET /ceremony`; the site manager writes the file. Voting buttons follow in build 2.
+
 ## 0.146.0 - 2026-11-20
 
 - Comments and replies now wait in the agent's queue by default (delivered when it is idle). A **⚠ interrupt** box next to Send, or `Ctrl+Shift+Enter`, sends past the queue instead. This inverts the old `Ctrl+Shift+Enter` queue shortcut. An agent's context is a finite budget, so interrupting is opt-in.
