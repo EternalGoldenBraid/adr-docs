@@ -696,6 +696,8 @@ export async function startCommentBridge({
     return {
       id: input.id, commentId: input.commentId, saved: true, revision,
       resolved: comments.get(input.commentId).resolved,
+      // Who has resolved, so a vote that was saved but not counted shows up in the answer.
+      resolvedBy: Object.keys(comments.get(input.commentId).resolvedBy ?? {}),
     };
   }
 
