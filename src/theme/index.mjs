@@ -4,6 +4,7 @@ import TeamGraph from "../components/TeamGraph.vue";
 import DocGraph from "../components/DocGraph.vue";
 import RerunViewer from "../components/RerunViewer.vue";
 import RouteMap from "../components/RouteMap.vue";
+import SplatViewer from "../components/SplatViewer.vue";
 import WorkstreamLinks from "../components/WorkstreamLinks.vue";
 import ClassificationBanner from "../components/ClassificationBanner.vue";
 import WorkstreamBoard from "../components/WorkstreamBoard.vue";
@@ -32,5 +33,5 @@ export default {
       installSidebarToggle();
       installPublishing();
     }
-    app.component("DocGraph", DocGraph); app.component("TeamGraph", TeamGraph); app.component("RerunViewer", RerunViewer); app.component("RouteMap", RouteMap); app.component("PageCard", PageCard); app.component("VoteHistory", VoteHistory); app.component("WorkstreamBoard", WorkstreamBoard); app.component("WorkstreamNow", WorkstreamNow); },
+    app.component("DocGraph", DocGraph); app.component("TeamGraph", TeamGraph); app.component("RerunViewer", RerunViewer); app.component("RouteMap", RouteMap); app.component("SplatViewer", SplatViewer); app.component("PageCard", PageCard); app.component("VoteHistory", VoteHistory); app.component("WorkstreamBoard", WorkstreamBoard); app.component("WorkstreamNow", WorkstreamNow); },
 };

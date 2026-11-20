@@ -1,10 +1,14 @@
 {
   "name": "adr-docs",
-  "version": "0.136.0",
+  "version": "0.137.0",
   "private": true,
   "license": "MIT",
   "type": "module",
-  "bin": { "adr": "bin/preview.mjs", "adr-check": "bin/check.mjs", "adr-vote": "bin/vote.mjs" },
+  "bin": {
+    "adr": "bin/preview.mjs",
+    "adr-check": "bin/check.mjs",
+    "adr-vote": "bin/vote.mjs"
+  },
   "description": "Local Markdown, equation and figure review with persistent Copilot session comments",
   "engines": {
     "node": ">=20"
@@ -31,8 +35,10 @@
     "build:site": "vitepress build examples"
   },
   "dependencies": {
+    "@sparkjsdev/spark": "2.4.0",
     "cytoscape": "3.35.0",
     "markdown-it-mathjax3": "4.3.2",
+    "three": "0.187.0",
     "vitepress": "1.6.4"
   },
   "devDependencies": {

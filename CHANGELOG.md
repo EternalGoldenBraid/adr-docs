@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.137.0 - 2026-11-20
+
+- `<SplatViewer src="…" />` embeds a Gaussian splat (`.ply`, `.splat`, `.spz`, `.ksplat`) with orbit controls (thread a634e142). It uses Spark and three.js, which install with the plugin and load only on pages that use the component. Needs WebGL2; shows a note where it is missing.
+
 ## 0.136.0 - 2026-11-20
 
 - History tabs are now This page, Page history, Open and Resolved. Open lists threads you have not resolved yourself (replacing the short-lived "Not by me" tab). The Chat, All and Notes tabs and their keys are gone; `H` opens Page history.

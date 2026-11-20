@@ -323,6 +323,8 @@ Image up is world +x and image right is world −y (the Sim mosaic's convention)
 
 `<RerunViewer src="https://host/x.rrd" :height="560" />` embeds the hosted Rerun web viewer. Local files: put the `.rrd` in `public/` and use `src="/x.rrd"`. Comments attach to the page as usual; timestamp quoting is not implemented.
 
+`<SplatViewer src="/data/splat/car0/car.ply" :height="480" />` embeds a Gaussian splat (`.ply`, `.splat`, `.spz` or `.ksplat`) you orbit with the mouse. The viewer ships with the plugin and loads only on pages that use it, so nothing comes from outside. Optional: `:position="[0,0,5]"`, `:target="[0,0,0]"`, `:up="[0,1,0]"` (set the up axis of your capture) and `rotate` for a slow turn. About 100k Gaussians are a few MB.
+
 ## Workstreams
 
 Tickets in `workstreams/*.md` follow the schema in `workstreams/README.md`. The board is legacy: new work goes on page cards as tests (see Team queues), and nothing in ADR creates tickets. The index page (`<WorkstreamBoard />`, built live from the front matter) groups them by status; `list_workstreams` (agent tool) or `npm run workstreams -- --json` returns them as JSON.
