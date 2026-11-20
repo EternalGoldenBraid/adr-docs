@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.139.1 - 2026-11-20
+
+- Reads over the mesh no longer time out on long histories (thread bdc6753e, sim agent). The response was sent as many 6 KB chunks, and the mesh allows about nine sends per pair in a short window, so a big read stopped after nine chunks and the reader gave up. Responses are now gzipped and sent in 9 KB chunks (the reader accepts both forms).
+
 ## 0.139.0 - 2026-11-20
 
 - Card test rows of planned or running tests show their queue place from the test's `doer`, `rank` and `after`: "queued #13, doer", with ", after id" when it waits, or "not queued: no doer" (thread 2343372b).
