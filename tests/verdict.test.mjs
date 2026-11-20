@@ -125,4 +125,6 @@ test("a finished page with open threads is in review until they are resolved", a
   writeFileSync(join(dir, "threads.json"), JSON.stringify([{ id: "t1", page: "/c.html", addressees: ["lead"], answered_by: [], at: "x" }]));
   const card = pageCards(dir)["/c"];
   assert.deepEqual([card.status, card.openThreads], ["done", 1]);
+  writeFileSync(join(dir, "t.md"), "---\nstatus: todo\ncard:\n  gist: An idea\n---\n# T\n");
+  assert.equal(pageCards(dir)["/t"].status, "todo");
 });

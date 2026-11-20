@@ -24,7 +24,7 @@ const summary = computed(() => {
 const staleDays = computed(() => theme.value.staleDays ?? 2)
 const clip = t => t.length > props.budget ? t.slice(0, props.budget - 1) + '…' : t
 const over = t => t.length > props.budget
-const ORDER = ['building', 'review', 'planned', 'idea', 'shipped', 'superseded']
+const ORDER = ['building', 'review', 'planned', 'todo', 'idea', 'shipped', 'superseded']
 const rows = computed(() => Object.entries(cards.value).filter(([, c]) => c.line || c.needsVerdict || c.missing).map(([link, c]) => ({ link, ...c }))
   .sort((a, b) => Boolean(b.needsVerdict) - Boolean(a.needsVerdict) || ORDER.indexOf(a.status) - ORDER.indexOf(b.status) || a.title.localeCompare(b.title)))
 </script>
@@ -57,6 +57,8 @@ const rows = computed(() => Object.entries(cards.value).filter(([, c]) => c.line
 .pc-tag.building { background: #51cf6633; color: #2b8a3e }
 .pc-tag.review { background: #e599f733; color: #9c36b5 }
 .pc-tag.planned { background: #fcc41933; color: #a67c00 }
+.pc-tag.todo { background: #74c0fc33; color: #1971c2 }
+.pc-tag.todo::before { content: '☐ ' }
 .pc-tag.needs { background: #ff922b44; color: #d9480f }
 .pc-tag.bad { background: #e0313122; color: #c92a2a }
 .pc-count { font-size: 13px }
