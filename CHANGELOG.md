@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.143.0 - 2026-11-20
+
+- `<RoomFeed />` shows every mesh room on a page (the Demo /team "Rooms" section): topic, members, open time, the pinned summary and the last 20 posts. It reads the new bridge route `GET /rooms` from the mesh database in read-only mode, so viewing never marks a post read and needs no seat. Open rooms are expanded; closed ones sit behind a "show N closed" toggle.
+- Room convention: a post starting `SUMMARY:` is pinned (latest wins); a post starting `CLOSED:` closes the room and sets its close time. The mesh itself has no such fields.
+- Removed: two copies of the session-id regex in `server.mjs`; both now use `bareSession` from `src/roster.mjs`.
+
 ## 0.142.0 - 2026-11-20
 
 - A page's `voted: true|false` front-matter flag shows on its card as a green "voted ✓" or an orange "not voted" chip (thread aaec5b27: planning vote before a page may start running). ADR only shows it; blocking planned to running is the status generator's job.

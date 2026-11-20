@@ -495,3 +495,5 @@ A named preview (`adr --name demo`) listens for `ADR-REQ` mesh messages (every 2
 ## Threads about this page
 
 `:threads` opens the history on **This page**: the threads started on the page, the threads of the page it was created from, and any thread whose text (comment or replies) links to the page by path, with or without `.html`. The What's new list (`n`) shows `💬 N` per page and `t` opens that page with the list. Read-only; it never edits links.
+
+Room feed: `<RoomFeed />` lists every mesh room read-only (topic, members, open time, pinned summary, last 20 posts), refreshed every 15 s, from the bridge route `GET /rooms`. Viewing marks nothing read. A post starting `SUMMARY:` is pinned (latest wins); a post starting `CLOSED:` closes the room. Closed rooms stay behind a toggle.
