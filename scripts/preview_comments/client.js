@@ -63,6 +63,9 @@
       .thread-card.waiting{border-left-color:#f85149;background:rgba(248,81,73,.14)}
       .thread-card.open{border-left-color:#58a6ff}
       .thread-card.done{opacity:.55}
+      .thread-card .newdot{display:none;flex:none;width:9px;height:9px;border-radius:50%;background:#ff5a4f;align-self:center}
+      .thread-card.fresh .newdot{display:inline-block}.thread-card.fresh .row-top strong,.thread-card.fresh .preview{font-weight:700;color:#fff}
+      .thread-card.fresh .badge{color:#ff8a80;font-weight:700}
       .thread-card:focus-visible.unread,.thread-card:focus-visible.waiting{border-color:#74c0fc}
       .thread-card small{display:block}.preview{display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;color:#c9d1d9}
       .thread-head{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 8px!important;padding:10px 20px;position:sticky;top:44px;background:#1b1d22;z-index:1;border-bottom:1px solid #3a404a}
@@ -1651,7 +1654,9 @@
       badge.textContent = [comment.resolved ? (hasFresh(comment) ? "resolved · new reply" : "resolved") : awaiting(comment) ? "awaiting you" : comment.seen || comment.note ? "" : "unread",
         comment.replies.length ? `💬${comment.replies.length}` : "", links ? `🔗${links}` : "",
         comment.kind !== "session" && pagePath(comment.url) !== pagePath(location.href) ? pagePath(comment.url) : ""].filter(Boolean).join(" · ");
-      top.append(section, badge);
+      const fresh = hasFresh(comment);
+      if (fresh) { card.classList.add("fresh"); badge.textContent = ["NEW", badge.textContent].filter(Boolean).join(" · "); }
+      top.append(Object.assign(document.createElement("i"), { className: "newdot", title: "Unread reply" }), section, badge);
       if (marks.length) {
         const chip = document.createElement("span");
         chip.className = `rchip ${marks[0].done ? "mine" : "todo"}`;
@@ -1667,6 +1672,12 @@
       text.textContent = plainMarkdown(comment.comment) || "Highlight";
       card.append(top, text);
       card.addEventListener("click", () => selectThread(comment.id));
+      // Moving over a card with the keys counts as reading it: after a short dwell the unread mark goes.
+      if (fresh) {
+        let dwell;
+        card.addEventListener("focus", () => { dwell = setTimeout(() => { markSeen(comment); card.classList.remove("fresh"); card.querySelector(".badge").textContent = card.querySelector(".badge").textContent.replace(/^NEW( · )?/, ""); }, 700); });
+        card.addEventListener("blur", () => clearTimeout(dwell));
+      }
       (linkedHere(comment) ? groups.linked : groups.here).push(card);
     }
     const heading = text => Object.assign(document.createElement("div"), { className: "group-head", textContent: text });
