@@ -94,6 +94,8 @@ The agent can show a status line (`set_doc_review_status`) and attach a before/a
 
 ## Command line
 
+`:calm` silences ADR on the current page (`:calm site` for all pages, `:calm off` to restore): no shortcuts, comment popups, screenshots or marks, only `:` stays. For pages with their own controls.
+
 `:` opens a command line at the bottom of the page (Tab completes command names): `:help`, `:history`, `:threads`, `:chat`, `:comment`, `:tree`, `:new`, `:keys`, `:vim on|off`.
 
 ## Resizing and key bindings
