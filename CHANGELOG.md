@@ -3,12 +3,11 @@
 ## 0.144.0 - 2026-11-20
 
 - Each open thread in the comment list shows your own resolve mark and the tally: `✓ you 2/3` or `○ you 0/2` (hover for who has resolved). Resolved threads keep just "resolved".
-- Removed: the duplicated resolve-mark wording is now computed once (`resolveMarks`) for both the list and the thread header.
+- The list reuses `resolveMarks`, the same helper the thread header uses, so the two cannot disagree.
 
 ## 0.143.1 - 2026-11-20
 
 - Fixed: `:grep` hits now open at the matching line, not just the page. The jump searched only for the matched word, so it landed on the first occurrence on the page; it now picks the occurrence whose paragraph, list item or table row shares the most words with the hit's source line (also for `:grep -m`).
-- Removed: the unused `text` shadowing in `findPending` (the jump now reads the stored match and context in one place).
 
 ## 0.143.0 - 2026-11-20
 
