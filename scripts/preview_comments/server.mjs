@@ -17,7 +17,7 @@ function meshDataDirectory() {
   return existsSync(join(moved, "agent-mesh.db")) ? moved : meshCodeDirectory;
 }
 import { readCell, writeCell } from "./table-edit.mjs";
-import { readRoster, slugify } from "../../src/roster.mjs";
+import { bareSession, readRoster, slugify } from "../../src/roster.mjs";
 import { addNote, applyVote, publicVotes, readVotes, reveal } from "../../src/votes.mjs";
 import { pageCards, readPageTree } from "../../src/page-tree.mjs";
 import { diffLines, hunks } from "./page-diff.mjs";
@@ -225,11 +225,10 @@ export async function startCommentBridge({
         const columns = db.prepare("PRAGMA table_info(agent_sessions)").all().some(column => column.name === "kind") ? "kind" : "'agent' AS kind";
         live = new Map(db.prepare(`SELECT session_id, cwd, status, ${columns}, last_heartbeat FROM agent_sessions WHERE session_id IN (${marks})`).all(...known.map(row => row.session)).map(row => [row.session_id, row]));
         // Latest `STATUS <ticket> | <state> | <doing> | <next>` reply per agent, and who wrote to whom recently (never other message bodies).
-        const bare = id => String(id).match(/[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}/i)?.[0] ?? id;
         const sessions = new Set(known.map(row => row.session));
         const since = new Date(Date.now() - 3600_000).toISOString();
         for (const message of db.prepare("SELECT sender_session_id AS s, recipient_session_id AS r, created_at AS at, CASE WHEN content LIKE 'STATUS %' THEN content END AS line FROM agent_messages WHERE created_at > ? OR content LIKE 'STATUS %' ORDER BY message_id").all(since)) {
-          const from = bare(message.s), to = bare(message.r);
+          const from = bareSession(message.s), to = bareSession(message.r);
           if (message.line && sessions.has(from)) {
             const [ticket, state, doing, next] = message.line.split("\n")[0].slice(7).split("|").map(part => part.trim());
             if (state) statusLines.set(from, { ticket: ticket === "-" ? "" : ticket, state, doing: doing ?? "", next: !next || next === "-" ? "" : next, at: message.at });
@@ -836,6 +835,29 @@ export async function startCommentBridge({
         } catch (error) { return reply(response, 400, { error: error.message }); }
       }
       if (request.method === "GET" && request.url === "/settings") return reply(response, 200, effective());
+      if (request.method === "GET" && request.url === "/rooms") {
+        // Read-only view of every room; it never touches read_through, so viewing marks nothing read.
+        const names = new Map(roster().filter(row => row.session).map(row => [row.session, row.slug]));
+        const who = id => names.get(bareSession(id)) ?? bareSession(id).slice(0, 8);
+        try {
+          const db = new DatabaseSync(process.env.ADR_MESH_DB || join(meshDataDirectory(), "agent-mesh.db"), { readOnly: true });
+          try {
+            const rooms = db.prepare("SELECT face_id, topic, created_at FROM mesh_faces ORDER BY created_at DESC").all().map(room => {
+              const posts = db.prepare("SELECT post_id, sender_session_id, content, created_at FROM mesh_face_posts WHERE face_id = ? ORDER BY post_id").all(room.face_id).map(post => ({ id: post.post_id, from: who(post.sender_session_id), content: post.content, at: post.created_at }));
+              const summary = posts.findLast(post => /^SUMMARY:/i.test(post.content));
+              const closed = posts.findLast(post => /^CLOSED:/i.test(post.content));
+              return {
+                id: room.face_id, topic: room.topic, opened: room.created_at,
+                members: db.prepare("SELECT session_id FROM mesh_face_members WHERE face_id = ?").all(room.face_id).map(member => who(member.session_id)),
+                summary: summary ? { from: summary.from, at: summary.at, text: summary.content.replace(/^SUMMARY:\s*/i, "") } : null,
+                closed: closed ? { at: closed.at, text: closed.content.replace(/^CLOSED:\s*/i, "") } : null,
+                postCount: posts.length, posts: posts.slice(-20),
+              };
+            });
+            return reply(response, 200, { rooms });
+          } finally { db.close(); }
+        } catch (error) { return reply(response, 200, { rooms: [], error: error.message }); }
+      }
       const faceRoute = request.method === "GET" && /^\/faces(?:\/([\w-]{1,64}))?$/.exec(request.url);
       if (faceRoute) {
         try {

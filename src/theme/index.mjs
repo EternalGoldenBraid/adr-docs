@@ -11,6 +11,7 @@ import WorkstreamBoard from "../components/WorkstreamBoard.vue";
 import WorkstreamNow from "../components/WorkstreamNow.vue";
 import PageCard from "../components/PageCard.vue";
 import VoteHistory from "../components/VoteHistory.vue";
+import RoomFeed from "../components/RoomFeed.vue";
 import PageTree from "../components/PageTree.vue";
 import AutoPageCard from "../components/AutoPageCard.vue";
 import { installSidebarToggle } from "./sidebar-toggle.mjs";
@@ -33,5 +34,5 @@ export default {
       installSidebarToggle();
       installPublishing();
     }
-    app.component("DocGraph", DocGraph); app.component("TeamGraph", TeamGraph); app.component("RerunViewer", RerunViewer); app.component("RouteMap", RouteMap); app.component("SplatViewer", SplatViewer); app.component("PageCard", PageCard); app.component("VoteHistory", VoteHistory); app.component("WorkstreamBoard", WorkstreamBoard); app.component("WorkstreamNow", WorkstreamNow); },
+    app.component("DocGraph", DocGraph); app.component("TeamGraph", TeamGraph); app.component("RerunViewer", RerunViewer); app.component("RouteMap", RouteMap); app.component("SplatViewer", SplatViewer); app.component("PageCard", PageCard); app.component("VoteHistory", VoteHistory); app.component("RoomFeed", RoomFeed); app.component("WorkstreamBoard", WorkstreamBoard); app.component("WorkstreamNow", WorkstreamNow); },
 };

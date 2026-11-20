@@ -2,6 +2,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const UUID = /[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}/i;
+// The bare session id inside a mesh address such as "remote:[gpu]<id>"; anything else comes back unchanged.
+export const bareSession = id => String(id).match(UUID)?.[0] ?? id;
 const cells = line => line.trim().replace(/^\||\|$/g, "").split("|").map(cell => cell.trim());
 // "Mökki agent" is "mokki-agent"; `legacySlug` is the older form that dropped the accent ("m-kki-agent") and is still accepted.
 export const legacySlug = text => text.toLowerCase().replace(/[^a-z\d]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);

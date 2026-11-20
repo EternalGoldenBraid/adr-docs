@@ -1,0 +1,8 @@
+pane	agent-doc-review	0	1	:*Z	0	Create Workstreams Directory - GitHub Copilot	:/home/nicklas/Projects/Personal/adr/agent-doc-review	0	node	:copilot --resume 76b012f3-9cef-43da-a036-2bd3cf80566d
+pane	agent-doc-review	0	1	:*Z	1	nicklas@nicklas-lenovo:~/Projects/Personal	:/home/nicklas/Projects/Personal	1	bash	:bash ./gh-personal.sh
+pane	agent-doc-review	0	1	:*Z	2	nicklas@nicklas-lenovo:~/Projects/mokki	:/home/nicklas/Projects/mokki	0	bash	:
+pane	agent-doc-review	1	0	:-	0	nicklas@nicklas-lenovo:~/Projects/mokki	:/home/nicklas/Projects/mokki	0	bash	:
+pane	agent-doc-review	1	0	:-	1	nicklas@nicklas-lenovo:~/Projects/agent-doc-review	:/home/nicklas/Projects/Personal/adr/agent-doc-review	1	node	:node /home/nicklas/.local/bin/adr tui
+window	agent-doc-review	0	:bash	1	:*Z	{"V":2,"L":{"t":"v","w":103,"h":26,"x":0,"y":0,"c":[{"t":"p","w":103,"h":24,"x":0,"y":0,"l":0,"i":0,"I":"%1"},{"t":"h","w":103,"h":1,"x":0,"y":25,"c":[{"t":"p","w":51,"h":1,"x":0,"y":25,"a":true,"i":1,"I":"%10"},{"t":"p","w":51,"h":1,"x":52,"y":25,"l":1,"i":2,"I":"%11"}]}]}}	:
+window	agent-doc-review	1	:node	0	:-	{"V":2,"L":{"t":"v","w":103,"h":26,"x":0,"y":0,"c":[{"t":"p","w":103,"h":13,"x":0,"y":0,"l":0,"i":0,"I":"%13"},{"t":"p","w":103,"h":12,"x":0,"y":14,"a":true,"i":1,"I":"%14"}]}}	:
+state	agent-doc-review	

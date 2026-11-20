@@ -1,0 +1,4 @@
+pane	agent-doc-review	0	1	:*	0	Create Workstreams Directory - GitHub Copilot	:/home/nicklas/Projects/agent-doc-review	1	node	:node /usr/bin/copilot --resume=76b012f3-9cef-43da-a036-2bd3cf80566d
+pane	agent-doc-review	0	1	:*	1	nicklas@nicklas-lenovo:~/Projects/agent-doc-review	:/home/nicklas/mnt/DrivePersonal/Inbox	0	vifm	:vifm /home/nicklas/.local/share/agent-doc-review/voice/out/
+window	agent-doc-review	0	:node	1	:*	{"V":2,"L":{"t":"h","w":50,"h":26,"x":0,"y":0,"c":[{"t":"p","w":25,"h":26,"x":0,"y":0,"a":true,"i":0,"I":"%0"},{"t":"p","w":24,"h":26,"x":26,"y":0,"l":0,"i":1,"I":"%4"}]}}	:
+state	agent-doc-review	

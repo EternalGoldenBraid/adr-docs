@@ -597,3 +597,41 @@ test("threads.json keeps a thread whose addressee answered but has not resolved,
   await bridge.close();
   rmSync(directory, { recursive: true, force: true });
 });
+
+test("/rooms lists rooms read-only with the pinned summary, close time and last 20 posts", async () => {
+  const { DatabaseSync } = await import("node:sqlite");
+  const directory = mkdtempSync(join(tmpdir(), "preview-comments-"));
+  const databasePath = join(directory, "mesh.db");
+  const db = new DatabaseSync(databasePath);
+  db.exec(`CREATE TABLE mesh_faces (face_id TEXT PRIMARY KEY, topic TEXT, created_by TEXT, created_at TEXT);
+    CREATE TABLE mesh_face_members (face_id TEXT, session_id TEXT, read_through INTEGER DEFAULT 0, pinged INTEGER DEFAULT 0);
+    CREATE TABLE mesh_face_posts (post_id INTEGER PRIMARY KEY AUTOINCREMENT, face_id TEXT, sender_session_id TEXT, content TEXT, created_at TEXT);
+    INSERT INTO mesh_faces VALUES ('f1', 'Morning review', 'x', '2026-11-20T07:00:00Z');
+    INSERT INTO mesh_face_members (face_id, session_id) VALUES ('f1', '${randomUUID()}');`);
+  const post = db.prepare("INSERT INTO mesh_face_posts (face_id, sender_session_id, content, created_at) VALUES ('f1', 'someone', ?, ?)");
+  for (let i = 0; i < 25; i++) post.run(`post ${i}`, "2026-11-20T07:01:00Z");
+  post.run("SUMMARY: decided A", "2026-11-20T07:02:00Z");
+  post.run("CLOSED: done", "2026-11-20T07:03:00Z");
+  db.close();
+  process.env.ADR_MESH_DB = databasePath;
+  const sessionId = randomUUID();
+  const bridge = await startCommentBridge({
+    sessionId, documentRoot: directory, storageRoot: directory, previewOrigin: "http://127.0.0.1:8768",
+    onError: error => assert.fail(error.message), notify: async () => {},
+  });
+  try {
+    const connection = JSON.parse(readFileSync(bridge.connectionFile, "utf8"));
+    const response = await fetch(`http://127.0.0.1:${connection.port}/rooms`, { headers: { Authorization: `Bearer ${connection.token}` } });
+    const [room] = (await response.json()).rooms;
+    assert.equal(room.topic, "Morning review");
+    assert.equal(room.posts.length, 20);
+    assert.equal(room.postCount, 27);
+    assert.equal(room.summary.text, "decided A");
+    assert.equal(room.closed.at, "2026-11-20T07:03:00Z");
+    assert.equal(new DatabaseSync(databasePath).prepare("SELECT SUM(read_through) AS n FROM mesh_face_members").get().n, 0);
+  } finally {
+    delete process.env.ADR_MESH_DB;
+    await bridge.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
