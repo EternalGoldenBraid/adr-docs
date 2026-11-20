@@ -2,7 +2,7 @@
 
 ## 0.155.0 - 2026-11-20
 
-- Calm mode: `:calm` makes ADR quiet on this page (`:calm site` on every page, `:calm off` to restore). Keys such as `s`, `t`, `n`, clicks and text selection no longer open comments or take screenshots, and the pill and marks are hidden, so a page with its own controls (the field console) is left alone. Only `:` still works, and the page's own key handlers still run. The status bar shows `CALM`.
+- Calm mode: `:calm` makes ADR quiet on this page (`:calm site` on every page, `:calm off` to restore). Keys such as `s`, `t`, `n`, clicks and text selection no longer open comments or take screenshots, and the pill and marks are hidden, so a page with its own controls (the field console) is left alone. Only `:` still works, and the page's own key handlers still run. The status bar shows `CALM`, and `:help` (Search & commands) lists it.
 - Removed: the need to fight ADR's shortcuts on pages that have their own.
 
 ## 0.154.0 - 2026-11-20

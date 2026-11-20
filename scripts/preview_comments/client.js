@@ -359,7 +359,8 @@
     ]],
     ["Search & commands", [
       "/ or :grep [-d N] [-u N] [-s] [-p|-c] <regex> searches pages and threads (no flag: all pages; -d 0: this page; -d N: N levels below; -u N: N ancestors; -1 = all)",
-      "Commands: :help [section] :man :history :threads :chat :comment :tree :new :present :export [single|compress] :read [stop] :figure :restart :grep :vim off|on :keys",
+      "Commands: :help [section] :man :history :threads :chat :comment :tree :new :present :export [single|compress] :read [stop] :figure :restart :grep :vim off|on :calm [site|off] :keys",
+      ":calm silences ADR on this page (:calm site: every page; :calm off restores): no shortcuts, comment popups, screenshots or marks, so a page with its own controls is left alone. Only : still works; the status bar shows CALM.",
       ":threads opens the threads about this page: those started on it and those whose text links to it. In the What's new list (n), 💬 N counts them and t opens the page with them.",
       "Keys are configured in ~/.config/agent-doc-review/keymap.json",
     ]],
