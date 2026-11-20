@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.151.0 - 2026-11-20
+
+- 🔔 Bell in the thread header (shown while someone has not resolved): sends a call for resolution to every addressee who has not resolved, immediately, naming the thread and page. It lists who was rung and who is unreachable. Server route `POST /bell {id}`.
+- Smarter nudges: each agent's answer rate is learned from the logged nudges (`.adr-data/nudges.jsonl`, answered = a reply on that thread within 30 min), as a Beta(1,1) posterior mean. A thread closes only when all missing addressees answer, so an agent is nudged first about the thread with the highest closure probability p_a·∏p_b. The slots are independent per agent, so this is exact for the expected number of closed threads under that model. It does not yet coordinate two agents on one thread. See `src/nudge-plan.mjs`.
+- Removed: the arrival-order pick of which waiting thread an idle agent is nudged about.
+
 ## 0.150.0 - 2026-11-20
 
 - The floating panels (comment, history, Team, What's new, Help) can be dragged by their header, and the comment panel by its top strip. The position is remembered per panel; double-click the header to put it back.

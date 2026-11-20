@@ -18,6 +18,7 @@ function meshDataDirectory() {
 }
 import { readCell, writeCell } from "./table-edit.mjs";
 import { bareSession, readRoster, slugify } from "../../src/roster.mjs";
+import { answerRates, rank } from "../../src/nudge-plan.mjs";
 import { deriveState, disagrees } from "../../src/verified-state.mjs";
 import { addNote, applyVote, publicVotes, readVotes, reveal } from "../../src/votes.mjs";
 import { pageCards, readPageTree } from "../../src/page-tree.mjs";
@@ -349,6 +350,15 @@ export async function startCommentBridge({
     const { threads, toResolve } = unansweredFor(slug);
     return { items, threads, toResolve };
   };
+  // Every thread nudge is logged; whether the agent replied within 30 min feeds the per-agent answer rate that orders later nudges.
+  const nudgeLog = join(data, "nudges.jsonl");
+  const logNudge = (slug, thread, kind) => append(nudgeLog, { at: new Date().toISOString(), slug, thread, kind });
+  const answerRate = () => {
+    let rows = [];
+    try { rows = readFileSync(nudgeLog, "utf8").split("\n").filter(Boolean).map(line => JSON.parse(line)); } catch { /* none yet */ }
+    return answerRates(rows, (slug, thread) => (comments.get(thread)?.replies ?? []).filter(reply => reply.from && canon(reply.from) === slug).map(reply => Date.parse(reply.at)));
+  };
+  const missingOn = id => { const c = comments.get(id); return c ? (c.to ?? []).map(canon).filter(name => !c.resolvedBy?.[name]) : []; };
   const isIdle = row => row.verified ? row.verified.state === "idle" : (row.activity ?? (row.statusLine?.state === "idle" ? "idle" : null)) === "idle";
   async function nudgeIdle() {
     const now = Date.now();
@@ -368,7 +378,9 @@ export async function startCommentBridge({
       // Name the first item not yet nudged at its current version, so a stuck item does not hide the ones behind it. An item comes back when its version
       // changes (a reply, a vote, a new test state) or, once everything has been named, after NUDGE_EVERY.
       if (row.statusLine?.state === "waiting" && Date.parse(row.statusLine.at) > (nudgedAt.get(row.slug) ?? 0)) continue;
-      const candidates = [...threads.map(t => ({ key: `t:${t.id}`, version: t.version, thread: t })), ...toResolve.map(t => ({ key: `r:${t.id}`, version: t.version, resolve: t })),
+      const rate = answerRate();
+      const byClosure = list => rank(row.slug, list.map(t => ({ ...t, missing: missingOn(t.id) })), rate).map(({ candidate }) => candidate);
+      const candidates = [...byClosure(threads).map(t => ({ key: `t:${t.id}`, version: t.version, thread: t })), ...byClosure(toResolve).map(t => ({ key: `r:${t.id}`, version: t.version, resolve: t })),
         ...items.map(item => ({ key: `q:${item.id}`, version: `${item.state}|${item.run}|${item.weight}`, item }))];
       const seen = nudged.get(row.slug) ?? new Map();
       for (const key of [...seen.keys()]) if (!candidates.some(c => c.key === key)) seen.delete(key);
@@ -387,6 +399,8 @@ export async function startCommentBridge({
         "Start it, or post what blocks it. When you finish one and go idle, the next one follows right after.";
       nudgedAt.set(row.slug, now);
       nudgedCount.set(row.slug, count);
+      const nudgedThread = pick.thread ?? pick.resolve;
+      if (nudgedThread) logNudge(row.slug, nudgedThread.id, "idle");
       try { await mesh.send(meshAddress(row).session, note, meshAddress(row).machine); } catch (error) { nudgedAt.delete(row.slug); seen.delete(pick.key); onError?.(error); }
     }
   }
@@ -895,6 +909,27 @@ export async function startCommentBridge({
         } catch (error) { return reply(response, 400, { error: error.message }); }
       }
       if (request.method === "GET" && request.url === "/settings") return reply(response, 200, effective());
+      if (request.method === "POST" && request.url === "/bell") {
+        // Call for resolution: tell every addressee who has not resolved the thread, now, whatever the nudge pacing says.
+        const body = [];
+        for await (const chunk of request) { body.push(chunk); if (body.length > 16) break; }
+        let input;
+        try { input = JSON.parse(Buffer.concat(body).toString("utf8")); } catch { return reply(response, 400, { error: "Invalid JSON." }); }
+        const comment = comments.get(input.id);
+        if (!comment || comment.removed || comment.resolved) return reply(response, 404, { error: "No open thread with that id." });
+        if (!mesh) return reply(response, 409, { error: "The mesh is not connected." });
+        const rows = await meshStatus();
+        const page = new URL(comment.url).pathname;
+        const rung = [], unreachable = [];
+        for (const name of missingOn(comment.id)) {
+          const row = rows.find(r => r.slug === name);
+          if (!row?.session || row.status === "offline") { unreachable.push(name); continue; }
+          const note = `ADR call for resolution (thread ${comment.id.slice(0, 8)} on ${page}): the user is waiting for your resolve vote on this thread. ` +
+            `Resolve it, or reply with what blocks it. Read: read_doc_review_comments; reply or vote resolve: update_doc_review_comment(comment_id="${comment.id}").`;
+          try { await mesh.send(meshAddress(row).session, note, meshAddress(row).machine); logNudge(name, comment.id, "bell"); rung.push(name); } catch { unreachable.push(name); }
+        }
+        return reply(response, 200, { ok: true, rung, unreachable });
+      }
       if (request.method === "GET" && request.url === "/ceremony") {
         try { return reply(response, 200, JSON.parse(readFileSync(join(documentRoot, "ceremony.json"), "utf8"))); } catch { return reply(response, 200, { rows: [] }); }
       }
