@@ -51,3 +51,12 @@ test("itemTurns maps each item to the first interaction naming it and counts the
   assert.deepEqual(result.items.map(row => [row.interaction, row.via]), [[2, "told"], [2, "acted"], [null, undefined]]);
   assert.equal(result.unmapped, 1);
 });
+
+test("the chain hash covers the last N event ids and verifies against the log", async () => {
+  const { verifyChain, CHAIN_N } = await import("../src/verified-state.mjs");
+  const lines = Array.from({ length: 12 }, (_, i) => ev("tool.execution_complete", `2026-11-20T10:00:${String(i).padStart(2, "0")}Z`, {}, `id${i}`));
+  const state = deriveState(lines, Date.parse("2026-11-20T10:01:00Z"));
+  assert.equal(state.chain.n, CHAIN_N);
+  assert.ok(verifyChain(lines, state.chain.hash));
+  assert.ok(!verifyChain([...lines, ev("tool.execution_complete", "2026-11-20T10:00:59Z", {}, "later")], state.chain.hash));
+});

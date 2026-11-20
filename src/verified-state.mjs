@@ -1,7 +1,16 @@
 // What a Copilot session is doing, read from its own append-only event log (events.jsonl), not from what the agent says.
 // Every event carries an id and a parentId, so the last event id is a checkable pointer into the log.
+import { createHash } from "node:crypto";
 const NOISE = /^(hook\.|session\.usage|session\.info|system\.|model\.)/;
 const STALLED_MS = 10 * 60_000;
+export const CHAIN_N = 8;
+// A short digest of the last N event ids: a reader holding the log recomputes it, so a state claim names exactly which log position it was read at.
+export const chainHash = ids => createHash("sha256").update(ids.join("\n")).digest("hex").slice(0, 12);
+export const verifyChain = (lines, hash, n = CHAIN_N) => {
+  const ids = [];
+  for (const line of lines) { try { const e = JSON.parse(line); if (e.type && !NOISE.test(e.type)) ids.push(e.id); } catch { /* cut line */ } }
+  return ids.length >= n && chainHash(ids.slice(-n)) === hash;
+};
 
 const escape = text => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 // A queue item counts as touched when its id (or, for a thread item, its 8-character thread id) appears in what the agent was told or did.
@@ -18,6 +27,7 @@ export function deriveState(lines, now = Date.now(), items = []) {
   const mention = (event, text) => {
     for (const [item, needle] of needles) if (needle.test(text)) touched.set(item.id, { id: item.id, test: item.test, eventId: event.id, at: event.timestamp });
   };
+  const recent = [];
   const tools = new Map();
   const permissions = new Set();
   for (const line of lines) {
@@ -26,6 +36,8 @@ export function deriveState(lines, now = Date.now(), items = []) {
     const { type, data = {} } = event;
     if (!type || NOISE.test(type)) continue;
     last = event;
+    recent.push(event.id);
+    if (recent.length > CHAIN_N) recent.shift();
     // The window is the current interaction: everything since the last user message.
     if (type === "user.message") touched.clear();
     if (type === "user.message" || type === "tool.execution_start") mention(event, JSON.stringify(type === "user.message" ? data.content ?? data : data.arguments ?? {}));
@@ -40,7 +52,7 @@ export function deriveState(lines, now = Date.now(), items = []) {
   if (!last) return null;
   const at = Date.parse(last.timestamp);
   const ageMs = Math.max(0, now - at);
-  const evidence = { eventId: last.id, eventType: last.type, at: last.timestamp, workingOn: [...touched.values()].sort((a, b) => b.at.localeCompare(a.at)).slice(0, 3) };
+  const evidence = { eventId: last.id, eventType: last.type, at: last.timestamp, chain: { n: recent.length, hash: chainHash(recent) }, workingOn: [...touched.values()].sort((a, b) => b.at.localeCompare(a.at)).slice(0, 3) };
   if (permissions.size) return { state: "asking", detail: "permission prompt", ...evidence, ageMs };
   if (turn) {
     const tool = [...tools.values()].at(-1);

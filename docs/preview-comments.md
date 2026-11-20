@@ -486,6 +486,8 @@ Ordering: every thread nudge is logged to `.adr-data/nudges.jsonl`. An agent's a
 
 `GET /itemturns` (local agents only) maps each queue item to the first interaction that named it, `told` (in the user message) or `acted` (in a tool call), and reports the unmapped share.
 
+The verified state also carries `chain {n, hash}`, a digest of the last 8 event ids of the log, shown on hover in the Team panel; `verifyChain(lines, hash)` checks it against `events.jsonl`.
+
 **Bell**: the 🔔 button in the thread header (shown while someone has not resolved) sends a call for resolution right away to every addressee who has not resolved, naming the thread and page, and says who was rung and who is unreachable.
 
 Unblock ping: every 30 s ADR checks which pages are held in review. When one leaves review for done (its last open thread resolved, its verdict written), the page owner gets one note: no blockers, check and set done. It never moves the page itself.

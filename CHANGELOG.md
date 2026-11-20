@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.153.0 - 2026-11-20
+
+- Verified state carries a log position: `chain {n, hash}`, the first 12 hex of the SHA-256 of the last 8 event ids of the session log. The Team panel shows it on hover ("Log position #…"). A reader holding `events.jsonl` recomputes it with `verifyChain(lines, hash)` in `src/verified-state.mjs`, so a state claim names exactly where in the log it was read. It is a commitment to a position, not a signature: the log owner can rewrite the log.
+- Removed: the last event id as the only pointer into the log (it said where, but could not be re-derived from the preceding events).
+
 ## 0.152.0 - 2026-11-20
 
 - Fix: an exported page with images in its markdown (for example the icons in a table) lost its graph and every other component. The export bundle turned each imported asset into `new URL(path, "")`, which throws "Invalid base URL" and stopped hydration. Those calls are now plain paths; the static markup already carries the inlined file. Found on `/field/2026-11-19` (thread 9298a248).
