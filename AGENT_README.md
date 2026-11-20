@@ -13,3 +13,7 @@ Page replies must be scannable, never a wall of text:
 - Then a short bulleted list, one idea per bullet, at most about five.
 - Bold the one thing Nicklas must decide or do, last.
 - No history of how I got there.
+
+## One in, two out (standing rule from Nicklas, 2026-11-20)
+
+Each change that adds something also removes two rough edges: a shortcut script, dead code, a duplicated path, an unclear name or a missing doc line. Before adding a feature, look over the whole graph. Keep removals small and inside ADR; propose openly anything that belongs to another agent.
