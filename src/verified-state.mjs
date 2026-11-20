@@ -3,8 +3,21 @@
 const NOISE = /^(hook\.|session\.usage|session\.info|system\.|model\.)/;
 const STALLED_MS = 10 * 60_000;
 
-export function deriveState(lines, now = Date.now()) {
+const escape = text => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+// A queue item counts as touched when its id (or, for a thread item, its 8-character thread id) appears in what the agent was told or did.
+function needleFor(item) {
+  const id = String(item.id ?? "");
+  const bare = item.kind === "thread" ? id.replace(/^thread-/, "") : id;
+  return bare.length >= 5 ? new RegExp(`(?<![\\w-])${escape(bare)}(?!\\w)`, "i") : null;
+}
+
+export function deriveState(lines, now = Date.now(), items = []) {
   let turn = false, last = null, turnEnded = null;
+  const needles = items.map(item => [item, needleFor(item)]).filter(([, needle]) => needle);
+  const touched = new Map();
+  const mention = (event, text) => {
+    for (const [item, needle] of needles) if (needle.test(text)) touched.set(item.id, { id: item.id, test: item.test, eventId: event.id, at: event.timestamp });
+  };
   const tools = new Map();
   const permissions = new Set();
   for (const line of lines) {
@@ -13,6 +26,9 @@ export function deriveState(lines, now = Date.now()) {
     const { type, data = {} } = event;
     if (!type || NOISE.test(type)) continue;
     last = event;
+    // The window is the current interaction: everything since the last user message.
+    if (type === "user.message") touched.clear();
+    if (type === "user.message" || type === "tool.execution_start") mention(event, JSON.stringify(type === "user.message" ? data.content ?? data : data.arguments ?? {}));
     if (type === "assistant.turn_start") turn = true;
     else if (type === "assistant.turn_end") { turn = false; turnEnded = event.timestamp; tools.clear(); permissions.clear(); }
     else if (type === "tool.execution_start") tools.set(data.toolCallId ?? event.id, data.toolName ?? "tool");
@@ -24,7 +40,7 @@ export function deriveState(lines, now = Date.now()) {
   if (!last) return null;
   const at = Date.parse(last.timestamp);
   const ageMs = Math.max(0, now - at);
-  const evidence = { eventId: last.id, eventType: last.type, at: last.timestamp };
+  const evidence = { eventId: last.id, eventType: last.type, at: last.timestamp, workingOn: [...touched.values()].sort((a, b) => b.at.localeCompare(a.at)).slice(0, 3) };
   if (permissions.size) return { state: "asking", detail: "permission prompt", ...evidence, ageMs };
   if (turn) {
     const tool = [...tools.values()].at(-1);
