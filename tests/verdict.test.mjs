@@ -36,6 +36,16 @@ test("the nested card: block gives the line, badge and tests", async () => {
   assert.deepEqual([card.line, card.status, card.owner, card.tests], ["Why?", "running", "PC lead", [{ name: "Run 1", status: "running", at: "2026-11-19" }]]);
 });
 
+test("a card test keeps a #heading or site-path link and drops anything else", async () => {
+  const { mkdtempSync, writeFileSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { pageCards } = await import("../src/page-tree.mjs");
+  const dir = mkdtempSync(join(tmpdir(), "link-"));
+  writeFileSync(join(dir, "l.md"), "---\ncard:\n  gist: \"G\"\n  state: planned\n  tests:\n    - {name: \"A\", link: \"#first-result\", state: done}\n    - {name: \"B\", link: \"/other#x\", state: done}\n    - {name: \"C\", link: \"javascript:alert(1)\", state: done}\n---\n# L\n");
+  assert.deepEqual(pageCards(dir)["/l"].tests.map(t => t.link), ["#first-result", "/other#x", undefined]);
+});
+
 test("a test's result file drives its state and the page state is derived", async () => {
   const { mkdtempSync, writeFileSync } = await import("node:fs");
   const { tmpdir } = await import("node:os");

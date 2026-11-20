@@ -160,7 +160,7 @@ function workstreamSummary(documentRoot) {
 //   card-what / card-state / card-evidence / card-next / card-owner: one short line each
 export const CARD_SLOTS = ["what", "state", "evidence", "next", "owner"];
 // The nested form:  card:\n  gist: "…"\n  state: planned\n  evidence/next/owner/what: "…"\n  tests:\n    - {name: "…", state: done, date: 2026-11-19}
-// `gist` is the one-liner and `state` the badge; tests normalise to {name, status, at}.
+// `gist` is the one-liner and `state` the badge; tests normalise to {name, status, at, link}; `link` is `#heading-slug` or a site path, shown on the test row.
 function nestedCard(front) {
   const head = /^card:[ \t]*$/m.exec(front);
   if (!head) return {};
@@ -172,7 +172,7 @@ function nestedCard(front) {
     const item = /^\s+-\s*\{(.*)\}\s*$/.exec(line);
     if (item) {
       const f = Object.fromEntries([...item[1].matchAll(/(\w+):\s*("[^"]*"|'[^']*'|[^,}]*)/g)].map(m => [m[1], unquote(m[2])]));
-      if (f.name) tests.push({ ...(f.result ? { result: f.result } : {}), name: f.name, status: (f.state ?? f.status ?? "planned").toLowerCase(), ...(/^\d{4}-\d{2}-\d{2}$/.test(f.date ?? f.at ?? "") ? { at: f.date ?? f.at } : {}) });
+      if (f.name) tests.push({ ...(f.result ? { result: f.result } : {}), ...(/^(#|\/(?!\/))[^\s]*$/.test(f.link ?? "") ? { link: f.link } : {}), name: f.name, status: (f.state ?? f.status ?? "planned").toLowerCase(), ...(/^\d{4}-\d{2}-\d{2}$/.test(f.date ?? f.at ?? "") ? { at: f.date ?? f.at } : {}) });
       continue;
     }
     const kv = /^\s+(gist|state|what|evidence|next|owner|line|status):\s*(.+)$/.exec(line);
