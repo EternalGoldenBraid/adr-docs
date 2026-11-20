@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.141.0 - 2026-11-20
+
+- A page with `status: todo` (an idea, may be bare) shows a `todo` chip on its card, blue with a ☐ icon, ahead of `planned`.
+
 ## 0.140.0 - 2026-11-20
 
 - A page that is done stays done when threads are opened on it later; the card no longer flips it back to review (thread 2367efbc). `openThreads` still counts them and the card still lists who has not resolved. Holding a page out of done while threads are open is for the status generator.

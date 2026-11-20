@@ -156,7 +156,7 @@ function workstreamSummary(documentRoot) {
 }
 
 // Cards from front matter, so every page can be read at three levels (line, card, page):
-//   card-line: one line   card-status: idea | planned | building | shipped
+//   card-line: one line   card-status: todo | idea | planned | building | shipped
 //   card-what / card-state / card-evidence / card-next / card-owner: one short line each
 export const CARD_SLOTS = ["what", "state", "evidence", "next", "owner"];
 // The nested form:  card:\n  gist: "…"\n  state: planned\n  evidence/next/owner/what: "…"\n  tests:\n    - {name: "…", state: done, date: 2026-11-19}
@@ -253,6 +253,7 @@ export function pageCards(documentRoot, options) {
     // Done is blocked until the structured verdict is written; the page waits in review and says what blocks it.
     if (["done", "shipped"].includes(card.status) && !structuredVerdict(front)) { card.reviewFrom ??= card.status; card.status = "review"; card.blockedBy = ["verdict"]; }
     if (/^(?:card-)?status:\s*["']?review["']?\s*$/m.test(front)) card.status = "review";
+    if (Object.keys(card).length && /^status:\s*["']?todo["']?\s*$/m.test(front)) card.status = "todo";
     const missing = ["line", "owner", "status"].filter(k => !card[k]);
     if (Object.keys(card).length && missing.length) card.missing = missing.map(k => ({ line: "gist", status: "state" }[k] ?? k));
     const verdict = needsVerdict(text);
