@@ -42,7 +42,7 @@ const rows = computed(() => Object.entries(cards.value).filter(([, c]) => c.line
     <div v-if="here.waitingOn" class="pc-slot"><i>waiting</i><span>{{ here.waitingOn.join(', ') }} have not resolved the open threads</span></div>
     <div v-if="tests.length" class="pc-slot"><i>tests</i><div>
       <div class="pc-count"><b>{{ summary.count }}</b><span v-if="summary.age !== null" :class="{ 'pc-old': summary.running && summary.age > staleDays }"> · last result {{ summary.age ? summary.age + ' d ago' : 'today' }}<template v-if="summary.running && summary.age > staleDays"> ⚠ stale</template></span></div>
-      <ul class="pc-tests"><li v-for="t in tests" :key="t.name" :class="['pc-test', t.status]"><span class="pc-mark">{{ MARK[t.status] || '?' }}</span><span>{{ t.name }}</span><small>{{ t.at || '' }}{{ t.verified ? ' ·run' : '' }}</small></li></ul>
+      <ul class="pc-tests"><li v-for="t in tests" :key="t.name" :class="['pc-test', t.status]"><span class="pc-mark">{{ MARK[t.status] || '?' }}</span><a v-if="t.link" :href="t.link.startsWith('#') ? t.link : withBase(t.link)" class="pc-link">{{ t.name }}</a><span v-else>{{ t.name }}</span><small>{{ t.at || '' }}{{ t.verified ? ' ·run' : '' }}</small></li></ul>
     </div></div>
     <template v-for="k in SLOTS" :key="k"><div v-if="here[k]" class="pc-slot"><i>{{ k }}</i><span :title="over(here[k]) ? here[k] : undefined">{{ clip(here[k]) }}</span></div></template>
   </div>
@@ -65,6 +65,7 @@ const rows = computed(() => Object.entries(cards.value).filter(([, c]) => c.line
 .vp-doc .pc-tests li { margin: 0 }
 .pc-test { display: grid; grid-template-columns: 18px 1fr auto; gap: 6px; padding: 1px 0; font-size: 13px }
 .pc-test small { color: var(--vp-c-text-3) }
+.vp-doc .pc-link { color: inherit; text-decoration: underline dotted; text-underline-offset: 2px } .vp-doc .pc-link:hover { color: var(--vp-c-brand-1) }
 .pc-test.done .pc-mark { color: #2b8a3e } .pc-test.running .pc-mark { color: #1c7ed6 } .pc-test.failed .pc-mark { color: #e03131 } .pc-test.obsolete { color: var(--vp-c-text-3); text-decoration: line-through }
 .pc-old { color: #d9480f; font-weight: 600 }
 .pc-tag.idea { background: #74c0fc33; color: #1c7ed6 }

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.138.0 - 2026-11-20
+
+- A card test may carry `link: "#heading-slug"` (or a site path); the test's name on the card is then a link to its result (thread f7ed1520). Anything else, such as `javascript:` or `//host`, is dropped. Headings use VitePress slugs: lower case, spaces to hyphens, punctuation removed.
+
 ## 0.137.0 - 2026-11-20
 
 - `<SplatViewer src="…" />` embeds a Gaussian splat (`.ply`, `.splat`, `.spz`, `.ksplat`) with orbit controls (thread a634e142). It uses Spark and three.js, which install with the plugin and load only on pages that use the component. Needs WebGL2; shows a note where it is missing.
