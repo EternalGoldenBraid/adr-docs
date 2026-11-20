@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.155.1 - 2026-11-20
+
+- Fix: calm mode no longer eats the page's own keys. It used to stop every key event at `document`, so handlers on `window` (the mokki /console W A S D) never saw them. ADR's own handlers now skip the event in calm mode and the event carries on to the page.
+- Test: `tests/calm.browser.mjs` drives a host window handler in calm and normal mode (needs a running preview).
+- Removed: the event-stopping calm listener.
+
 ## 0.155.0 - 2026-11-20
 
 - Calm mode: `:calm` makes ADR quiet on this page (`:calm site` on every page, `:calm off` to restore). Keys such as `s`, `t`, `n`, clicks and text selection no longer open comments or take screenshots, and the pill and marks are hidden, so a page with its own controls (the field console) is left alone. Only `:` still works, and the page's own key handlers still run. The status bar shows `CALM`, and `:help` (Search & commands) lists it.
