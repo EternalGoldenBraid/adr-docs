@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.149.1 - 2026-11-20
+
+- Fix: `Shift+T` now opens and closes the Team panel. The docs said so since 0.148.0, but the key was never bound (the panel opened only with `:mesh`, the leader key then `m`, or the edge tab).
+- Removed: the documentation claim of a key that did nothing.
+
 ## 0.149.0 - 2026-11-20
 
 - Shift+T, Verified column: **what each agent is working on**. The queue items (`queues.json`) whose id, or for a thread item its 8-character thread id, appear in the agent's current interaction (the user message and the tool arguments since the last user message) are listed after `→`. Hover for the event that first named each one. A working agent with no match shows `→ unattributed`; there is never a guess.

@@ -3020,6 +3020,11 @@
       openHistory();
       return;
     }
+    if (event.key === "T") {
+      event.preventDefault();
+      if (find(".mesh-panel").hidden || !meshPinned) openMesh(); else closeMesh();
+      return;
+    }
     if (event.key === "m" && previous === KM.leader) {
       event.preventDefault();
       if (find(".mesh-panel").hidden || !meshPinned) openMesh(); else closeMesh();
