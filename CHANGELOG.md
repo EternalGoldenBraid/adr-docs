@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.148.0 - 2026-11-20
+
+- Team panel (Shift+T): each agent now has a **Verified** column, read from the session's own `events.jsonl` (locally, or over ssh for the GPU machine), not from what the agent says. States: working (with the running tool), asking (unanswered permission prompt), idle, stalled (an open turn with no event for 10 min). Hover for the last event's type, id and time, which you can look up in the log.
+- The agent's own `STATUS` line is kept as the **Claim** column. When it contradicts the log (claims free while a turn is open, or busy while the log has been idle for 2 min) it is marked `≠` in amber.
+- The idle nudge now takes idle from the log when it is available, so it no longer relies on the cwd-matched hook.
+- Version 1 reads the log tail only; matching queue items to turns is not attempted yet.
+- Removed: the cwd-matched hook guess as the first source of an agent's state, wherever the log can be read.
+
 ## 0.147.2 - 2026-11-20
 
 - Fix: a GPU agent's call to a store with several matching relay sessions failed with "Several previews match"; the bridge now uses the one with the latest heartbeat.

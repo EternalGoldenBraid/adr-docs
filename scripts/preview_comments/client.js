@@ -144,7 +144,7 @@
     </section>
     <section class="panel mesh-panel" hidden aria-label="Team status">
       <div class="history-head"><h2>Team</h2><span class="mesh-tabs help-tabs-look"><button type="button" data-tab="table">Table</button><button type="button" data-tab="graph">Graph</button><button type="button" data-tab="room">Room</button></span><small class="mesh-note"></small><button class="mesh-close icon" type="button" aria-label="Close">✕</button></div>
-      <table class="mesh-table"><thead><tr><th>Who</th><th>Status</th><th>Doing</th><th>Machine</th></tr></thead><tbody></tbody></table><svg class="mesh-graph" viewBox="0 0 600 320" hidden></svg><div class="mesh-room" hidden></div><div class="mesh-machines"></div><div class="mesh-machines"></div><div class="mesh-edges"></div>
+      <table class="mesh-table"><thead><tr><th>Who</th><th>Verified (from the session log)</th><th>Claim (agent\u2019s own status)</th><th>Machine</th></tr></thead><tbody></tbody></table><svg class="mesh-graph" viewBox="0 0 600 320" hidden></svg><div class="mesh-room" hidden></div><div class="mesh-machines"></div><div class="mesh-machines"></div><div class="mesh-edges"></div>
     </section>
     <section class="panel whats-panel" hidden aria-label="What's new">
       <div class="history-head"><h2>What's new</h2><small class="whats-hint"></small><button class="whats-close icon" type="button" aria-label="Close">✕</button></div>
@@ -857,10 +857,11 @@
   const ago = at => { const m = Math.max(0, Math.round((Date.now() - Date.parse(at)) / 60000)); return m < 1 ? "now" : m < 60 ? `${m}m` : `${Math.round(m / 60)}h`; };
   let meshTab = localStorage.getItem("preview-comments-mesh-tab") || "table";
   // Same indicators as the desktop mesh panel: blue working, pink waiting, yellow asking, green idle, hollow grey ring = active, state unknown.
-  const MESH_COLOURS = { working: "#6fb7e8", waiting: "#f38ba8", asking: "#ffd500", idle: "#9ccc65", active: "#9399b2", offline: "#9399b2", human: "#e6edf7" };
+  const MESH_COLOURS = { working: "#6fb7e8", waiting: "#f38ba8", asking: "#ffd500", idle: "#9ccc65", stalled: "#fab387", active: "#9399b2", offline: "#9399b2", human: "#e6edf7" };
   function meshState(m) {
     if (!m.session) return "human";
     if (m.status !== "active" || (m.lastSeen && Date.now() - Date.parse(m.lastSeen) > 30 * 60000)) return "offline";
+    if (m.verified) return m.verified.state;
     if (MESH_COLOURS[m.activity] && !["active", "offline", "human"].includes(m.activity)) return m.activity;
     const line = m.statusLine?.state;
     return line === "running" ? "working" : line === "waiting" || line === "blocked" ? "waiting" : line === "idle" ? "idle" : "active";
@@ -1065,10 +1066,13 @@
         const st = meshState(m);
         cell(m.session ? `${agentLook(m.name).icon} ${m.name}` : m.name);
         if (m.session) row.lastChild.style.color = agentLook(m.name).color;
-        cell(st === "offline" ? m.status : st === "active" ? "active" : st, st);
+        const v = m.verified;
+        cell(st === "offline" ? m.status : v ? `${st}${v.detail ? " · " + v.detail : ""} (${Math.round(v.ageMs / 1000) < 90 ? Math.round(v.ageMs / 1000) + " s" : Math.round(v.ageMs / 60000) + " min"})` : st === "active" ? "active (unverified)" : st, st);
+        if (v) row.lastChild.title = `Last event ${v.eventType} ${v.eventId} at ${v.at}`;
         const d = row.lastChild.querySelector(".dot");
         if (d) { d.style.background = ["active", "offline"].includes(st) ? "none" : MESH_COLOURS[st]; if (["active", "offline"].includes(st)) d.style.boxShadow = `inset 0 0 0 2px ${MESH_COLOURS[st]}`; if (st === "offline") d.style.opacity = ".4"; }
-        cell(l ? `${l.ticket ? l.ticket + " · " : ""}${l.state} · ${l.doing}${l.next ? " → " + l.next : ""} (${ago(l.at)})` : "—");
+        cell(l ? `${m.verified?.mismatch ? "≠ " : ""}${l.ticket ? l.ticket + " · " : ""}${l.state} · ${l.doing}${l.next ? " → " + l.next : ""} (${ago(l.at)})` : "—");
+        if (m.verified?.mismatch) { row.lastChild.style.color = "#fab387"; row.lastChild.title = "The agent's claim disagrees with its session log"; }
         cell(m.machine || "—");
         return row;
       }));
