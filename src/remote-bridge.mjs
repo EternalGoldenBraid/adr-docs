@@ -18,28 +18,38 @@ async function meshBridge(machine, store, path, init, timeoutMs = 30_000) {
     const router = routerModule.createRouter(database, network.loadMachines());
     const peers = await router.listAgents(me.sessionId, { status: "active", machine });
     // Short-lived relay sessions pile up for one store; the one heard from last is the live one.
+    // A store id (not the folder name) matches no cwd, so every relay is a candidate and each one checks the store itself.
     const heard = agent => String(agent.last_heartbeat ?? agent.lastHeartbeat ?? "");
-    const targets = (peers.agents ?? []).filter(agent => agent.repo === "agent-doc-review-site" && basename(agent.cwd ?? "") === store).sort((a, b) => heard(b).localeCompare(heard(a)));
+    const relays = (peers.agents ?? []).filter(agent => agent.repo === "agent-doc-review-site").sort((a, b) => heard(b).localeCompare(heard(a)));
+    const named = relays.filter(agent => basename(agent.cwd ?? "") === store);
+    const targets = (named.length ? named : relays).slice(0, 3);
     if (!targets.length) throw new Error(`No running preview "${store}" on ${machine}.`);
-    const id = randomUUID();
-    const sent = await router.sendMessage(me.sessionId, { machine, recipient_session_id: targets[0].session_id, priority: "high",
-      content: `ADR-REQ ${JSON.stringify({ id, store, path, method: init.method ?? "GET", body: init.body })}` });
-    if (sent.error) throw new Error(sent.error);
-    const chunks = new Map();
-    for (const deadline = Date.now() + timeoutMs; Date.now() < deadline; await new Promise(done => setTimeout(done, 400))) {
-      for (const message of me.inbox().messages ?? []) {
-        const part = parseResponse(message.content);
-        if (part?.id !== id) continue;
-        me.read(message.message_id);
-        chunks.set(part.part, part);
-        if (chunks.size === part.parts) {
-          const { status, body } = decodeResponse([...chunks.keys()].sort((a, b) => a - b).map(key => chunks.get(key).data));
-          if (status >= 400) throw new Error(body.error || `Bridge answered ${status}`);
-          return body;
+    let refused;
+    for (const target of targets) {
+      const id = randomUUID();
+      const sent = await router.sendMessage(me.sessionId, { machine, recipient_session_id: target.session_id, priority: "high",
+        content: `ADR-REQ ${JSON.stringify({ id, store, path, method: init.method ?? "GET", body: init.body })}` });
+      if (sent.error) throw new Error(sent.error);
+      const chunks = new Map();
+      for (const deadline = Date.now() + timeoutMs; Date.now() < deadline; await new Promise(done => setTimeout(done, 400))) {
+        for (const message of me.inbox().messages ?? []) {
+          const part = parseResponse(message.content);
+          if (part?.id !== id) continue;
+          me.read(message.message_id);
+          chunks.set(part.part, part);
+          if (chunks.size === part.parts) {
+            const { status, body } = decodeResponse([...chunks.keys()].sort((a, b) => a - b).map(key => chunks.get(key).data));
+            if (status === 404 && /This preview serves/.test(body?.error ?? "")) { refused = body.error; break; }
+            if (status >= 400) throw new Error(body.error || `Bridge answered ${status}`);
+            return body;
+          }
         }
+        if (refused) break;
       }
+      if (!refused) throw new Error(`No answer from the preview "${store}" on ${machine} within ${timeoutMs / 1000} s.`);
+      if (target === targets.at(-1)) throw new Error(refused);
+      refused = undefined;
     }
-    throw new Error(`No answer from the preview "${store}" on ${machine} within ${timeoutMs / 1000} s.`);
   } finally { me.close(); database.close(); }
 }
 

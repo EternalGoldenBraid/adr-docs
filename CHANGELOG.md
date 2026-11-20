@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.148.1 - 2026-11-20
+
+- Fix: a GPU agent addressing a store by its id (e.g. `ddd31c98`) got "No running preview", because relays were matched on the folder name only. The bridge now tries the three most recently heard relays for the machine and each one checks the store itself; the first that serves it answers.
+- Removed: the folder-name-only matching of relays, so a store id and a store name both work remotely.
+
 ## 0.148.0 - 2026-11-20
 
 - Team panel (Shift+T): each agent now has a **Verified** column, read from the session's own `events.jsonl` (locally, or over ssh for the GPU machine), not from what the agent says. States: working (with the running tool), asking (unanswered permission prompt), idle, stalled (an open turn with no event for 10 min). Hover for the last event's type, id and time, which you can look up in the log.
