@@ -849,6 +849,31 @@ export async function startCommentBridge({
         } catch (error) { return reply(response, 400, { error: error.message }); }
       }
       if (request.method === "GET" && request.url === "/settings") return reply(response, 200, effective());
+      if (request.method === "GET" && request.url === "/latency") {
+        // How long your messages wait for an answer, and how long threads stay open, per thread and per addressed agent (minutes). For the ceremony stats.
+        const minutes = (from, to) => Math.round((Date.parse(to) - Date.parse(from)) / 6000) / 10;
+        const median = values => values.length ? [...values].sort((a, b) => a - b)[Math.floor((values.length - 1) / 2)] : null;
+        const threads = [...comments.values()].filter(comment => !comment.removed && !comment.note && !comment.highlight && comment.kind !== "session").map(comment => {
+          const messages = [{ user: true, at: comment.at }, ...comment.replies.map(reply => ({ user: reply.author === "user", at: reply.at }))].filter(message => message.at);
+          const answers = [];
+          messages.forEach((message, index) => {
+            if (!message.user || messages[index - 1]?.user) return;
+            const answer = messages.slice(index + 1).find(next => !next.user);
+            if (answer) answers.push(minutes(message.at, answer.at));
+          });
+          return { id: comment.id, page: new URL(comment.url).pathname, to: (comment.to ?? []).map(canon), answerMinutes: answers, resolveMinutes: comment.resolved && comment.resolvedAt ? minutes(comment.at, comment.resolvedAt) : null };
+        });
+        const perAgent = {};
+        for (const thread of threads) for (const agent of thread.to) {
+          const entry = perAgent[agent] ??= { answer: [], resolve: [] };
+          entry.answer.push(...thread.answerMinutes);
+          if (thread.resolveMinutes !== null) entry.resolve.push(thread.resolveMinutes);
+        }
+        return reply(response, 200, {
+          threads,
+          agents: Object.fromEntries(Object.entries(perAgent).map(([agent, entry]) => [agent, { answers: entry.answer.length, medianAnswerMinutes: median(entry.answer), resolved: entry.resolve.length, medianResolveMinutes: median(entry.resolve) }])),
+        });
+      }
       if (request.method === "GET" && request.url === "/rooms") {
         // Read-only view of every room; it never touches read_through, so viewing marks nothing read.
         const names = new Map(roster().filter(row => row.session).map(row => [row.session, row.slug]));

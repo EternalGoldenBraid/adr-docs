@@ -383,7 +383,9 @@ A thread started with a region screenshot (`s`) keeps the drawn area: the page s
 
 ## Queued send
 
-`Ctrl+Enter` sends a comment or reply immediately. `Ctrl+Shift+Enter` queues it: it is saved and addressed as usual, but nothing wakes or messages the agent while it is busy. The hosting agent picks it up the next time it goes idle; an addressed mesh agent is messaged once its status is no longer "working". Use it to leave feedback without interrupting.
+Every comment and reply waits in the agent's queue by default: it is saved and addressed as usual, but nothing wakes or messages the agent while it is busy. The hosting agent picks it up the next time it goes idle; an addressed mesh agent is messaged once its status is no longer "working". To interrupt instead, tick **⚠ interrupt** next to Send before sending (it unticks after each send), or press `Ctrl+Shift+Enter`. `Ctrl+Enter` follows the default.
+
+`GET /__preview_comments/latency` returns, per thread and per addressed agent, how many minutes your messages waited for an answer and the median time to resolve, for the ceremony statistics.
 
 ## Served bundle (offline with runtime-fetched assets)
 

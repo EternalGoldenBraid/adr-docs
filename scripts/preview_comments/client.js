@@ -26,6 +26,7 @@
       .banners[hidden]{display:none}.banners{position:fixed;top:72px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;z-index:5}.banner{max-width:min(640px,90vw);padding:8px 14px;border:1px solid #ff5a4f;border-radius:10px;background:#2a1517;color:#eee;text-align:left}.banner small{color:#ffb3ae;display:block}
       .statusbar{position:fixed;left:0;right:0;bottom:0;display:flex;gap:18px;align-items:center;padding:3px 14px;background:#111318;border-top:1px solid #3a404a;font:12px/1.4 ui-monospace,monospace;color:#b7c1ce;pointer-events:none}.sb-mode{font-weight:700;color:#74c0fc}.sb-hint{order:3;margin-left:auto}.sb-stale{color:#e3b341;font-weight:700;white-space:nowrap}.sb-mode{white-space:nowrap}.agent-status::before{content:"● ";color:#51cf66}.agent-status.await::before{color:#ff6b6b}.agent-status.blocked{color:#fff;background:#d6336c;font-weight:700;padding:0 8px;border-radius:3px}.agent-status.blocked::before{content:"⛔ "}.dot.blocked{background:#f03e3e;animation:adrblink 1s infinite}@keyframes adrblink{50%{opacity:.3}}
       .rchip{display:inline-flex;align-items:center;gap:3px;padding:1px 8px 1px 6px;border-radius:999px;font-size:11px;line-height:16px;border:1px solid;white-space:nowrap}.rchip i{width:7px;height:7px;border-radius:50%;border:1.5px solid currentColor;box-sizing:border-box}.rchip i.on{background:currentColor}.rchip i.me{width:9px;height:9px}.rchip b{margin-left:3px;font-weight:600;font-variant-numeric:tabular-nums}.rchip em{font-style:normal;margin-left:2px;opacity:.85}.rchip.todo{color:#f2c94c;background:rgba(242,201,76,.12);border-color:rgba(242,201,76,.35)}.rchip.mine{color:#6fcf97;background:rgba(111,207,151,.13);border-color:rgba(111,207,151,.4)}
+      .interrupt{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#8b949e;cursor:pointer;padding:2px 8px;border-radius:999px;border:1px solid transparent}.interrupt:has(input:checked){color:#f2c94c;background:rgba(242,201,76,.14);border-color:rgba(242,201,76,.45)}
       .grep{position:fixed;left:50%;bottom:44px;transform:translateX(-50%);width:min(860px,94vw);max-height:50vh;display:flex;flex-direction:column;background:#17191f;border:1px solid #59616d;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,.5);font:13px/1.4 ui-monospace,monospace;color:#d6dbe3;z-index:5}
       .grep header{padding:6px 12px;border-bottom:1px solid #2f343d;color:#9aa4b2}.grep .grep-list{overflow:auto;padding:4px}
       .grep-hit{display:block;width:100%;text-align:left;background:none;border:0;border-radius:6px;color:inherit;font:inherit;padding:3px 8px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -116,7 +117,7 @@
       <form><label for="comment-body">Your comment</label>
       <textarea id="comment-body" required maxlength="4000"></textarea>
       <div class="shots"></div>
-      <div class="actions"><button type="button" class="attach-region" title="Attach a screenshot of a region (s)">Region</button><button type="button" class="cancel">Cancel</button><button type="button" class="note-save">Save as note</button><button class="primary" type="submit">Send</button></div></form>
+      <div class="actions"><button type="button" class="attach-region" title="Attach a screenshot of a region (s)">Region</button><button type="button" class="cancel">Cancel</button><button type="button" class="note-save">Save as note</button><label class="interrupt" title="Tick to interrupt the agent now; otherwise this waits in its queue until it is idle (Ctrl+Shift+Enter also interrupts)"><input type="checkbox" class="int-comment"> ⚠ interrupt</label><button class="primary" type="submit">Send</button></div></form>
     </section>
     <section class="panel history" hidden aria-labelledby="history-title">
       <div class="history-head"><h2 id="history-title">Comment history</h2><small class="history-counts"></small>
@@ -135,10 +136,10 @@
         <details class="quote-box"><summary class="quote-summary">Selected content</summary><div class="quote thread-quote"></div></details>
         <div class="thread-links"></div>
         <div class="thread-messages"></div>
-        <form class="reply-form"><div class="reply-target" hidden><span></span><button type="button" title="Drop (Esc in the field, or click)">✕</button></div><div class="to to-reply" hidden></div><textarea id="thread-reply" aria-label="Your reply" placeholder="Reply (i to focus · /w name text whispers · Ctrl+Enter sends · Ctrl+Shift+Enter queues until the agent is idle · Esc/jk normal mode, again leaves)" required maxlength="4000"></textarea>
+        <form class="reply-form"><div class="reply-target" hidden><span></span><button type="button" title="Drop (Esc in the field, or click)">✕</button></div><div class="to to-reply" hidden></div><textarea id="thread-reply" aria-label="Your reply" placeholder="Reply (i to focus · /w name text whispers · Ctrl+Enter queues it for the agent's next idle moment · ⚠ or Ctrl+Shift+Enter interrupts now · Esc/jk normal mode, again leaves)" required maxlength="4000"></textarea>
         <div class="actions"><button class="thread-region" type="button" title="Attach a screenshot of a region (s)">Region</button>
         <button class="thread-branch" type="button" title="Start a linked child thread from the selected text or focused message (n)">↳ New thread</button>
-        <button class="primary reply-send" type="submit">Reply</button></div></form>
+        <label class="interrupt" title="Tick to interrupt the agent now; otherwise this waits in its queue until it is idle (Ctrl+Shift+Enter also interrupts)"><input type="checkbox" class="int-reply"> ⚠ interrupt</label><button class="primary reply-send" type="submit">Reply</button></div></form>
       </section>
     </section>
     <section class="panel mesh-panel" hidden aria-label="Team status">
@@ -182,7 +183,9 @@
   let selecting = false;
   let draftId;
   let noteRequested = false;
-  let queueRequested = false;
+  // Sends wait in the agent's queue by default; the ⚠ box or Ctrl+Shift+Enter interrupts instead.
+  let interruptRequested = false;
+  const takeQueued = box => { const interrupt = interruptRequested || box.checked; interruptRequested = false; box.checked = false; return !interrupt; };
   let submittedText;
   let sessionId;
   let statusTimer;
@@ -1936,7 +1939,7 @@
         fitReply();
         setReplyTarget(null);
         host.dataset.replyDrafts = String([...replyDrafts.values()].filter(draft => draft.text.trim()).length);
-        message(values.queued ? "Reply queued · delivered when the agent is idle" : "Reply saved");
+        message(values.queued ? "Reply queued · delivered when the agent is idle" : "Reply sent · interrupts the agent");
       } else if (values.resolved !== undefined) message(result.resolved ? "Comment resolved" : "Comment reopened");
       else message("Saved");
       if (values.resolved === true && result.resolved) selectedThread = undefined;
@@ -2040,8 +2043,7 @@
     draft.submitted = replyInput.value;
     replyDrafts.set(selectedThread, draft);
     const target = replyTarget;
-    const queued = queueRequested;
-    queueRequested = false;
+    const queued = takeQueued(find(".int-reply"));
     // "/w name[,name] text" whispers: only those agents get it.
     let text = replyInput.value, whisper;
     replyAssist.addMentions(text);
@@ -3138,12 +3140,11 @@
       if (!sessionId) sessionId = (await api("status")).sessionId;
       const asNote = noteRequested;
       noteRequested = false;
-      const queued = queueRequested;
-      queueRequested = false;
+      const queued = takeQueued(find(".int-comment"));
       await api("comments", { ...target, id: draftId, sessionId, ...personField(), comment: submittedText, ...(draftImages.length ? { images: draftImages.map(shot => shot.id) } : {}), ...(draftImages[0]?.region ? { region: draftImages[0].region } : {}), ...(asNote ? { note: true } : {}), ...(queued ? { queued: true } : {}), ...(branchOf ? { refs: [branchOf] } : {}), ...toValue(composeTo, !find(".to-new").hidden) });
       branchOf = undefined;
       rememberTo(composeTo);
-      message(asNote ? "Saved as private note" : queued ? "Queued · delivered when the agent is idle" : "Saved · awaiting review");
+      message(asNote ? "Saved as private note" : queued ? "Queued · delivered when the agent is idle" : "Sent · interrupts the agent");
       statusTimer = setTimeout(() => message(""), 5000);
       textarea.value = "";
       keepDraft(pageDraftKey(), "");
@@ -3542,10 +3543,10 @@
     pill.setAttribute("aria-expanded", String(!toolbar.hidden));
   });
   textarea.addEventListener("keydown", event => {
-    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) { event.preventDefault(); queueRequested = event.shiftKey; find("form").requestSubmit(); }
+    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) { event.preventDefault(); interruptRequested = event.shiftKey; find("form").requestSubmit(); }
   });
   replyInput.addEventListener("keydown", event => {
-    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) { event.preventDefault(); queueRequested = event.shiftKey; find(".reply-form").requestSubmit(); }
+    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) { event.preventDefault(); interruptRequested = event.shiftKey; find(".reply-form").requestSubmit(); }
   });
   const clock = seconds => `${Math.floor(seconds / 60)}:${(seconds % 60).toFixed(2).padStart(5, "0")}`;
   const videoName = video => (video.currentSrc || video.src || "video").split("/").pop().split("?")[0];

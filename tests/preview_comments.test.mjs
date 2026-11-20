@@ -635,3 +635,26 @@ test("/rooms lists rooms read-only with the pinned summary, close time and last 
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test("/latency reports how long your messages wait for an answer and how long threads take to resolve", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "preview-comments-"));
+  const sessionId = randomUUID();
+  writeFileSync(join(directory, "page.md"), "# Page\n\nText.");
+  const bridge = await startCommentBridge({
+    sessionId, documentRoot: directory, storageRoot: directory, previewOrigin: "http://127.0.0.1:8769",
+    onError: error => assert.fail(error.message), notify: async () => {},
+  });
+  try {
+    const id = bridge.add({ page: "/page", kind: "page", quote: "Page", comment: "question" }).id;
+    bridge.update({ id: randomUUID(), commentId: id, reply: "answer" });
+    bridge.update({ id: randomUUID(), sessionId, commentId: id, resolved: true }, "user");
+    const connection = JSON.parse(readFileSync(bridge.connectionFile, "utf8"));
+    const body = await (await fetch(`http://127.0.0.1:${connection.port}/latency`, { headers: { Authorization: `Bearer ${connection.token}` } })).json();
+    const thread = body.threads.find(row => row.id === id);
+    assert.equal(thread.answerMinutes.length, 1);
+    assert.equal(typeof thread.resolveMinutes, "number");
+  } finally {
+    await bridge.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
