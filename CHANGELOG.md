@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.149.0 - 2026-11-20
+
+- Shift+T, Verified column: **what each agent is working on**. The queue items (`queues.json`) whose id, or for a thread item its 8-character thread id, appear in the agent's current interaction (the user message and the tool arguments since the last user message) are listed after `→`. Hover for the event that first named each one. A working agent with no match shows `→ unattributed`; there is never a guess.
+- This is a relation, not a one-to-one map: a turn can name several items or none. It is exact only for agents that open work with a `STATUS <item-id> | running` line or an id in their commands; ticket slugs and prose mentions are not matched yet.
+- Removed: nothing this time.
+
 ## 0.148.1 - 2026-11-20
 
 - Fix: a GPU agent addressing a store by its id (e.g. `ddd31c98`) got "No running preview", because relays were matched on the folder name only. The bridge now tries the three most recently heard relays for the machine and each one checks the store itself; the first that serves it answers.

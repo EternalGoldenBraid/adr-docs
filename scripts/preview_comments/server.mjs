@@ -239,14 +239,14 @@ export async function startCommentBridge({
       } finally { closeSync(fd); }
     } catch { return null; }
   }
-  async function verifiedStates(rows) {
+  async function verifiedStates(rows, queues = {}) {
     const out = new Map();
     const peers = new Map();
     for (const row of rows.filter(r => r.session)) {
       if (row.machine && row.machine !== hostname()) peers.set(row.machine, [...(peers.get(row.machine) ?? []), row.session]);
-      else { const lines = localLog(row.session); if (lines) out.set(row.session, deriveState(lines)); }
+      else { const lines = localLog(row.session); if (lines) out.set(row.session, deriveState(lines, Date.now(), queues[row.slug] ?? [])); }
     }
-    for (const [machine, sessions] of peers) for (const [id, lines] of await remoteLogs(machine, sessions)) out.set(id, deriveState(lines));
+    for (const [machine, sessions] of peers) for (const [id, lines] of await remoteLogs(machine, sessions)) out.set(id, deriveState(lines, Date.now(), queues[rows.find(r => r.session === id)?.slug] ?? []));
     return out;
   }
 
@@ -292,7 +292,9 @@ export async function startCommentBridge({
       }
     } catch { /* no agent-notify on this machine */ }
     const rows = roster();
-    const verified = await verifiedStates(rows).catch(() => new Map());
+    let queued = {};
+    try { queued = JSON.parse(readFileSync(join(documentRoot, "queues.json"), "utf8")); } catch { /* no queues.json */ }
+    const verified = await verifiedStates(rows, queued).catch(() => new Map());
     return rows.map(row => {
       const seen = live.get(row.session) ?? remote.get(row.session);
       const proof = verified.get(row.session) ?? null;

@@ -505,3 +505,5 @@ Ceremony rows: `<CeremonyRows />` renders `ceremony.json` (site root, written by
 ### Verified state (Shift+T)
 
 The Team panel shows two columns per agent. **Verified** is derived from the session's own `events.jsonl`: working (and the running tool), asking (a permission prompt is open), idle, or stalled (an open turn silent for 10 minutes). Hover for the last event's id and time. **Claim** is the agent's own `STATUS` line; a `≠` means it contradicts the log. Peer machines are read over ssh.
+
+The Verified column also lists, after `→`, the queue items named in the agent's current interaction (by id, found in its prompt and tool arguments). `→ unattributed` means it is working but no queue item is named; it is never guessed.

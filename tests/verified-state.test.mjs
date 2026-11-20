@@ -24,3 +24,17 @@ test("a claim that contradicts the log is flagged", () => {
   assert.equal(disagrees("running", idle), true);
   assert.equal(disagrees("running", working), false);
 });
+
+test("queue items are attributed by id from this interaction only, with the event as proof", () => {
+  const items = [{ id: "piadapter", kind: "test", test: "pi adapter" }, { id: "thread-716db4bb", kind: "thread", test: "t" }, { id: "x", kind: "test" }];
+  const lines = [
+    ev("user.message", "2026-11-20T09:00:00Z", { content: "start piadapter" }),
+    ev("assistant.turn_start", "2026-11-20T09:00:01Z"),
+    ev("user.message", "2026-11-20T09:59:00Z", { content: "look at thread 716db4bb" }),
+    ev("assistant.turn_start", "2026-11-20T09:59:01Z"),
+    ev("tool.execution_start", "2026-11-20T09:59:02Z", { toolCallId: "a", toolName: "bash", arguments: { command: "echo 716db4bb-d3db" } }, "evt1"),
+  ];
+  const { workingOn } = deriveState(lines, now, items);
+  assert.deepEqual(workingOn.map(w => w.id), ["thread-716db4bb"]);
+  assert.equal(workingOn[0].eventId, "evt1");
+});
