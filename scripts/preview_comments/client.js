@@ -551,7 +551,7 @@
     };
     grepList.replaceChildren(
       ...pageHits.map(hit => row(`${hit.title}:${hit.line}`, hit, () => {
-        sessionStorage.setItem("adr-find", JSON.stringify({ text: hit.match, sensitive }));
+        sessionStorage.setItem("adr-find", JSON.stringify({ text: hit.match, sensitive, context: hit.text }));
         if (pagePath(new URL(hit.link, location.origin)) === pagePath(location.href)) findPending(); else location.assign(hit.link);
       })),
       ...threads.map(hit => row(`💬 ${hit.thread.kind === "session" ? "session" : hit.thread.section || pagePath(hit.thread.url)}${hit.thread.resolved ? " ✓" : ""}`, hit, () => goToThread(hit.thread))));
@@ -583,7 +583,7 @@
       button.addEventListener("click", () => {
         closeGrep();
         if (hit.kind === "thread") { const thread = historyComments.find(c => c.id === hit.id); if (thread) goToThread(thread); return; }
-        sessionStorage.setItem("adr-find", JSON.stringify({ text: hit.text.slice(0, 40), sensitive: false }));
+        sessionStorage.setItem("adr-find", JSON.stringify({ text: hit.text.slice(0, 40), sensitive: false, context: hit.text }));
         if (pagePath(new URL(hit.link, location.origin)) === pagePath(location.href)) findPending(); else location.assign(hit.link);
       });
       return button;
@@ -597,8 +597,30 @@
     const raw = sessionStorage.getItem("adr-find");
     if (!raw) return;
     sessionStorage.removeItem("adr-find");
-    const { text, sensitive } = JSON.parse(raw);
-    setTimeout(() => { getSelection().removeAllRanges(); window.find(text, sensitive, false, true); }, 400);
+    const { text, sensitive, context = "" } = JSON.parse(raw);
+    // The match text (say "ADR") occurs all over a page; select the occurrence whose block shares the most words with the hit's source line.
+    const words = [...new Set(context.toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) ?? [])];
+    const score = range => {
+      const block = (range.startContainer.nodeType === 1 ? range.startContainer : range.startContainer.parentElement)?.closest("tr,p,li,h1,h2,h3,h4,h5,h6,pre,blockquote,dt,dd");
+      const own = block?.textContent.toLowerCase() ?? "";
+      return words.length ? words.filter(word => own.includes(word)).length / words.length : 0;
+    };
+    setTimeout(() => {
+      const selection = getSelection();
+      selection.removeAllRanges();
+      const found = [];
+      for (let i = 0; i < 300 && window.find(text, sensitive, false, true); i++) {
+        const range = selection.getRangeAt(0).cloneRange();
+        if (found.some(other => other.compareBoundaryPoints(Range.START_TO_START, range) === 0)) break;
+        found.push(range);
+      }
+      if (!found.length) return;
+      let best = found[0], top = score(best);
+      for (const range of found) { const value = score(range); if (value > top) { best = range; top = value; } }
+      selection.removeAllRanges();
+      selection.addRange(best);
+      (best.startContainer.nodeType === 1 ? best.startContainer : best.startContainer.parentElement)?.scrollIntoView({ block: "center" });
+    }, 400);
   }
   grepPanel.addEventListener("keydown", event => {
     const hits = [...grepList.children], at = hits.indexOf(shadow.activeElement);

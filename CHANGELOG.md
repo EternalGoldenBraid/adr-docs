@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.143.1 - 2026-11-20
+
+- Fixed: `:grep` hits now open at the matching line, not just the page. The jump searched only for the matched word, so it landed on the first occurrence on the page; it now picks the occurrence whose paragraph, list item or table row shares the most words with the hit's source line (also for `:grep -m`).
+- Removed: the unused `text` shadowing in `findPending` (the jump now reads the stored match and context in one place).
+
 ## 0.143.0 - 2026-11-20
 
 - `<RoomFeed />` shows every mesh room on a page (the Demo /team "Rooms" section): topic, members, open time, the pinned summary and the last 20 posts. It reads the new bridge route `GET /rooms` from the mesh database in read-only mode, so viewing never marks a post read and needs no seat. Open rooms are expanded; closed ones sit behind a "show N closed" toggle.
