@@ -1618,7 +1618,11 @@
       const badge = document.createElement("span");
       badge.className = "badge";
       const links = (comment.refs?.length || 0) + historyComments.filter(c => !c.removed && c.refs?.includes(comment.id)).length;
+      // Open threads with participants show your own resolve mark and how many of them have resolved.
+      const marks = comment.resolved ? [] : resolveMarks(comment);
+      if (marks.length) badge.title = marks.map(m => `${m.done ? "✓" : "○"} ${m.name}`).join("  ");
       badge.textContent = [comment.resolved ? (hasFresh(comment) ? "resolved · new reply" : "resolved") : awaiting(comment) ? "awaiting you" : comment.seen || comment.note ? "" : "unread",
+        marks.length ? `${marks[0].done ? "✓ you" : "○ you"} ${marks.filter(m => m.done).length}/${marks.length}` : "",
         comment.replies.length ? `💬${comment.replies.length}` : "", links ? `🔗${links}` : "",
         comment.kind !== "session" && pagePath(comment.url) !== pagePath(location.href) ? pagePath(comment.url) : ""].filter(Boolean).join(" · ");
       top.append(section, badge);
