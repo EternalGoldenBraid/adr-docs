@@ -181,11 +181,13 @@
   const calmList = () => { try { return JSON.parse(localStorage.getItem(CALM_KEY) || "[]"); } catch { return []; } };
   const calmPath = () => location.pathname.replace(/\.html$/, "").replace(/\/index$/, "/");
   const isCalm = () => calmList().some(entry => entry === "*" || entry === calmPath());
-  for (const type of ["keydown", "mouseup", "dblclick", "selectionchange", "focusin"]) document.addEventListener(type, event => {
-    if (!isCalm() || event.composedPath().includes(host)) return;
-    if (type === "keydown" && event.key === ":" && !event.ctrlKey && !event.metaKey && !event.altKey && !event.target.closest?.("input,textarea,select,[contenteditable]")) return;
-    event.stopImmediatePropagation();
-  });
+  const CALM_TYPES = ["keydown", "mouseup", "dblclick", "selectionchange", "focusin"];
+  // ADR's own handlers go through here: in calm mode they skip the event, which keeps travelling to the page's own handlers (also on window).
+  const docOn = (type, fn, options) => document.addEventListener(type, CALM_TYPES.includes(type) ? event => {
+    if (isCalm() && !event.composedPath().includes(host) &&
+      !(type === "keydown" && event.key === ":" && !event.ctrlKey && !event.metaKey && !event.altKey && !event.target.closest?.("input,textarea,select,[contenteditable]"))) return;
+    return fn(event);
+  } : fn, options);
   let calmShown = false;
   const syncCalm = () => {
     const now = isCalm();
@@ -314,7 +316,7 @@
   let prefix;
   let prefixTimer;
   let externalMode; // set by pages that run their own modal keys (e.g. the graph)
-  document.addEventListener("preview-comment-mode", event => { externalMode = event.detail?.mode; modeLabel(); });
+  docOn("preview-comment-mode", event => { externalMode = event.detail?.mode; modeLabel(); });
 
   function modeLabel() {
     const mode = calmShown ? "CALM" : !vimEnabled ? "OFF" : !history.hidden ? "HISTORY" : !panel.hidden ? "COMMENT" : externalMode || (visual ? "VISUAL" : caretMode ? "CARET" : "NORMAL");
@@ -380,7 +382,7 @@
     helpPanel.hidden = false;
   }
   find(".help-close").addEventListener("click", () => { helpPanel.hidden = true; });
-  document.addEventListener("keydown", event => {
+  docOn("keydown", event => {
     if (helpPanel.hidden || event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
     const next = ["]", "l", "ArrowRight", "Tab"].includes(event.key), prev = ["[", "h", "ArrowLeft"].includes(event.key);
     if (event.key === "Escape") helpPanel.hidden = true;
@@ -465,7 +467,7 @@
       exporting = false;
     }
   }
-  document.addEventListener("adr-export", event => exportPage(event.detail?.pages?.length ? event.detail.pages : undefined));
+  docOn("adr-export", event => exportPage(event.detail?.pages?.length ? event.detail.pages : undefined));
   // :export (zip or page), :export single (one self-contained HTML file), :export compress (single, videos re-encoded smaller).
   commands.export = arg => {
     if (arg && !["single", "compress"].includes(arg)) return message("Usage: :export [single|compress]", true);
@@ -528,8 +530,8 @@
     document.body.style.cursor = "crosshair";
     message("Click a graph, SVG, image or canvas to save it (Esc cancels)");
   }
-  document.addEventListener("click", event => { if (picking) pickFigure(event); }, true);
-  document.addEventListener("keydown", event => { if (picking && event.key === "Escape") { stopPicking(); message(""); } }, true);
+  docOn("click", event => { if (picking) pickFigure(event); }, true);
+  docOn("keydown", event => { if (picking && event.key === "Escape") { stopPicking(); message(""); } }, true);
   commands.figure = startFigure;
   // :restart — a server started with `adr` restarts itself; the page reloads once it answers again.
   commands.restart = async () => {
@@ -888,7 +890,7 @@
     document.dispatchEvent(new CustomEvent("preview-comment-vim", { detail: { enabled: vimEnabled } }));
     showCaret();
   });
-  document.addEventListener("selectionchange", () => {
+  docOn("selectionchange", () => {
     showCaret();
     const chosen = selection();
     if (chosen) offer(chosen, getSelection().getRangeAt(0).cloneRange());
@@ -899,7 +901,7 @@
     if (!contextual.hidden) position(contextual, offeredAnchor);
     if (!panel.hidden && targetAnchor) position(panel, targetAnchor);
   };
-  document.addEventListener("scroll", reposition, { passive: true, capture: true });
+  docOn("scroll", reposition, { passive: true, capture: true });
   addEventListener("resize", reposition);
   modeLabel();
 
@@ -1390,7 +1392,7 @@
       if (token === readToken) { stopReading(); message(error.message, true); }
     }
   }
-  document.addEventListener("keydown", event => {
+  docOn("keydown", event => {
     if (event.key === "Escape" && readState) { stopReading(); message("Stopped reading"); }
   }, true);
   // Inline Markdown for messages (bold, italic, code), built from DOM nodes so message text is never parsed as HTML.
@@ -2230,7 +2232,7 @@
         finish(rect.width >= 8 && rect.height >= 8 ? rect : null);
       };
       regionLayer.onpointercancel = () => finish(null);
-      document.addEventListener("keydown", onKey, true);
+      docOn("keydown", onKey, true);
       regionLayer.hidden = false;
     });
   }
@@ -2314,7 +2316,7 @@
     open(text || context(element, "figure", "Region screenshot"), text ? undefined : element);
     addDraftImage(shot);
   }
-  document.addEventListener("preview-comment-region", () => regionComment());
+  docOn("preview-comment-region", () => regionComment());
   // Editable tables (`{editable}` under a table): double-click a cell to edit its markdown; Enter saves into the page file, Esc cancels.
   const editStyle = document.createElement("style");
   editStyle.textContent = "td.adr-edit-cell{cursor:cell;border-bottom:1px dotted #8b949e}td.adr-edit-cell:hover{background:#ffffff14}td.adr-editing{padding:0!important}td.adr-editing input{width:100%;box-sizing:border-box;font:inherit;color:inherit;background:#0d1117;border:2px solid #388bfd;padding:6px 10px;margin:0}";
@@ -2325,7 +2327,7 @@
   });
   new MutationObserver(markEditable).observe(document.body, { childList: true, subtree: true });
   markEditable();
-  document.addEventListener("dblclick", async event => {
+  docOn("dblclick", async event => {
     const cell = event.target.closest?.("td.adr-edit-cell");
     if (!cell || cell.classList.contains("adr-editing")) return;
     event.preventDefault();
@@ -2441,7 +2443,7 @@
     replyInput.focus();
   });
   find(".thread-region").addEventListener("click", () => regionThread(ids => updateThread({ id: crypto.randomUUID(), addImages: ids })));
-  document.addEventListener("keydown", event => {
+  docOn("keydown", event => {
     if (history.hidden || !vimEnabled || historySaving || event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
     const field = shadow.activeElement;
     if (field?.matches("textarea, input, select")) return;
@@ -2591,7 +2593,7 @@
   find(".whats-close").addEventListener("click", () => { whatsPanel.hidden = true; });
   commands.new = () => whatsOpen();
   commands.threads = async () => { await openHistory(); setFilter("page"); };
-  document.addEventListener("keydown", event => {
+  docOn("keydown", event => {
     const field = shadow.activeElement?.matches?.("textarea, input, select") || document.activeElement?.matches?.("input, textarea, select, [contenteditable]");
     if (event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
     if (whatsPanel.hidden) {
@@ -2652,7 +2654,7 @@
     glow.items.forEach((el, i) => el.classList.toggle("on", i === glow.at));
     glow.items[glow.at].scrollIntoView({ block: "center", behavior: "smooth" });
   }
-  document.addEventListener("keydown", event => {
+  docOn("keydown", event => {
     if (!glow.items.length || event.isComposing || event.ctrlKey || event.metaKey || event.altKey || !vimEnabled) return;
     if (!history.hidden || !panel.hidden || !helpPanel.hidden || !whatsPanel.hidden) return;
     if (shadow.activeElement?.matches?.("textarea, input, select") || document.activeElement?.matches?.("input, textarea, select, button, a, [contenteditable]")) return;
@@ -2669,7 +2671,7 @@
   }, true);
   setTimeout(glowStart, 1200);
   let popComment;
-  document.addEventListener("keydown", event => {
+  docOn("keydown", event => {
     if (event.key !== KM.page.region || event.isComposing || event.repeat || !vimEnabled || event.ctrlKey || event.metaKey || event.altKey ||
         regioning || historySaving || find("button[type=submit]").disabled || !document.querySelector(".vp-doc") ||
         event.composedPath().some(node => node.matches?.("input, textarea, select, button, [contenteditable]:not([contenteditable='false']), [role='textbox']"))) return;
@@ -2773,13 +2775,13 @@
     contextual.hidden = false;
     position(contextual, anchor);
   }
-  document.addEventListener("adr-presenting", () => { contextual.hidden = true; });
+  docOn("adr-presenting", () => { contextual.hidden = true; });
   contextual.addEventListener("mousedown", event => event.preventDefault());
-  document.addEventListener("focusin", event => {
+  docOn("focusin", event => {
     const picked = elementSelection(event.target);
     if (picked) offer(picked.chosen, picked.element);
   });
-  document.addEventListener("input", event => {
+  docOn("input", event => {
     if (contextual.hidden || offeredAnchor !== event.target) return;
     const picked = elementSelection(event.target);
     if (picked) offer(picked.chosen, picked.element);
@@ -2828,7 +2830,7 @@
     toggle.textContent = selecting ? "Cancel selection" : "Comment";
     message(selecting ? "Select text, or click an equation, figure, label or control." : "");
   });
-  document.addEventListener("mouseup", event => {
+  docOn("mouseup", event => {
     if (host.contains(event.target)) return;
     const selected = selection();
     const picked = selected ? null : elementSelection(event.target, selecting);
@@ -3028,7 +3030,7 @@
     st.mode = "insert"; st.pending = ""; st.line = false;
     delete event.target.dataset.vmode;
   });
-  document.addEventListener("keydown", event => {
+  docOn("keydown", event => {
     if (event.isComposing) return;
     if (vimEnabled && event.altKey && resizeKey(event)) { event.preventDefault(); return; }
     if (event.key === "Escape") {
@@ -3383,14 +3385,14 @@
       anchor: { getBoundingClientRect: () => customTarget(id)?.rect || { top: -1e4, bottom: -1e4, left: 0, right: 0 } },
     };
   }
-  document.addEventListener("preview-comment-pick", event => {
+  docOn("preview-comment-pick", event => {
     setTimeout(() => { const item = customChosen(event.detail?.id); if (item) offer(item.chosen, item.anchor); }, 0);
   });
-  document.addEventListener("preview-comment-open", event => {
+  docOn("preview-comment-open", event => {
     const item = customChosen(event.detail?.id);
     if (item) open(item.chosen, item.anchor);
   });
-  document.addEventListener("preview-comment-reflow", () => { if (marks.length) requestAnimationFrame(placeBubbles); });
+  docOn("preview-comment-reflow", () => { if (marks.length) requestAnimationFrame(placeBubbles); });
   // Bubbles sit at the comment: left of the text block, on a graph node's top-right
   // corner, above an edge label. Overlapping bubbles are nudged apart.
   function bubbleSpot(mark) {
@@ -3593,7 +3595,7 @@
     pop.style.top = `${Math.max(12, Math.min(at.top + 14, innerHeight - pop.offsetHeight * uiScale() - 12))}px`;
     input.focus();
   }
-  document.addEventListener("click", event => {
+  docOn("click", event => {
     if (host.contains(event.target) || !getSelection().isCollapsed) return;
     const caret = document.caretPositionFromPoint?.(event.clientX, event.clientY);
     const hit = caret && marks.filter(mark => !mark.custom && mark.range.isPointInRange(caret.offsetNode, caret.offset))
