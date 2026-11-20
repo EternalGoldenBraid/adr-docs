@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.150.0 - 2026-11-20
+
+- The floating panels (comment, history, Team, What's new, Help) can be dragged by their header, and the comment panel by its top strip. The position is remembered per panel; double-click the header to put it back.
+- The Team panel resizes with the same keys as the other panels (Alt+h/j/k/l in vim mode, see `:keys`), and the size is shared and remembered.
+- Removed: the fixed 640 px width of the Team panel.
+
 ## 0.149.1 - 2026-11-20
 
 - Fix: `Shift+T` now opens and closes the Team panel. The docs said so since 0.148.0, but the key was never bound (the panel opened only with `:mesh`, the leader key then `m`, or the edge tab).
