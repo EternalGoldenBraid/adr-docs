@@ -17,8 +17,10 @@ async function meshBridge(machine, store, path, init, timeoutMs = 30_000) {
   try {
     const router = routerModule.createRouter(database, network.loadMachines());
     const peers = await router.listAgents(me.sessionId, { status: "active", machine });
-    const targets = (peers.agents ?? []).filter(agent => agent.repo === "agent-doc-review-site" && basename(agent.cwd ?? "") === store);
-    if (targets.length !== 1) throw new Error(targets.length ? `Several previews match "${store}" on ${machine}.` : `No running preview "${store}" on ${machine}.`);
+    // Short-lived relay sessions pile up for one store; the one heard from last is the live one.
+    const heard = agent => String(agent.last_heartbeat ?? agent.lastHeartbeat ?? "");
+    const targets = (peers.agents ?? []).filter(agent => agent.repo === "agent-doc-review-site" && basename(agent.cwd ?? "") === store).sort((a, b) => heard(b).localeCompare(heard(a)));
+    if (!targets.length) throw new Error(`No running preview "${store}" on ${machine}.`);
     const id = randomUUID();
     const sent = await router.sendMessage(me.sessionId, { machine, recipient_session_id: targets[0].session_id, priority: "high",
       content: `ADR-REQ ${JSON.stringify({ id, store, path, method: init.method ?? "GET", body: init.body })}` });

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.147.2 - 2026-11-20
+
+- Fix: a GPU agent's call to a store with several matching relay sessions failed with "Several previews match"; the bridge now uses the one with the latest heartbeat.
+- A saved update now answers with `resolvedBy` (who has resolved), so "saved" can no longer hide a resolve vote that was not counted.
+- Removed: the "Several previews match" dead end.
+
 ## 0.147.1 - 2026-11-20
 
 - Fix: a table's Group by and sort choice now survives refresh. The saved key used the table's position among the page's tables, which shifted whenever a table gained or lost rows (tables under three rows are skipped), and `/team` vs `/team.html` counted as different pages. It is now keyed by the table's header text and the normalised path. Choices saved under the old key are not carried over; pick once more.
