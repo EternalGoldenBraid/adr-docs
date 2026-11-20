@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.145.0 - 2026-11-20
+
+- Idle nudges no longer repeat the same item. Each agent keeps the version it was last nudged about for every thread (last reply or vote) and queue item (state, run, weight); a nudge names the first item not yet named at its current version, so the next one follows. A named item returns only when its version changes, or after 30 minutes once all have been named. A status line `waiting` posted since the last nudge pauses it. (Site manager's proposal, message 4022.)
+- Removed: the separate 30-minute pace for queue items, and the thread-first-always rule.
+
 ## 0.144.1 - 2026-11-20
 
 - The resolve indicator in the comment list is a coloured pill at the right edge: one dot per participant (filled = resolved, yours is larger), the tally, and "you". Amber while you haven't resolved, green once you have.

@@ -298,7 +298,7 @@ export async function startCommentBridge({
   // then at most one per NUDGE_EVERY; none while it is working. Idle comes from the agent-notify hook or its status line (ticket|state|...).
   // Threads waiting on you are pinged after 10 s idle; other queue items after 1 min. Repeats: 5 min (threads) or 30 min (items) without progress, the same idle wait after progress.
   const NUDGE_AFTER = Number(process.env.ADR_NUDGE_MINUTES ?? 1) * 60_000, NUDGE_THREAD_AFTER = 10_000, NUDGE_THREAD_EVERY = 5 * 60_000, NUDGE_EVERY = 30 * 60_000;
-  const idleSince = new Map(), nudgedAt = new Map(), nudgedCount = new Map();
+  const idleSince = new Map(), nudgedAt = new Map(), nudgedCount = new Map(), nudged = new Map();
   const readQueues = () => { try { return JSON.parse(readFileSync(join(documentRoot, "queues.json"), "utf8")); } catch { return {}; } };
   const openWork = slug => {
     const items = (readQueues()[slug] ?? []).filter(item => item.state !== "done").sort((a, b) => a.rank - b.rank);
@@ -315,21 +315,35 @@ export async function startCommentBridge({
       idleSince.set(row.slug, since);
       const { items, threads, toResolve } = openWork(row.slug);
       const count = items.length + threads.length + toResolve.length;
-      if (!count) { nudgedCount.delete(row.slug); continue; }
+      if (!count) { nudgedCount.delete(row.slug); nudged.delete(row.slug); continue; }
       // Progress since the last nudge (the backlog shrank) earns the next one soon, so the queue drains one by one; otherwise keep the slow pace.
       const progressed = count < (nudgedCount.get(row.slug) ?? 0);
       const waiting = threads.length + toResolve.length > 0;
       const after = waiting ? NUDGE_THREAD_AFTER : NUDGE_AFTER;
-      if (now - since < after || now - (nudgedAt.get(row.slug) ?? 0) < (progressed ? after : waiting ? NUDGE_THREAD_EVERY : NUDGE_EVERY)) continue;
-      const first = items[0];
+      if (now - since < after || now - (nudgedAt.get(row.slug) ?? 0) < (progressed ? after : NUDGE_THREAD_EVERY)) continue;
+      // Name the first item not yet nudged at its current version, so a stuck item does not hide the ones behind it. An item comes back when its version
+      // changes (a reply, a vote, a new test state) or, once everything has been named, after NUDGE_EVERY.
+      if (row.statusLine?.state === "waiting" && Date.parse(row.statusLine.at) > (nudgedAt.get(row.slug) ?? 0)) continue;
+      const candidates = [...threads.map(t => ({ key: `t:${t.id}`, version: t.version, thread: t })), ...toResolve.map(t => ({ key: `r:${t.id}`, version: t.version, resolve: t })),
+        ...items.map(item => ({ key: `q:${item.id}`, version: `${item.state}|${item.run}|${item.weight}`, item }))];
+      const seen = nudged.get(row.slug) ?? new Map();
+      for (const key of [...seen.keys()]) if (!candidates.some(c => c.key === key)) seen.delete(key);
+      let pick = candidates.find(c => seen.get(c.key) !== c.version);
+      if (!pick) {
+        if (now - (nudgedAt.get(row.slug) ?? 0) < NUDGE_EVERY) continue;
+        seen.clear();
+        pick = candidates[0];
+      }
+      seen.set(pick.key, pick.version);
+      nudged.set(row.slug, seen);
       const note = `ADR idle nudge (no reply needed): you have been idle ${Math.round((now - since) / 60000)} min with ${items.length} open queue item(s), ${threads.length} thread(s) waiting and ${toResolve.length} to resolve. ` +
-        (!threads.length && toResolve.length ? `Thread ${toResolve[0].id.slice(0, 8)} on ${toResolve[0].page} needs your resolve vote (or a reply if you disagree). ` : "") +
-        (threads.length ? `Thread ${threads[0].id.slice(0, 8)} on ${threads[0].page} is waiting on you. ` : "") +
-        (first ? `Next in your queue: "${first.test}" (rank ${first.rank}${first.weight ? `, weight ${first.weight}` : ""}, ${first.page}). ` : "") +
+        (pick.resolve ? `Thread ${pick.resolve.id.slice(0, 8)} on ${pick.resolve.page} needs your resolve vote (or a reply if you disagree). ` : "") +
+        (pick.thread ? `Thread ${pick.thread.id.slice(0, 8)} on ${pick.thread.page} is waiting on you. ` : "") +
+        (pick.item ? `Next in your queue: "${pick.item.test}" (rank ${pick.item.rank}${pick.item.weight ? `, weight ${pick.item.weight}` : ""}, ${pick.item.page}). ` : "") +
         "Start it, or post what blocks it. When you finish one and go idle, the next one follows right after.";
       nudgedAt.set(row.slug, now);
       nudgedCount.set(row.slug, count);
-      try { await mesh.send(meshAddress(row).session, note, meshAddress(row).machine); } catch (error) { nudgedAt.delete(row.slug); onError?.(error); }
+      try { await mesh.send(meshAddress(row).session, note, meshAddress(row).machine); } catch (error) { nudgedAt.delete(row.slug); seen.delete(pick.key); onError?.(error); }
     }
   }
   const nudgeTimer = mesh && process.env.ADR_NUDGE !== "off" ? setInterval(() => nudgeIdle().catch(error => onError?.(error)), 5_000) : undefined;
@@ -692,11 +706,11 @@ export async function startCommentBridge({
       const last = comment.replies.at(-1) ?? { author: comment.author ?? "user", comment: comment.comment, at: comment.at };
       if (last.author !== "user") return [];
       const text = (last.reply ?? last.comment ?? "").replace(/\s+/g, " ");
-      return [{ id: comment.id, page: new URL(comment.url).pathname, ageMinutes: Math.round((now - Date.parse(last.at || comment.at)) / 60000), quote: text.length > 140 ? `${text.slice(0, 140)}…` : text }];
+      return [{ id: comment.id, version: String(last.at || comment.at), page: new URL(comment.url).pathname, ageMinutes: Math.round((now - Date.parse(last.at || comment.at)) / 60000), quote: text.length > 140 ? `${text.slice(0, 140)}…` : text }];
     }).sort((a, b) => b.ageMinutes - a.ageMinutes);
     // Open threads addressed to this agent whose last word is an agent's, so nothing is left to answer but its resolve vote is still missing.
     const toResolve = [...comments.values()].filter(comment => !comment.removed && !comment.resolved && !comment.note && !comment.highlight && comment.to?.length && addressed(comment, as) && !comment.resolvedBy?.[as] && !rows.some(row => row.id === comment.id))
-      .map(comment => ({ id: comment.id, page: new URL(comment.url).pathname }));
+      .map(comment => ({ id: comment.id, version: `${comment.replies.at(-1)?.at ?? comment.at}|${Object.keys(comment.resolvedBy ?? {}).length}`, page: new URL(comment.url).pathname }));
     return { checked: `${rows.length} unanswered, ${toResolve.length} to resolve`, as, threads: rows, toResolve };
   }
   function readAs(as, includeSeen = false) {
