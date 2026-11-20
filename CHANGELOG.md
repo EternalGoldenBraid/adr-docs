@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.154.0 - 2026-11-20
+
+- Thread list: a thread with a reply you have not read now shows a red dot, bold title and preview, and `NEW` in front of the badge, so unread is unmistakable. Moving onto a card with the keys (j/k) marks it read after 0.7 s, and the dot goes; a quick pass over it does not count.
+- Removed: having to open a thread to clear its unread mark.
+
 ## 0.153.1 - 2026-11-20
 
 - Fix: a failed idle-nudge send was retried every 5 seconds (256 attempts at one agent in an hour) and each attempt was logged as a nudge. It now keeps the normal pace, and only delivered nudges are logged and counted in the answer rate. The storm also used up the per-pair send limit, which can make the 🔔 bell report everyone as not reachable.

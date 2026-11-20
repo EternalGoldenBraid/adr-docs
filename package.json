@@ -1,6 +1,6 @@
 {
   "name": "adr-docs",
-  "version": "0.153.1",
+  "version": "0.154.0",
   "private": true,
   "license": "MIT",
   "type": "module",
