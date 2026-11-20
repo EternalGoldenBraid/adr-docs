@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.147.1 - 2026-11-20
+
+- Fix: a table's Group by and sort choice now survives refresh. The saved key used the table's position among the page's tables, which shifted whenever a table gained or lost rows (tables under three rows are skipped), and `/team` vs `/team.html` counted as different pages. It is now keyed by the table's header text and the normalised path. Choices saved under the old key are not carried over; pick once more.
+- Removed: the position index from the saved-choice key, and the separate `.html`/slash variants of one page's saved state.
+
 ## 0.147.0 - 2026-11-20
 
 - `<CeremonyRows />`: the daily ceremony as one row per ticket (read-only, build 1). Each row shows the ticket, planned → observed effort, a surprise chip when they differ by one Fibonacci step or more, the owner's note as the observation, a chip per voter (✓ agree, ⚑ challenge, ○ not yet) with challenge lines, and open, challenged or settled. A row is settled when every voter agreed; silence never counts as agree. It reads `ceremony.json` at the site root through the new bridge route `GET /ceremony`; the site manager writes the file. Voting buttons follow in build 2.
