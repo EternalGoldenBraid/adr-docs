@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.139.0 - 2026-11-20
+
+- Card test rows of planned or running tests show their queue place from the test's `doer`, `rank` and `after`: "queued #13, doer", with ", after id" when it waits, or "not queued: no doer" (thread 2343372b).
+
 ## 0.138.0 - 2026-11-20
 
 - A card test may carry `link: "#heading-slug"` (or a site path); the test's name on the card is then a link to its result (thread f7ed1520). Anything else, such as `javascript:` or `//host`, is dropped. Headings use VitePress slugs: lower case, spaces to hyphens, punctuation removed.
