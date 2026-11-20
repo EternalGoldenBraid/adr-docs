@@ -17,13 +17,19 @@ function compare(a, b) {
 }
 
 export function enhanceTables(root = document, path = location.pathname) {
+  path = path.replace(/(\.html|\/)$/, "");
+  const seen = new Map();
   const tables = [...root.querySelectorAll(".vp-doc table")].filter(table => !table.dataset.adrTable && table.tBodies[0]?.rows.length > 2 && table.tHead?.rows[0]);
-  tables.forEach((table, index) => {
+  tables.forEach(table => {
     table.dataset.adrTable = "1";
     const heads = [...table.tHead.rows[0].cells];
     const body = table.tBodies[0];
     const rows = [...body.rows];
-    const id = `${KEY}${path}:${index}:${heads.map(cellText).join(SEP)}`;
+    // Keyed by the header text, not by position: tables that come and go (a table with fewer than three rows is skipped) must not shift the saved choice.
+    const signature = heads.map(cellText).join(SEP);
+    const nth = seen.get(signature) ?? 0;
+    seen.set(signature, nth + 1);
+    const id = `${KEY}${path}:${nth}:${signature}`;
     let state = { sort: [], group: -1 };
     try { state = { ...state, ...JSON.parse(localStorage.getItem(id) ?? "{}") }; } catch { /* ignore a corrupt value */ }
     state.sort = (state.sort ?? []).filter(key => key.col < heads.length);
