@@ -849,6 +849,9 @@ export async function startCommentBridge({
         } catch (error) { return reply(response, 400, { error: error.message }); }
       }
       if (request.method === "GET" && request.url === "/settings") return reply(response, 200, effective());
+      if (request.method === "GET" && request.url === "/ceremony") {
+        try { return reply(response, 200, JSON.parse(readFileSync(join(documentRoot, "ceremony.json"), "utf8"))); } catch { return reply(response, 200, { rows: [] }); }
+      }
       if (request.method === "GET" && request.url === "/latency") {
         // How long your messages wait for an answer, and how long threads stay open, per thread and per addressed agent (minutes). For the ceremony stats.
         const minutes = (from, to) => Math.round((Date.parse(to) - Date.parse(from)) / 6000) / 10;
