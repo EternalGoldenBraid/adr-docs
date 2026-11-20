@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.153.1 - 2026-11-20
+
+- Fix: a failed idle-nudge send was retried every 5 seconds (256 attempts at one agent in an hour) and each attempt was logged as a nudge. It now keeps the normal pace, and only delivered nudges are logged and counted in the answer rate. The storm also used up the per-pair send limit, which can make the 🔔 bell report everyone as not reachable.
+- The bell now says why a send failed, next to the agent's name.
+- Removed: the 5-second retry loop on failed nudges, and the unexplained "not reachable".
+
 ## 0.153.0 - 2026-11-20
 
 - Verified state carries a log position: `chain {n, hash}`, the first 12 hex of the SHA-256 of the last 8 event ids of the session log. The Team panel shows it on hover ("Log position #…"). A reader holding `events.jsonl` recomputes it with `verifyChain(lines, hash)` in `src/verified-state.mjs`, so a state claim names exactly where in the log it was read. It is a commitment to a position, not a signature: the log owner can rewrite the log.

@@ -400,8 +400,8 @@ export async function startCommentBridge({
       nudgedAt.set(row.slug, now);
       nudgedCount.set(row.slug, count);
       const nudgedThread = pick.thread ?? pick.resolve;
-      if (nudgedThread) logNudge(row.slug, nudgedThread.id, "idle");
-      try { await mesh.send(meshAddress(row).session, note, meshAddress(row).machine); } catch (error) { nudgedAt.delete(row.slug); seen.delete(pick.key); onError?.(error); }
+      // A failed send keeps nudgedAt, so it is retried at the normal pace instead of every tick, and is not counted as a nudge.
+      try { await mesh.send(meshAddress(row).session, note, meshAddress(row).machine); if (nudgedThread) logNudge(row.slug, nudgedThread.id, "idle"); } catch (error) { seen.delete(pick.key); onError?.(error); }
     }
   }
   const nudgeTimer = mesh && process.env.ADR_NUDGE !== "off" ? setInterval(() => nudgeIdle().catch(error => onError?.(error)), 5_000) : undefined;
@@ -920,15 +920,15 @@ export async function startCommentBridge({
         if (!mesh) return reply(response, 409, { error: "The mesh is not connected." });
         const rows = await meshStatus();
         const page = new URL(comment.url).pathname;
-        const rung = [], unreachable = [];
+        const rung = [], unreachable = [], reasons = {};
         for (const name of missingOn(comment.id)) {
           const row = rows.find(r => r.slug === name);
           if (!row?.session || row.status === "offline") { unreachable.push(name); continue; }
           const note = `ADR call for resolution (thread ${comment.id.slice(0, 8)} on ${page}): the user is waiting for your resolve vote on this thread. ` +
             `Resolve it, or reply with what blocks it. Read: read_doc_review_comments; reply or vote resolve: update_doc_review_comment(comment_id="${comment.id}").`;
-          try { await mesh.send(meshAddress(row).session, note, meshAddress(row).machine); logNudge(name, comment.id, "bell"); rung.push(name); } catch { unreachable.push(name); }
+          try { await mesh.send(meshAddress(row).session, note, meshAddress(row).machine); logNudge(name, comment.id, "bell"); rung.push(name); } catch (error) { unreachable.push(name); reasons[name] = error.message; }
         }
-        return reply(response, 200, { ok: true, rung, unreachable });
+        return reply(response, 200, { ok: true, rung, unreachable, reasons });
       }
       if (request.method === "GET" && request.url === "/itemturns") {
         // Queue item → the interaction where each agent on this machine first met it, and how many items map to none. Remote agents are skipped.
