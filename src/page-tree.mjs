@@ -254,6 +254,8 @@ export function pageCards(documentRoot, options) {
     if (["done", "shipped"].includes(card.status) && !structuredVerdict(front)) { card.reviewFrom ??= card.status; card.status = "review"; card.blockedBy = ["verdict"]; }
     if (/^(?:card-)?status:\s*["']?review["']?\s*$/m.test(front)) card.status = "review";
     if (Object.keys(card).length && /^status:\s*["']?todo["']?\s*$/m.test(front)) card.status = "todo";
+    const voted = front.match(/^voted:\s*["']?(true|false)["']?\s*$/mi)?.[1];
+    if (voted && Object.keys(card).length) card.voted = voted.toLowerCase() === "true";
     const missing = ["line", "owner", "status"].filter(k => !card[k]);
     if (Object.keys(card).length && missing.length) card.missing = missing.map(k => ({ line: "gist", status: "state" }[k] ?? k));
     const verdict = needsVerdict(text);

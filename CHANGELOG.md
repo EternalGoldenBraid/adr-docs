@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.142.0 - 2026-11-20
+
+- A page's `voted: true|false` front-matter flag shows on its card as a green "voted ✓" or an orange "not voted" chip (thread aaec5b27: planning vote before a page may start running). ADR only shows it; blocking planned to running is the status generator's job.
+
 ## 0.141.0 - 2026-11-20
 
 - A page with `status: todo` (an idea, may be bare) shows a `todo` chip on its card, blue with a ☐ icon, ahead of `planned`.

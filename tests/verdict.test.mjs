@@ -127,4 +127,6 @@ test("a finished page with open threads is in review until they are resolved", a
   assert.deepEqual([card.status, card.openThreads], ["done", 1]);
   writeFileSync(join(dir, "t.md"), "---\nstatus: todo\ncard:\n  gist: An idea\n---\n# T\n");
   assert.equal(pageCards(dir)["/t"].status, "todo");
+  writeFileSync(join(dir, "v.md"), "---\nvoted: false\ncard:\n  gist: Planned\n---\n# V\n");
+  assert.equal(pageCards(dir)["/v"].voted, false);
 });
