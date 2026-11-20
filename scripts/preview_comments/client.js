@@ -2086,8 +2086,8 @@
     const comment = historyComments.find(c => c.id === selectedThread);
     if (!comment) return;
     try {
-      const { rung, unreachable } = await api("bell", { id: comment.id });
-      message(`🔔 Rung: ${rung.join(", ") || "nobody"}${unreachable.length ? `. Not reachable: ${unreachable.join(", ")}` : ""}`);
+      const { rung, unreachable, reasons = {} } = await api("bell", { id: comment.id });
+      message(`🔔 Rung: ${rung.join(", ") || "nobody"}${unreachable.length ? `. Not reachable: ${unreachable.map(name => reasons[name] ? `${name} (${reasons[name]})` : name).join(", ")}` : ""}`);
     } catch (error) { message(error.message, true); }
   });
   find(".thread-closeall").addEventListener("click", async () => {
