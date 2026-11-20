@@ -49,6 +49,26 @@ export function deriveState(lines, now = Date.now(), items = []) {
   return { state: "idle", detail: "", ...evidence, ageMs, idleSince: turnEnded ?? last.timestamp };
 }
 
+// Each queue item mapped to the first interaction (user message number, counting from 1) in which its id appears in what the agent was told or did.
+// Items that never appear map to none; `unmapped` is that share of the items, the measure of how reliable id matching is.
+export function itemTurns(lines, items) {
+  const needles = items.map(item => [item, needleFor(item)]);
+  const found = new Map();
+  let interaction = 0;
+  for (const line of lines) {
+    let event;
+    try { event = JSON.parse(line); } catch { continue; }
+    const { type, data = {} } = event;
+    if (type === "user.message") interaction += 1;
+    if (type !== "user.message" && type !== "tool.execution_start") continue;
+    const text = JSON.stringify(type === "user.message" ? data.content ?? data : data.arguments ?? {});
+    for (const [item, needle] of needles) if (needle && !found.has(item.id) && needle.test(text)) found.set(item.id, { interaction, eventId: event.id, at: event.timestamp, via: type === "user.message" ? "told" : "acted" });
+  }
+  const mapped = items.map(item => ({ id: item.id, test: item.test, state: item.state, ...(found.get(item.id) ?? { interaction: null }) }));
+  const none = mapped.filter(row => row.interaction === null).length;
+  return { items: mapped, mapped: mapped.length - none, unmapped: none, unmappedShare: mapped.length ? Math.round(none / mapped.length * 100) / 100 : 0 };
+}
+
 // A claim (the agent's STATUS line) contradicts the log when it says free while a turn is open, or busy while the log has been idle for a while.
 export function disagrees(claimState, verified, graceMs = 2 * 60_000) {
   if (!claimState || !verified) return false;

@@ -70,6 +70,13 @@ async function bundleScript(dist, key) {
           if (!source.includes("import(t)")) throw new Error("Unsupported VitePress client; cannot export.");
           return { contents: source.replace("import(t)", "Promise.resolve(window.__adrPage)"), loader: "js" };
         });
+        // Assets imported from a page become new URL("../x.svg", import.meta.url).href, and import.meta.url is "" here, which throws and
+        // leaves the page unhydrated (no graph). The static markup already carries the inlined file, so a plain path is enough.
+        b.onLoad({ filter: /\.js$/ }, args => {
+          if (!args.path.startsWith(assets)) return undefined;
+          const source = readFileSync(args.path, "utf8");
+          return /import\.meta\.url/.test(source) ? { contents: source.replace(/new URL\(("[^"]+"),\s*import\.meta\.url\)\.href/g, "$1"), loader: "js" } : undefined;
+        });
       },
     }],
     logLevel: "silent",

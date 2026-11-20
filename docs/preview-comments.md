@@ -484,6 +484,8 @@ Idle nudge: an agent that is idle (agent-notify hook, or a status line `ticket|i
 
 Ordering: every thread nudge is logged to `.adr-data/nudges.jsonl`. An agent's answer rate p is (answered+1)/(sent+2), answered meaning a reply on that thread within 30 minutes. A thread closes only when every missing addressee answers, so the thread named first is the one with the highest p·∏p(other missing addressees). It needs a few nudges before it differs from the arrival order.
 
+`GET /itemturns` (local agents only) maps each queue item to the first interaction that named it, `told` (in the user message) or `acted` (in a tool call), and reports the unmapped share.
+
 **Bell**: the 🔔 button in the thread header (shown while someone has not resolved) sends a call for resolution right away to every addressee who has not resolved, naming the thread and page, and says who was rung and who is unreachable.
 
 Unblock ping: every 30 s ADR checks which pages are held in review. When one leaves review for done (its last open thread resolved, its verdict written), the page owner gets one note: no blockers, check and set done. It never moves the page itself.

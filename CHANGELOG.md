@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.152.0 - 2026-11-20
+
+- Fix: an exported page with images in its markdown (for example the icons in a table) lost its graph and every other component. The export bundle turned each imported asset into `new URL(path, "")`, which throws "Invalid base URL" and stopped hydration. Those calls are now plain paths; the static markup already carries the inlined file. Found on `/field/2026-11-19` (thread 9298a248).
+- Queue item to turn mapping (ticket verified-state): `GET /itemturns` gives, for each agent on this machine, the first interaction in which each queue item's id was told to the agent (`told`) or used in a tool call (`acted`), and how many items map to none (`unmapped`, `unmappedShare`). Remote agents are skipped. `itemTurns` in `src/verified-state.mjs`.
+- Removed: the "Invalid base URL" error that aborted every exported page with a bundled asset import.
+
 ## 0.151.0 - 2026-11-20
 
 - 🔔 Bell in the thread header (shown while someone has not resolved): sends a call for resolution to every addressee who has not resolved, immediately, naming the thread and page. It lists who was rung and who is unreachable. Server route `POST /bell {id}`.
