@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { createServer } from "node:http";
 import {
   appendFileSync, closeSync, copyFileSync, cpSync, statSync, existsSync, fsyncSync, mkdirSync, openSync,
-  readdirSync, readFileSync, realpathSync, renameSync, rmSync, unlinkSync, writeFileSync,
+  readdirSync, readFileSync, readSync, realpathSync, renameSync, rmSync, unlinkSync, writeFileSync,
 } from "node:fs";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { homedir, hostname } from "node:os";
@@ -18,6 +18,7 @@ function meshDataDirectory() {
 }
 import { readCell, writeCell } from "./table-edit.mjs";
 import { bareSession, readRoster, slugify } from "../../src/roster.mjs";
+import { deriveState, disagrees } from "../../src/verified-state.mjs";
 import { addNote, applyVote, publicVotes, readVotes, reveal } from "../../src/votes.mjs";
 import { pageCards, readPageTree } from "../../src/page-tree.mjs";
 import { diffLines, hunks } from "./page-diff.mjs";
@@ -211,6 +212,44 @@ export async function startCommentBridge({
     return Promise.all([machineLoad(local, null), ...names.map(name => machineLoad(name, name))]);
   }
 
+  // Verified state: derived from each session's own events.jsonl (tail), locally or over ssh for peer machines; cached for a few seconds.
+  const TAIL = 200_000;
+  const logCache = new Map();
+  function remoteLogs(machine, sessions) {
+    const cached = logCache.get(machine);
+    if (cached && Date.now() - cached.at < 10_000) return cached.promise;
+    const script = sessions.map(id => `echo "@@${id}"; tail -c ${TAIL} ~/.copilot/session-state/${id}/events.jsonl 2>/dev/null`).join("; ");
+    const promise = new Promise(done => execFile("ssh", ["-o", "BatchMode=yes", "-o", "ConnectTimeout=4", machine, script], { timeout: 10_000, maxBuffer: 16 << 20 }, (error, stdout) => {
+      const out = new Map();
+      if (!error) for (const part of stdout.split("@@").slice(1)) { const [id, ...rest] = part.split("\n"); out.set(id.trim(), rest); }
+      done(out);
+    }));
+    logCache.set(machine, { at: Date.now(), promise });
+    return promise;
+  }
+  function localLog(id) {
+    try {
+      const file = join(homedir(), ".copilot", "session-state", id, "events.jsonl");
+      const size = statSync(file).size;
+      const fd = openSync(file, "r");
+      try {
+        const buffer = Buffer.alloc(Math.min(size, TAIL));
+        readSync(fd, buffer, 0, buffer.length, size - buffer.length);
+        return buffer.toString("utf8").split("\n");
+      } finally { closeSync(fd); }
+    } catch { return null; }
+  }
+  async function verifiedStates(rows) {
+    const out = new Map();
+    const peers = new Map();
+    for (const row of rows.filter(r => r.session)) {
+      if (row.machine && row.machine !== hostname()) peers.set(row.machine, [...(peers.get(row.machine) ?? []), row.session]);
+      else { const lines = localLog(row.session); if (lines) out.set(row.session, deriveState(lines)); }
+    }
+    for (const [machine, sessions] of peers) for (const [id, lines] of await remoteLogs(machine, sessions)) out.set(id, deriveState(lines));
+    return out;
+  }
+
   let meshEdges = [];
   async function meshStatus() {
     if (!remoteAt) await refreshRemote(); else if (Date.now() - remoteAt > 15000) refreshRemote();
@@ -252,9 +291,12 @@ export async function startCommentBridge({
         if (note.cwd && note.state && Date.now() / 1000 - note.ts < 12 * 3600 && !(activity.get(note.cwd)?.ts > note.ts)) activity.set(note.cwd, note);
       }
     } catch { /* no agent-notify on this machine */ }
-    return roster().map(row => {
+    const rows = roster();
+    const verified = await verifiedStates(rows).catch(() => new Map());
+    return rows.map(row => {
       const seen = live.get(row.session) ?? remote.get(row.session);
-      return { ...row, status: !row.session ? "human" : seen ? seen.status : "unknown", lastSeen: seen?.last_heartbeat ?? null, kind: seen?.kind ?? (row.session ? "agent" : "human"), statusLine: statusLines.get(row.session) ?? null, activity: activity.get(seen?.cwd)?.state ?? null };
+      const proof = verified.get(row.session) ?? null;
+      return { ...row, verified: proof && { ...proof, mismatch: disagrees(statusLines.get(row.session)?.state, proof) }, status: !row.session ? "human" : seen ? seen.status : "unknown", lastSeen: seen?.last_heartbeat ?? null, kind: seen?.kind ?? (row.session ? "agent" : "human"), statusLine: statusLines.get(row.session) ?? null, activity: activity.get(seen?.cwd)?.state ?? null };
     });
   }
   // Sessions on enrolled peer machines are sent through the mesh router with their machine name; a plain local send never reaches them.
@@ -305,7 +347,7 @@ export async function startCommentBridge({
     const { threads, toResolve } = unansweredFor(slug);
     return { items, threads, toResolve };
   };
-  const isIdle = row => (row.activity ?? (row.statusLine?.state === "idle" ? "idle" : null)) === "idle";
+  const isIdle = row => row.verified ? row.verified.state === "idle" : (row.activity ?? (row.statusLine?.state === "idle" ? "idle" : null)) === "idle";
   async function nudgeIdle() {
     const now = Date.now();
     for (const row of await meshStatus()) {

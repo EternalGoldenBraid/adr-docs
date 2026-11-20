@@ -501,3 +501,7 @@ A named preview (`adr --name demo`) listens for `ADR-REQ` mesh messages (every 2
 Room feed: `<RoomFeed />` lists every mesh room read-only (topic, members, open time, pinned summary, last 20 posts), refreshed every 15 s, from the bridge route `GET /rooms`. Viewing marks nothing read. A post starting `SUMMARY:` is pinned (latest wins); a post starting `CLOSED:` closes the room. Closed rooms stay behind a toggle.
 
 Ceremony rows: `<CeremonyRows />` renders `ceremony.json` (site root, written by the site manager): `{date, closes, rows:[{ticket, page, planned, observed, owner, note, positions:{name:{vote:"agree"|"challenge", line, at}}, voters?}]}`, one row per ticket, read-only, refreshed every 15 s. `voters` defaults to the names in `positions`. A row is settled when every voter agreed.
+
+### Verified state (Shift+T)
+
+The Team panel shows two columns per agent. **Verified** is derived from the session's own `events.jsonl`: working (and the running tool), asking (a permission prompt is open), idle, or stalled (an open turn silent for 10 minutes). Hover for the last event's id and time. **Claim** is the agent's own `STATUS` line; a `≠` means it contradicts the log. Peer machines are read over ssh.
