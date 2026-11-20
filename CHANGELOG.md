@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.140.0 - 2026-11-20
+
+- A page that is done stays done when threads are opened on it later; the card no longer flips it back to review (thread 2367efbc). `openThreads` still counts them and the card still lists who has not resolved. Holding a page out of done while threads are open is for the status generator.
+
 ## 0.139.1 - 2026-11-20
 
 - Reads over the mesh no longer time out on long histories (thread bdc6753e, sim agent). The response was sent as many 6 KB chunks, and the mesh allows about nine sends per pair in a short window, so a big read stopped after nine chunks and the reader gave up. Responses are now gzipped and sent in 9 KB chunks (the reader accepts both forms).

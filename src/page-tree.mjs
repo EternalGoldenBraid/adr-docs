@@ -245,10 +245,10 @@ export function pageCards(documentRoot, options) {
     }
     const question = front.match(/^question:[ \t]*(.+)$/m)?.[1].trim().replace(/^["']|["']$/g, "");
     if (!card.line && question && Object.keys(card).length) card.line = question;
-    // Open threads on the page hold a finished page in review; the page is done when they are resolved (threads.json is written by the preview server).
+    // Threads opened after a page is done leave it done (a past page may be discussed again); only a page's move to done is blocked while threads are open, by the status generator. `openThreads` just counts them (threads.json is written by the preview server).
     const { counts, waiting } = openThreads(documentRoot);
     const open = counts[pageKey(file)];
-    if (open && ["done", "shipped"].includes(card.status)) { card.reviewFrom = card.status; card.status = "review"; card.openThreads = open; }
+    if (open) card.openThreads = open;
     if (open && Object.keys(card).length && waiting[pageKey(file)]?.length) card.waitingOn = waiting[pageKey(file)];
     // Done is blocked until the structured verdict is written; the page waits in review and says what blocks it.
     if (["done", "shipped"].includes(card.status) && !structuredVerdict(front)) { card.reviewFrom ??= card.status; card.status = "review"; card.blockedBy = ["verdict"]; }
