@@ -38,3 +38,16 @@ test("queue items are attributed by id from this interaction only, with the even
   assert.deepEqual(workingOn.map(w => w.id), ["thread-716db4bb"]);
   assert.equal(workingOn[0].eventId, "evt1");
 });
+
+test("itemTurns maps each item to the first interaction naming it and counts the rest as unmapped", async () => {
+  const { itemTurns } = await import("../src/verified-state.mjs");
+  const line = (type, id, data) => JSON.stringify({ type, id, timestamp: "2026-11-20T10:00:00Z", data });
+  const lines = [
+    line("user.message", "e1", { content: "start" }),
+    line("user.message", "e2", { content: "please do thread 3b9aec6d now" }),
+    line("tool.execution_start", "e3", { toolName: "bash", arguments: { command: "work on harness-field" } }),
+  ];
+  const result = itemTurns(lines, [{ id: "thread-3b9aec6d", kind: "thread", test: "t" }, { id: "harness-field", test: "h" }, { id: "hash-chain", test: "c" }]);
+  assert.deepEqual(result.items.map(row => [row.interaction, row.via]), [[2, "told"], [2, "acted"], [null, undefined]]);
+  assert.equal(result.unmapped, 1);
+});

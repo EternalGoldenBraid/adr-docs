@@ -19,7 +19,7 @@ function meshDataDirectory() {
 import { readCell, writeCell } from "./table-edit.mjs";
 import { bareSession, readRoster, slugify } from "../../src/roster.mjs";
 import { answerRates, rank } from "../../src/nudge-plan.mjs";
-import { deriveState, disagrees } from "../../src/verified-state.mjs";
+import { deriveState, disagrees, itemTurns } from "../../src/verified-state.mjs";
 import { addNote, applyVote, publicVotes, readVotes, reveal } from "../../src/votes.mjs";
 import { pageCards, readPageTree } from "../../src/page-tree.mjs";
 import { diffLines, hunks } from "./page-diff.mjs";
@@ -929,6 +929,16 @@ export async function startCommentBridge({
           try { await mesh.send(meshAddress(row).session, note, meshAddress(row).machine); logNudge(name, comment.id, "bell"); rung.push(name); } catch { unreachable.push(name); }
         }
         return reply(response, 200, { ok: true, rung, unreachable });
+      }
+      if (request.method === "GET" && request.url === "/itemturns") {
+        // Queue item → the interaction where each agent on this machine first met it, and how many items map to none. Remote agents are skipped.
+        const queues = readQueues(), out = {};
+        for (const row of (await meshStatus()).filter(r => r.session && (!r.machine || r.machine === hostname()))) {
+          const items = queues[row.slug] ?? [];
+          if (!items.length) continue;
+          try { out[row.slug] = itemTurns(readFileSync(join(homedir(), ".copilot", "session-state", row.session, "events.jsonl"), "utf8").split("\n"), items); } catch { /* no log for this session */ }
+        }
+        return reply(response, 200, { agents: out });
       }
       if (request.method === "GET" && request.url === "/ceremony") {
         try { return reply(response, 200, JSON.parse(readFileSync(join(documentRoot, "ceremony.json"), "utf8"))); } catch { return reply(response, 200, { rows: [] }); }
