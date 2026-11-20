@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.144.1 - 2026-11-20
+
+- The resolve indicator in the comment list is a coloured pill at the right edge: one dot per participant (filled = resolved, yours is larger), the tally, and "you". Amber while you haven't resolved, green once you have.
+
 ## 0.144.0 - 2026-11-20
 
 - Each open thread in the comment list shows your own resolve mark and the tally: `✓ you 2/3` or `○ you 0/2` (hover for who has resolved). Resolved threads keep just "resolved".

@@ -25,6 +25,7 @@
       .proposal{margin:10px 0;border:1px solid #59616d;border-radius:8px;padding:8px}.proposal pre{margin:0 0 6px;padding:6px;white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.4 ui-monospace,monospace;border-radius:4px}.proposal .del{background:#4a1d24}.proposal .add{background:#16402a}
       .banners[hidden]{display:none}.banners{position:fixed;top:72px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;z-index:5}.banner{max-width:min(640px,90vw);padding:8px 14px;border:1px solid #ff5a4f;border-radius:10px;background:#2a1517;color:#eee;text-align:left}.banner small{color:#ffb3ae;display:block}
       .statusbar{position:fixed;left:0;right:0;bottom:0;display:flex;gap:18px;align-items:center;padding:3px 14px;background:#111318;border-top:1px solid #3a404a;font:12px/1.4 ui-monospace,monospace;color:#b7c1ce;pointer-events:none}.sb-mode{font-weight:700;color:#74c0fc}.sb-hint{order:3;margin-left:auto}.sb-stale{color:#e3b341;font-weight:700;white-space:nowrap}.sb-mode{white-space:nowrap}.agent-status::before{content:"● ";color:#51cf66}.agent-status.await::before{color:#ff6b6b}.agent-status.blocked{color:#fff;background:#d6336c;font-weight:700;padding:0 8px;border-radius:3px}.agent-status.blocked::before{content:"⛔ "}.dot.blocked{background:#f03e3e;animation:adrblink 1s infinite}@keyframes adrblink{50%{opacity:.3}}
+      .rchip{display:inline-flex;align-items:center;gap:3px;padding:1px 8px 1px 6px;border-radius:999px;font-size:11px;line-height:16px;border:1px solid;white-space:nowrap}.rchip i{width:7px;height:7px;border-radius:50%;border:1.5px solid currentColor;box-sizing:border-box}.rchip i.on{background:currentColor}.rchip i.me{width:9px;height:9px}.rchip b{margin-left:3px;font-weight:600;font-variant-numeric:tabular-nums}.rchip em{font-style:normal;margin-left:2px;opacity:.85}.rchip.todo{color:#f2c94c;background:rgba(242,201,76,.12);border-color:rgba(242,201,76,.35)}.rchip.mine{color:#6fcf97;background:rgba(111,207,151,.13);border-color:rgba(111,207,151,.4)}
       .grep{position:fixed;left:50%;bottom:44px;transform:translateX(-50%);width:min(860px,94vw);max-height:50vh;display:flex;flex-direction:column;background:#17191f;border:1px solid #59616d;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,.5);font:13px/1.4 ui-monospace,monospace;color:#d6dbe3;z-index:5}
       .grep header{padding:6px 12px;border-bottom:1px solid #2f343d;color:#9aa4b2}.grep .grep-list{overflow:auto;padding:4px}
       .grep-hit{display:block;width:100%;text-align:left;background:none;border:0;border-radius:6px;color:inherit;font:inherit;padding:3px 8px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1620,12 +1621,20 @@
       const links = (comment.refs?.length || 0) + historyComments.filter(c => !c.removed && c.refs?.includes(comment.id)).length;
       // Open threads with participants show your own resolve mark and how many of them have resolved.
       const marks = comment.resolved ? [] : resolveMarks(comment);
-      if (marks.length) badge.title = marks.map(m => `${m.done ? "✓" : "○"} ${m.name}`).join("  ");
       badge.textContent = [comment.resolved ? (hasFresh(comment) ? "resolved · new reply" : "resolved") : awaiting(comment) ? "awaiting you" : comment.seen || comment.note ? "" : "unread",
-        marks.length ? `${marks[0].done ? "✓ you" : "○ you"} ${marks.filter(m => m.done).length}/${marks.length}` : "",
         comment.replies.length ? `💬${comment.replies.length}` : "", links ? `🔗${links}` : "",
         comment.kind !== "session" && pagePath(comment.url) !== pagePath(location.href) ? pagePath(comment.url) : ""].filter(Boolean).join(" · ");
       top.append(section, badge);
+      if (marks.length) {
+        const chip = document.createElement("span");
+        chip.className = `rchip ${marks[0].done ? "mine" : "todo"}`;
+        chip.title = marks.map(m => `${m.done ? "✓" : "○"} ${m.name}`).join("   ");
+        const dots = marks.map((m, i) => Object.assign(document.createElement("i"), { className: `${m.done ? "on" : ""}${i ? "" : " me"}` }));
+        const tally = document.createElement("b");
+        tally.textContent = `${marks.filter(m => m.done).length}/${marks.length}`;
+        chip.append(...dots, tally, Object.assign(document.createElement("em"), { textContent: marks[0].done ? "you ✓" : "you" }));
+        top.append(chip);
+      }
       const text = document.createElement("div");
       text.className = "preview";
       text.textContent = plainMarkdown(comment.comment) || "Highlight";
