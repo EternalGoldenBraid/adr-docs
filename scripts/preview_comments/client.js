@@ -13,6 +13,7 @@
   shadow.innerHTML = `
     <style>
       :host{position:fixed;right:24px;bottom:24px;z-index:10000;color:#eee;font:14px/1.5 system-ui}
+      :host(.calm) .pill,:host(.calm) .bubble,:host(.calm) .contextual{display:none !important}
       *{box-sizing:border-box}button,textarea{font:inherit}
       button{border:1px solid #59616d;border-radius:8px;padding:8px 14px;cursor:pointer;background:#292d35;color:#eee}
       button:hover{background:#363e4b}button:focus-visible,textarea:focus-visible{outline:2px solid #74c0fc;outline-offset:3px}textarea[data-vmode=normal]{border-color:#ffb02e;caret-color:transparent}textarea[data-vmode=visual]{border-color:#b197fc;caret-color:transparent}textarea[data-vmode=normal]::selection,textarea[data-vmode=visual]::selection{background:#ffb02e88}
@@ -174,6 +175,27 @@
   document.body.append(host);
   const pagePath = url => new URL(url).pathname.replace(/\.html$/, "").replace(/\/index$/, "/");
   const find = selector => shadow.querySelector(selector);
+  // Calm mode (":calm"): ADR ignores keys, clicks and selections and hides its marks, so a page with its own controls (a console) is left alone.
+  // Per page, or for the whole site with ":calm site". Only ":" still works. Registered first, so the later document listeners never see the event.
+  const CALM_KEY = "preview-comments-calm";
+  const calmList = () => { try { return JSON.parse(localStorage.getItem(CALM_KEY) || "[]"); } catch { return []; } };
+  const calmPath = () => location.pathname.replace(/\.html$/, "").replace(/\/index$/, "/");
+  const isCalm = () => calmList().some(entry => entry === "*" || entry === calmPath());
+  for (const type of ["keydown", "mouseup", "dblclick", "selectionchange", "focusin"]) document.addEventListener(type, event => {
+    if (!isCalm() || event.composedPath().includes(host)) return;
+    if (type === "keydown" && event.key === ":" && !event.ctrlKey && !event.metaKey && !event.altKey && !event.target.closest?.("input,textarea,select,[contenteditable]")) return;
+    event.stopImmediatePropagation();
+  });
+  let calmShown = false;
+  const syncCalm = () => {
+    const now = isCalm();
+    if (now === calmShown) return;
+    calmShown = now;
+    host.classList.toggle("calm", now);
+    modeLabel();
+    if (!now) applyMarks();
+  };
+  setInterval(syncCalm, 500);
   const panel = find(".panel");
   const textarea = find("textarea");
   const toggle = find(".toggle");
@@ -295,7 +317,7 @@
   document.addEventListener("preview-comment-mode", event => { externalMode = event.detail?.mode; modeLabel(); });
 
   function modeLabel() {
-    const mode = !vimEnabled ? "OFF" : !history.hidden ? "HISTORY" : !panel.hidden ? "COMMENT" : externalMode || (visual ? "VISUAL" : caretMode ? "CARET" : "NORMAL");
+    const mode = calmShown ? "CALM" : !vimEnabled ? "OFF" : !history.hidden ? "HISTORY" : !panel.hidden ? "COMMENT" : externalMode || (visual ? "VISUAL" : caretMode ? "CARET" : "NORMAL");
     vimButton.textContent = "Vim";
     const bar = find(".statusbar");
     bar.hidden = !vimEnabled && !find(".agent-status")?.classList.contains("blocked");
@@ -372,7 +394,7 @@
     comment: () => commentSelection(),
     present: () => document.dispatchEvent(new CustomEvent("adr-present")),
     tree: () => document.dispatchEvent(new KeyboardEvent("keydown", { key: "t", bubbles: true })),
-    settings: () => loadSettings().then(() => message(`owner: ${settings.owner}\nteam: ${settings.team.join(", ") || "(none)"}\ndefault recipients: ${settings.default}\nread aloud auto-start: ${settings.tts === false ? "off" : "on"}\n:owner NAME · :team A B C · :default owner|last · :tts on|off`)),
+    settings: () => loadSettings().then(() => message(`owner: ${settings.owner}\nteam: ${settings.team.join(", ") || "(none)"}\ndefault recipients: ${settings.default}\nread aloud auto-start: ${settings.tts === false ? "off" : "on"}\ncalm: ${isCalm() ? "on" : "off"} (:calm · :calm site · :calm off)\n:owner NAME · :team A B C · :default owner|last · :tts on|off`)),
     mesh: () => openMesh(),
     labels: async () => {
       try {
@@ -397,6 +419,15 @@
     },
     owner: name => name ? api("settings", { owner: name }).then(v => { settings = v; message("Owner: " + name); }).catch(e => message(e.message, true)) : message("Usage: :owner NAME (this preview's agent)", true),
     team: (_first, line = "") => api("settings", { team: line.trim().split(/[\s,]+/).filter(Boolean) }).then(v => { settings = v; message("Team: " + (v.team.join(", ") || "(none)")); }).catch(e => message(e.message, true)),
+    calm: arg => {
+      const here = calmPath(), list = calmList();
+      const site = arg === "site", on = arg === "off" ? false : arg === "on" || site ? true : !isCalm();
+      const next = list.filter(entry => entry !== (site ? "*" : here) && !(arg === "off" && entry === "*"));
+      if (on) next.push(site ? "*" : here);
+      localStorage.setItem(CALM_KEY, JSON.stringify(next));
+      syncCalm();
+      message(on ? `Calm: ADR is quiet ${site ? "on every page" : "on this page"}; only ":" works. ":calm off" restores it.` : "Calm off: comments and keys are back.");
+    },
     tts: arg => ["on", "off"].includes(arg) ? api("settings", { tts: arg === "on" }).then(v => { settings = v; message("Read aloud auto-start: " + arg); }).catch(e => message(e.message, true)) : message("Read-aloud auto-start is " + (settings.tts === false ? "off" : "on") + ". Usage: :tts on|off", true),
     default: arg => ["owner", "last"].includes(arg) ? api("settings", { default: arg }).then(v => { settings = v; message("Default recipients: " + arg); }).catch(e => message(e.message, true)) : message("Usage: :default owner|last", true),
     vim: arg => { if ((arg === "off") === vimEnabled) vimButton.click(); },

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.155.0 - 2026-11-20
+
+- Calm mode: `:calm` makes ADR quiet on this page (`:calm site` on every page, `:calm off` to restore). Keys such as `s`, `t`, `n`, clicks and text selection no longer open comments or take screenshots, and the pill and marks are hidden, so a page with its own controls (the field console) is left alone. Only `:` still works, and the page's own key handlers still run. The status bar shows `CALM`.
+- Removed: the need to fight ADR's shortcuts on pages that have their own.
+
 ## 0.154.0 - 2026-11-20
 
 - Thread list: a thread with a reply you have not read now shows a red dot, bold title and preview, and `NEW` in front of the badge, so unread is unmistakable. Moving onto a card with the keys (j/k) marks it read after 0.7 s, and the dot goes; a quick pass over it does not count.
