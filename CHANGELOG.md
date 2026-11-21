@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.157.0 - 2026-11-21
+
+- `:order newest|oldest` (option B of workstreams/2026-11-21-lean-ui.md): a thread can show the newest reply first with the reply box on top, so you no longer scroll to the end. Saved per browser; default stays oldest first. `j`/`k`, `g`/`G` and "new thread" follow the visual order.
+- Removed: nothing this time.
+
 ## 0.156.0 - 2026-11-21
 
 - Lean panel (option A of workstreams/2026-11-21-lean-ui.md): the tabs sit in the header row, the thread header shows the page path as a badge first, the long state sentence is gone (the resolve chips and a tooltip on the path carry it), and the composer, messages and margins are tighter. About a third more of a 14" screen shows messages.

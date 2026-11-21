@@ -128,6 +128,7 @@
       details.quote-box{margin-bottom:4px}details.quote-box summary{font-size:12px}
       .note{margin:4px 0;padding:6px 10px}
       .reply-form{padding:6px 20px 8px}.reply-form textarea{min-height:38px;padding:6px 8px}.reply-form .actions{margin-top:4px}.reply-form .actions button{padding:3px 10px;font-size:12px}
+      .thread.newest .reply-form{position:sticky;top:34px;bottom:auto;border-top:0;border-bottom:1px solid #3a404a;z-index:2}
       .to{display:flex;flex-wrap:wrap;gap:4px;margin:0 0 4px}.to button{white-space:nowrap}
     </style>
     <section class="panel" hidden aria-labelledby="comment-title">
@@ -187,6 +188,13 @@
     <button class="toggle" type="button">Comment</button></div>
     <button class="pill" type="button" aria-expanded="false"><span class="dot"></span><span class="pill-label">Comments</span></button></div>`;
   document.body.append(host);
+  // ":order newest|oldest": newest replies first, with the reply box above them. The messages are rendered in visual order, so j/k and g/G follow what is on screen.
+  const newestFirst = () => localStorage.getItem("preview-comments-order") === "newest";
+  const syncOrder = () => {
+    const thread = find(".thread"), form = find(".reply-form"), list = find(".thread-messages");
+    thread.classList.toggle("newest", newestFirst());
+    if (newestFirst()) list.before(form); else thread.append(form);
+  };
   const pagePath = url => new URL(url).pathname.replace(/\.html$/, "").replace(/\/index$/, "/");
   const find = selector => shadow.querySelector(selector);
   // Calm mode (":calm"): ADR ignores keys, clicks and selections and hides its marks, so a page with its own controls (a console) is left alone.
@@ -375,7 +383,7 @@
     ]],
     ["Search & commands", [
       "/ or :grep [-d N] [-u N] [-s] [-p|-c] <regex> searches pages and threads (no flag: all pages; -d 0: this page; -d N: N levels below; -u N: N ancestors; -1 = all)",
-      "Commands: :help [section] :man :history :threads :chat :comment :tree :new :present :export [single|compress] :read [stop] :figure :restart :grep :vim off|on :calm [site|off] :keys",
+      "Commands: :help [section] :man :history :threads :chat :comment :tree :new :present :export [single|compress] :read [stop] :figure :restart :grep :vim off|on :order newest|oldest :calm [site|off] :keys",
       ":calm silences ADR on this page (:calm site: every page; :calm off restores): no shortcuts, comment popups, screenshots or marks, so a page with its own controls is left alone. Only : still works; the status bar shows CALM.",
       ":threads opens the threads about this page: those started on it and those whose text links to it. In the What's new list (n), 💬 N counts them and t opens the page with them.",
       "Keys are configured in ~/.config/agent-doc-review/keymap.json",
@@ -436,6 +444,12 @@
     },
     owner: name => name ? api("settings", { owner: name }).then(v => { settings = v; message("Owner: " + name); }).catch(e => message(e.message, true)) : message("Usage: :owner NAME (this preview's agent)", true),
     team: (_first, line = "") => api("settings", { team: line.trim().split(/[\s,]+/).filter(Boolean) }).then(v => { settings = v; message("Team: " + (v.team.join(", ") || "(none)")); }).catch(e => message(e.message, true)),
+    order: arg => {
+      if (arg !== "newest" && arg !== "oldest") return message(`Thread order: ${newestFirst() ? "newest" : "oldest"} first. Usage: :order newest|oldest`, !arg ? false : true);
+      localStorage.setItem("preview-comments-order", arg);
+      if (selectedThread) renderHistory();
+      message(arg === "newest" ? "Newest replies first, reply box on top." : "Oldest replies first, reply box at the bottom.");
+    },
     calm: arg => {
       const here = calmPath(), list = calmList();
       const site = arg === "site", on = arg === "off" ? false : arg === "on" || site ? true : !isCalm();
@@ -1781,7 +1795,9 @@
     markSeen(comment);
     renderLinks(comment);
     if (find(".to-reply").dataset.for !== comment.id) { setReplyTarget(null); find(".to-reply").dataset.for = comment.id; renderReplyTo(comment); }
-    find(".thread-messages").replaceChildren(...threadNodes(comment, values => updateThread({ id: crypto.randomUUID(), ...values })));
+    const nodes = threadNodes(comment, values => updateThread({ id: crypto.randomUUID(), ...values }));
+    find(".thread-messages").replaceChildren(...(newestFirst() ? nodes.reverse() : nodes));
+    syncOrder();
     for (const item of find(".thread-messages").children) item.tabIndex = -1;
   }
   function selectThread(id) {
@@ -2396,7 +2412,7 @@
     let note = picked.rangeCount ? picked.getRangeAt(0).commonAncestorContainer : null;
     note = note && messages.contains(note) ? (note.closest ? note : note.parentElement).closest(".note") : null;
     if (!note) {
-      note = [...messages.children].find(node => node === shadow.activeElement || node.contains(shadow.activeElement)) || messages.lastElementChild;
+      note = [...messages.children].find(node => node === shadow.activeElement || node.contains(shadow.activeElement)) || (newestFirst() ? messages.firstElementChild : messages.lastElementChild);
       quote = "";
     }
     quote ||= (note?.querySelector(".body, p, div")?.textContent || note?.textContent || "").trim();
