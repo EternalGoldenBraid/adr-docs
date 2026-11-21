@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { request as httpRequest } from "node:http";
 import { loadKeymap } from "./keymap.mjs";
+import { handleCode } from "../code_viewer/serve.mjs";
 
 const base = "/__preview_comments";
 
@@ -16,6 +17,7 @@ export function previewComments({ connectionFile }) {
         throw new Error("Preview comments require a loopback-only Vite server.");
       }
       server.middlewares.use((request, response, next) => {
+        if (handleCode(request, response, [server.config.publicDir, server.config.root])) return;
         if (!request.url?.startsWith(base + "/")) return next();
         const fail = (status, error) => {
           response.writeHead(status, { "Content-Type": "application/json" });

@@ -1,6 +1,6 @@
 {
   "name": "adr-docs",
-  "version": "0.159.0",
+  "version": "0.160.0",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -25,6 +25,7 @@
     "./comment-bridge": "./scripts/preview_comments/server.mjs"
   },
   "scripts": {
+    "build:code-viewer": "esbuild scripts/code_viewer/viewer.js --bundle --minify --format=esm --target=es2022 --outfile=scripts/code_viewer/viewer.bundle.js",
     "test": "node --test tests/*.test.mjs",
     "example:paper": "python3 tools/fetch_arxiv.py 2211.08416v3 --root examples",
     "preview": "node bin/preview.mjs",
@@ -42,6 +43,20 @@
     "vitepress": "1.6.4"
   },
   "devDependencies": {
+    "@codemirror/lang-cpp": "^6.0.3",
+    "@codemirror/lang-javascript": "^6.2.5",
+    "@codemirror/lang-json": "^6.0.2",
+    "@codemirror/lang-markdown": "^6.5.2",
+    "@codemirror/lang-python": "^6.2.1",
+    "@codemirror/lang-yaml": "^6.1.3",
+    "@codemirror/language": "^6.13.1",
+    "@codemirror/search": "^6.7.2",
+    "@codemirror/state": "^6.7.6",
+    "@codemirror/theme-one-dark": "^6.1.3",
+    "@codemirror/view": "^6.43.15",
+    "@replit/codemirror-vim": "^6.4.0",
+    "codemirror": "^6.0.2",
+    "esbuild": "^0.28.2",
     "playwright-core": "^1.65.0"
   }
 }

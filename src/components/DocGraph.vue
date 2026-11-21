@@ -32,7 +32,7 @@ const cmdInput = ref(null)
 const flash = ref('')
 const presenting = ref(null)
 const selTitle = computed(() => (selected.value && cy ? cy.getElementById(selected.value).data('title') || '' : ''))
-const HELP = "DOC-GRAPH(1)\n\nLAYERS\n  The page owns the keys. Click the graph to enter it\n  (mode line: GRAPH); Esc in NORMAL returns to the page.\nMODES\n  NORMAL  fly the view         VISUAL  walk node to node\n  INSERT  edit the graph       Esc     back to NORMAL\nNORMAL\n  h j k l   pan (H J K L: faster)\n  + - 0     zoom in / out / fit\n  v  visual     i  insert     u  up one layer\n  Enter     open the selected \u25b8 layer or \u2197 page\nVISUAL\n  h j k l   nearest node in that direction\n  Enter     open \u25b8 layer or \u2197 page, else zoom to node\n  o         open the node's </> code (editor locally, GitHub online)\n  c         comment on the node\n  s         attach a region screenshot\nINSERT\n  h j k l   select neighbour\n  arrows    nudge node (shift: x5)\n  Enter     edit text    o  new node    x  delete\nCOMMANDS\n  :help :man   this page     :w  export JSON\n  :fit         fit all       :q  close\n  :present     full-screen presentation (→ ← story, ↓ ↑ deeper, Esc exits)\nMOUSE / TRACKPAD\n  swipe pans \u00b7 pinch or shift+swipe zooms\n  dbl-click: \u2197 opens page, \u25b8 opens layer,\n    node/lane zooms, empty fits\nLINKS\n  a node with a \"link\" (e.g. \"/autonomy\") shows \u2197;\n  external URLs open as normal links"
+const HELP = "DOC-GRAPH(1)\n\nLAYERS\n  The page owns the keys. Click the graph to enter it\n  (mode line: GRAPH); Esc in NORMAL returns to the page.\nMODES\n  NORMAL  fly the view         VISUAL  walk node to node\n  INSERT  edit the graph       Esc     back to NORMAL\nNORMAL\n  h j k l   pan (H J K L: faster)\n  + - 0     zoom in / out / fit\n  v  visual     i  insert     u  up one layer\n  Enter     open the selected \u25b8 layer or \u2197 page\nVISUAL\n  h j k l   nearest node in that direction\n  Enter     open \u25b8 layer or \u2197 page, else zoom to node\n  o         open the node's </> code (local viewer, GitHub online)\n  c         comment on the node\n  s         attach a region screenshot\nINSERT\n  h j k l   select neighbour\n  arrows    nudge node (shift: x5)\n  Enter     edit text    o  new node    x  delete\nCOMMANDS\n  :help :man   this page     :w  export JSON\n  :fit         fit all       :q  close\n  :present     full-screen presentation (→ ← story, ↓ ↑ deeper, Esc exits)\nMOUSE / TRACKPAD\n  swipe pans \u00b7 pinch or shift+swipe zooms\n  dbl-click: \u2197 opens page, \u25b8 opens layer,\n    node/lane zooms, empty fits\nLINKS\n  a node with a \"link\" (e.g. \"/autonomy\") shows \u2197;\n  external URLs open as normal links"
 const topic = ref('')
 const activeTab = ref('')
 const TOPICS = ref([])
@@ -310,23 +310,22 @@ function openLink(n) {
   else router.go(withBase(link))
   return true
 }
-// A node's `code` is "repo:path#L12". The repo map (/code-repos.json: {repo: {local, github, ref}}) turns it into an editor link on a local preview
-// (vscode://file/...) and a GitHub blob link anywhere else, so one field serves both cases.
+// A node's `code` is "repo:path#L12". The repo map (/code-repos.json: {repo: {local, github, ref}}) turns it into ADR's own Vim-key code viewer on a local
+// preview (/__adr/code/...) and a GitHub blob link anywhere else, so one field serves both cases whatever editor anyone uses.
 let codeRepos = null
 const isLocalHost = () => /^(localhost|127\.0\.0\.1|\[::1\]|.*\.localhost)$/.test(location.hostname)
 function codeUrl(code) {
   const m = /^([^:]+):([^#]+)(?:#L(\d+))?$/.exec(code || '')
   const repo = m && codeRepos?.[m[1]]
   if (!repo) return ''
-  const [, , path, line] = m
-  if (isLocalHost() && repo.local) return `vscode://file${repo.local.startsWith('/') ? '' : '/'}${repo.local.replace(/\/$/, '')}/${path}${line ? ':' + line : ''}`
+  const [, name, path, line] = m
+  if (isLocalHost() && repo.local) return `/__adr/code/${encodeURIComponent(name)}/${path.split('/').map(encodeURIComponent).join('/')}${line ? '#L' + line : ''}`
   return repo.github ? `${repo.github.replace(/\/$/, '')}/blob/${repo.ref || 'main'}/${path}${line ? '#L' + line : ''}` : ''
 }
 function openCode(n) {
   const url = codeUrl(n.data('code'))
   if (!url) { say(n.data('code') ? 'No repo mapping for this code link (see /code-repos.json)' : 'This node has no code link'); return false }
-  if (url.startsWith('vscode:')) location.href = url
-  else window.open(url, '_blank', 'noopener')
+  window.open(url, '_blank', 'noopener')
   return true
 }
 const hasCode = () => Boolean(selected.value && cy.getElementById(selected.value).data('code'))

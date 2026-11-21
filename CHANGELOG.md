@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.160.0 - 2026-11-21
+
+- Code links open in ADR's own viewer on a local preview (thread d75ea297): `/__adr/code/<repo>/<path>#L12`, CodeMirror 6 with Vim keys (`@replit/codemirror-vim`), read-only, search, "copy vim +line", a GitHub button, `:q` back. It replaces the `vscode://` target of 0.159.0, because every user has their own editor. Online, the link still opens GitHub.
+- The viewer reads only files inside a repo mapped in `code-repos.json`; no dot-folders, key or secret-looking names, no symlinks leaving the checkout, 2 MB cap, loopback hosts only. Test added.
+- Removed: the `vscode://` link.
+
 ## 0.159.0 - 2026-11-21
 
 - DocGraph code links (thread d75ea297 on /live-data-flow): a node can carry `code: "repo:path#L12"`. It shows `</>`; `o` in visual mode or a double-click opens it. `public/code-repos.json` maps each repo to a local checkout and a GitHub URL: a localhost preview opens `vscode://file/...`, any other host opens the GitHub blob. The node editor has a Code field.
