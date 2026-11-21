@@ -574,6 +574,12 @@ test("the user's resolve is one mark among the addressees'; it closes when all h
   bridge.update({ id: randomUUID(), commentId: id, sessionId, resolved: false }, "user");
   bridge.update({ id: randomUUID(), commentId: id, sessionId, resolved: true }, "user");
   assert.equal(thread().resolved, true, "a record without partial (as in old logs) still closes for all");
+  bridge.update({ id: randomUUID(), commentId: id, sessionId, resolved: false }, "user");
+  bridge.update({ id: randomUUID(), commentId: id, from: "bob", resolved: true });
+  bridge.update({ id: randomUUID(), commentId: id, from: "carol", resolved: true });
+  assert.equal(thread().resolved, false, "the thread stays open while you have not resolved, although every addressee has");
+  bridge.update({ id: randomUUID(), commentId: id, sessionId, resolved: true, partial: true }, "user");
+  assert.equal(thread().resolved, true);
   await bridge.close();
   rmSync(directory, { recursive: true, force: true });
 });

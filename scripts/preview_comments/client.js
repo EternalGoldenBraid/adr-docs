@@ -1807,7 +1807,10 @@
   // Closing for all overrides whoever has not resolved; show who they are and whether they are reachable first.
   async function confirmCloseAll(comment) {
     const { members = [] } = await api("mesh").catch(() => ({}));
-    const lines = (comment.to ?? []).filter(name => !comment.resolvedBy?.[name]).map(name => {
+    const pending = (comment.to ?? []).filter(name => !comment.resolvedBy?.[name]);
+    const reachable = pending.filter(name => { const m = members.find(x => x.slug === name); return m && meshState(m) !== "offline"; });
+    if (reachable.length) { alert(`Cannot close for all: ${reachable.join(", ")} can still be reached. Ring the bell (🔔) instead.`); return false; }
+    const lines = pending.map(name => {
       const m = members.find(x => x.slug === name);
       return `  ${name}: ${m ? meshState(m) : "unknown"}${m?.open ? `, ${m.open} open` : ""}`;
     });
