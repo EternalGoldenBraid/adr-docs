@@ -672,3 +672,20 @@ test("every route the panel calls through api() is let through by the Vite proxy
   assert.ok(called.includes("bell"));
   for (const route of called) assert.ok(proxy.includes(`"/${route}"`), `proxy whitelist lacks /${route}`);
 });
+
+test("an @agent in a reply adds that team member to the thread's addressees; unknown handles do not", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "preview-comments-"));
+  const owner = randomUUID(), bob = randomUUID(), carol = randomUUID();
+  writeFileSync(join(directory, "page.md"), "# Page\n\nText.");
+  writeFileSync(join(directory, "team.md"), `| Who | Session |\n|---|---|\n| Owner | ${owner} |\n| Bob | ${bob} |\n| Carol | ${carol} |\n`);
+  const bridge = await startCommentBridge({ sessionId: owner, documentRoot: directory, storageRoot: directory, previewOrigin: "http://127.0.0.1:8773", onError: error => assert.fail(error.message), notify: async () => {}, mesh: { send: async () => {} } });
+  try {
+    const id = bridge.add({ page: "/page", kind: "page", quote: "Page", comment: "hi", to: ["bob"], from: "bob" }).id;
+    bridge.update({ id: randomUUID(), commentId: id, from: "bob", reply: "ping @carol, mail me at x@nobody.io or @stranger" });
+    const [thread] = bridge.read({ as: "carol", includeSeen: true });
+    assert.deepEqual([...thread.to].sort(), ["bob", "carol"]);
+  } finally {
+    await bridge.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});

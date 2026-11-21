@@ -141,6 +141,11 @@ export async function startCommentBridge({
     }
     return [...new Set(value.map(canon))];
   };
+  // An `@agent` in a message addresses it; only names on the team count, so emails and handles do not.
+  const mentioned = text => {
+    const team = new Set(teamNames());
+    return [...new Set([...String(text ?? "").matchAll(/(?<![\w@.-])@([\w.-]{1,60})/g)].map(m => canon(m[1].replace(/[.-]+$/, ""))).filter(name => team.has(name)))];
+  };
   // The team page (src/roster.mjs) is the source of the team when it lists agent sessions; settings are the fallback.
   let rosterAt = 0, rosterRows = [];
   const roster = () => {
@@ -645,7 +650,7 @@ export async function startCommentBridge({
       ...(input.queued === true ? { queued: true } : {}),
       ...(regionField(input.region) ? { region: regionField(input.region) } : {}),
       ...(refs.length ? { refs } : {}),
-      ...(names(input.to, "to")?.length ? { to: names(input.to, "to") } : {}),
+      ...(names(input.to, "to")?.length || mentioned(input.comment).length ? { to: [...new Set([...(names(input.to, "to") ?? []), ...mentioned(input.comment)])].slice(0, 12) } : {}),
     };
   }
 
@@ -683,6 +688,10 @@ export async function startCommentBridge({
       value.resolved = input.resolved;
     }
     if (names(input.to, "to")?.length) value.to = names(input.to, "to");
+    if (value.reply !== undefined && !input.note) {
+      const extra = mentioned(value.reply).filter(name => !(value.to ?? comments.get(value.commentId).to ?? []).map(canon).includes(name));
+      if (extra.length) value.to = [...new Set([...(value.to ?? comments.get(value.commentId).to ?? []).map(canon), ...extra])].slice(0, 12);
+    }
     if (input.whisper === true && value.to?.length && value.reply !== undefined) value.whisper = true;
     if (author === "user" && COLORS.includes(input.color)) value.color = input.color;
     if (author === "user" && input.clear === true) value.clear = true;

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.162.0 - 2026-11-21
+
+- `@agent` in a comment or reply adds that team member to the thread's addressees (thread a1850ba0), so a mention wakes them; non-team handles and emails are ignored. Test added.
+- Removed: nothing this time.
+
 ## 0.161.1 - 2026-11-21
 
 - Fix: "Close for all" no longer refuses because the user's own seat (or another human) is listed as an addressee that "can still be reached" (thread d75ea297). Humans and `you` are not counted as pending agents.
