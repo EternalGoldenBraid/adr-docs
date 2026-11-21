@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.158.0 - 2026-11-21
+
+- `:rail on|off` (option C of workstreams/2026-11-21-lean-ui.md): a rail of open discussions grouped by page, `↔` for linked threads, beside the thread. Off by default, saved per browser, hidden below 1100 px. It is `:rail` because `:tree` already opens the page tree.
+- Removed: nothing this time.
+
 ## 0.157.0 - 2026-11-21
 
 - `:order newest|oldest` (option B of workstreams/2026-11-21-lean-ui.md): a thread can show the newest reply first with the reply box on top, so you no longer scroll to the end. Saved per browser; default stays oldest first. `j`/`k`, `g`/`G` and "new thread" follow the visual order.
