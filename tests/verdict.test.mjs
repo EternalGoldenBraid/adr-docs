@@ -130,3 +130,14 @@ test("a finished page with open threads is in review until they are resolved", a
   writeFileSync(join(dir, "v.md"), "---\nvoted: false\ncard:\n  gist: Planned\n---\n# V\n");
   assert.equal(pageCards(dir)["/v"].voted, false);
 });
+
+test("a card test keeps its check, measured value and pass/fail verdict", async () => {
+  const { mkdtempSync, writeFileSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const { pageCards } = await import("../src/page-tree.mjs");
+  const dir = mkdtempSync(join(tmpdir(), "cards-"));
+  writeFileSync(join(dir, "c.md"), "---\ncard:\n  gist: \"x\"\n  tests:\n    - {name: \"Fit\", state: done, check: {experiment: \"fit\", field: err, stat: min, op: \"<\", value: 0.1}, measured: 0.03, result: pass}\n---\n# C\n");
+  const [t] = pageCards(dir)["/c"].tests;
+  assert.deepEqual([t.check, t.measured, t.verdict, t.result, t.status], [{ stat: "min", field: "err", op: "<", value: "0.1" }, 0.03, "pass", undefined, "done"]);
+});

@@ -32,7 +32,7 @@ const rows = computed(() => Object.entries(cards.value).filter(([, c]) => c.line
 <template>
   <div v-if="board" class="pc-board">
     <a v-for="r in rows" :key="r.link" :href="withBase(r.link)" class="pc-row">
-      <b :class="['pc-tag', r.status]">{{ r.status || '—' }}</b> <b v-if="r.missing" class="pc-tag bad">missing: {{ r.missing.join(', ') }}</b> <b v-if="r.needsVerdict" class="pc-tag needs">needs verdict</b> <span>{{ r.title }}</span><small> {{ clip(r.line) }}</small>
+      <b :class="['pc-tag', r.status]">{{ r.status || '—' }}</b> <b v-if="r.missing" class="pc-tag bad">missing: {{ r.missing.join(', ') }}</b> <b v-if="r.needsVerdict" class="pc-tag needs">needs verdict</b> <span>{{ r.title }}</span><small><code v-if="t.check" class="pc-check" :title="'auto-checked when the run ends (one seed)'">{{ t.check.stat }}({{ t.check.field }}) {{ t.check.op }} {{ t.check.value }}</code> {{ clip(r.line) }}</small>
     </a>
     <p v-if="!rows.length" class="pc-empty">No page has a <code>card-line</code> yet.</p>
   </div>
@@ -42,7 +42,7 @@ const rows = computed(() => Object.entries(cards.value).filter(([, c]) => c.line
     <div v-if="here.waitingOn" class="pc-slot"><i>waiting</i><span>{{ here.waitingOn.join(', ') }} have not resolved the open threads</span></div>
     <div v-if="tests.length" class="pc-slot"><i>tests</i><div>
       <div class="pc-count"><b>{{ summary.count }}</b><span v-if="summary.age !== null" :class="{ 'pc-old': summary.running && summary.age > staleDays }"> · last result {{ summary.age ? summary.age + ' d ago' : 'today' }}<template v-if="summary.running && summary.age > staleDays"> ⚠ stale</template></span></div>
-      <ul class="pc-tests"><li v-for="t in tests" :key="t.name" :class="['pc-test', t.status]"><span class="pc-mark">{{ MARK[t.status] || '?' }}</span><a v-if="t.link" :href="t.link.startsWith('#') ? t.link : withBase(t.link)" class="pc-link">{{ t.name }}</a><span v-else>{{ t.name }}</span><small><em v-if="t.status === 'planned' || t.status === 'running'" :class="['pc-q', { no: !t.doer }]">{{ t.doer ? `queued #${t.rank}, ${t.doer}${t.after?.length ? ', after ' + t.after.join(', ') : ''}` : 'not queued: no doer' }} </em>{{ t.at || '' }}{{ t.verified ? ' ·run' : '' }}</small></li></ul>
+      <ul class="pc-tests"><li v-for="t in tests" :key="t.name" :class="['pc-test', t.status]"><span class="pc-mark">{{ MARK[t.status] || '?' }}</span><a v-if="t.link" :href="t.link.startsWith('#') ? t.link : withBase(t.link)" class="pc-link">{{ t.name }}</a><span v-else>{{ t.name }}</span><small><em v-if="t.measured !== undefined" :class="['pc-v', t.verdict]">{{ t.measured }} {{ t.verdict === 'pass' ? 'pass (hypothesis)' : t.verdict === 'fail' ? 'measured, not met' : '' }} </em><em v-if="t.status === 'planned' || t.status === 'running'" :class="['pc-q', { no: !t.doer }]">{{ t.doer ? `queued #${t.rank}, ${t.doer}${t.after?.length ? ', after ' + t.after.join(', ') : ''}` : 'not queued: no doer' }} </em>{{ t.at || '' }}{{ t.verified ? ' ·run' : '' }}</small></li></ul>
     </div></div>
     <template v-for="k in SLOTS" :key="k"><div v-if="here[k]" class="pc-slot"><i>{{ k }}</i><span :title="over(here[k]) ? here[k] : undefined">{{ clip(here[k]) }}</span></div></template>
   </div>
@@ -69,6 +69,7 @@ const rows = computed(() => Object.entries(cards.value).filter(([, c]) => c.line
 .pc-test small { color: var(--vp-c-text-3) } .pc-q { font-style: normal; color: var(--vp-c-brand-1) } .pc-q.no { color: #e03131 }
 .vp-doc .pc-link { color: inherit; text-decoration: underline dotted; text-underline-offset: 2px } .vp-doc .pc-link:hover { color: var(--vp-c-brand-1) }
 .pc-test.done .pc-mark { color: #2b8a3e } .pc-test.running .pc-mark { color: #1c7ed6 } .pc-test.failed .pc-mark { color: #e03131 } .pc-test.obsolete { color: var(--vp-c-text-3); text-decoration: line-through }
+.pc-check { font-size: 11px; margin-right: 6px; padding: 0 4px } .pc-v { font-style: normal } .pc-v.pass { color: #2b8a3e } .pc-v.fail { color: #e03131 }
 .pc-old { color: #d9480f; font-weight: 600 }
 .pc-tag.idea { background: #74c0fc33; color: #1c7ed6 }
 .pc-board { display: flex; flex-direction: column; gap: 4px; margin: 12px 0; font-size: 14px }

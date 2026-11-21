@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.161.0 - 2026-11-21
+
+- Card tests can carry a machine check (thread 56b94a00 on /experiments/2026-11-21-live-data-loop): `check: {experiment, field, stat, op, value}` shows as a chip (`min(err) < 0.1`) on the test row. `measured: <number>` and `result: pass|fail` (written by the site's `verify_checks.py`) show as "0.03 pass (hypothesis)" or "measured, not met". A `result:` that is not pass/fail still means a result file path, as before.
+- Removed: nothing this time.
+
 ## 0.160.0 - 2026-11-21
 
 - Code links open in ADR's own viewer on a local preview (thread d75ea297): `/__adr/code/<repo>/<path>#L12`, CodeMirror 6 with Vim keys (`@replit/codemirror-vim`), read-only, search, "copy vim +line", a GitHub button, `:q` back. It replaces the `vscode://` target of 0.159.0, because every user has their own editor. Online, the link still opens GitHub.

@@ -171,8 +171,10 @@ function nestedCard(front) {
     if (line && !/^\s/.test(line)) break;
     const item = /^\s+-\s*\{(.*)\}\s*$/.exec(line);
     if (item) {
-      const f = Object.fromEntries([...item[1].matchAll(/(\w+):\s*("[^"]*"|'[^']*'|[^,}]*)/g)].map(m => [m[1], unquote(m[2])]));
-      if (f.name) tests.push({ ...(f.result ? { result: f.result } : {}), ...(/^(#|\/(?!\/))[^\s]*$/.test(f.link ?? "") ? { link: f.link } : {}), ...(/^[\w.-]{1,60}$/.test(f.doer ?? "") && Number.isFinite(+f.rank) && f.rank !== "" ? { doer: f.doer, rank: +f.rank } : {}), ...(Array.isArray(f.after) ? { after: f.after.filter(x => /^[\w.-]{1,60}$/.test(x)) } : {}), name: f.name, status: (f.state ?? f.status ?? "planned").toLowerCase(), ...(/^\d{4}-\d{2}-\d{2}$/.test(f.date ?? f.at ?? "") ? { at: f.date ?? f.at } : {}) });
+      const chk = /\bcheck:\s*\{([^}]*)\}/.exec(item[1]);
+      const check = chk && Object.fromEntries([...chk[1].matchAll(/(\w+):\s*("[^"]*"|'[^']*'|[^,}]*)/g)].map(m => [m[1], unquote(m[2])]));
+      const f = Object.fromEntries([...(chk ? item[1].replace(chk[0], "") : item[1]).matchAll(/(\w+):\s*("[^"]*"|'[^']*'|[^,}]*)/g)].map(m => [m[1], unquote(m[2])]));
+      if (f.name) tests.push({ ...(f.result && !/^(pass|fail)$/.test(f.result) ? { result: f.result } : {}), ...(/^(pass|fail)$/.test(f.result ?? "") ? { verdict: f.result } : {}), ...(check && check.stat && check.field && check.op && check.value !== undefined ? { check: { stat: check.stat, field: check.field, op: check.op, value: check.value } } : {}), ...(f.measured !== undefined && Number.isFinite(+f.measured) && f.measured !== "" ? { measured: +f.measured } : {}), ...(/^(#|\/(?!\/))[^\s]*$/.test(f.link ?? "") ? { link: f.link } : {}), ...(/^[\w.-]{1,60}$/.test(f.doer ?? "") && Number.isFinite(+f.rank) && f.rank !== "" ? { doer: f.doer, rank: +f.rank } : {}), ...(Array.isArray(f.after) ? { after: f.after.filter(x => /^[\w.-]{1,60}$/.test(x)) } : {}), name: f.name, status: (f.state ?? f.status ?? "planned").toLowerCase(), ...(/^\d{4}-\d{2}-\d{2}$/.test(f.date ?? f.at ?? "") ? { at: f.date ?? f.at } : {}) });
       continue;
     }
     const kv = /^\s+(gist|state|what|evidence|next|owner|line|status):\s*(.+)$/.exec(line);
