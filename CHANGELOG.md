@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.155.3 - 2026-11-21
+
+- Fix: a thread closed when every addressee had resolved, even if you had not (thread 48d85716 on /ops.html). Your mark now counts, as the docs always said. Threads opened before 2026-11-21 keep the old rule so history does not reopen. Needs a preview restart.
+- **Close for all** now refuses while any addressee who has not resolved is still reachable (not offline); ring the bell instead. It still asks first for the offline ones.
+- Removed: nothing this time.
+
 ## 0.155.2 - 2026-11-21
 
 - Fix: the 🔔 bell answered "Unknown comment endpoint." since 0.151.0. The Vite proxy that forwards the panel's requests to the comment bridge did not list `/bell`, and I had only tested the bridge directly. Needs a preview restart.

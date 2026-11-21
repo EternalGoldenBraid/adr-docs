@@ -9,6 +9,7 @@ import { homedir, hostname } from "node:os";
 import { execFile, spawn } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
+const USER_MARK_FROM = "2026-11-21T00:00:00";
 const meshCodeDirectory = join(homedir(), ".copilot", "extensions", "agent-mesh");
 // MESH_DIR, else ~/.agent-mesh, else the pre-move location inside the extension.
 function meshDataDirectory() {
@@ -541,10 +542,11 @@ export async function startCommentBridge({
         // Each addressee resolves for itself, and so does the user (`you`); the thread closes when every addressee has. The user's mark is recorded only with `partial` (older records, which replay on start, closed for all); `closeAll` closes it for all, and reopening clears everyone's mark.
         const who = record.author === "copilot" && record.from ? canon(record.from) : null;
         const need = (comment.to ?? []).map(canon);
+        // Threads opened before USER_MARK_FROM keep the old rule (addressees only), so history does not reopen.
         const mark = who && need.includes(who) ? who : record.author === "user" && record.partial && need.length ? "you" : null;
         if (mark && record.resolved) {
           comment.resolvedBy = { ...comment.resolvedBy, [mark]: record.at };
-          const done = need.every(name => comment.resolvedBy[name]);
+          const done = (comment.at >= USER_MARK_FROM ? [...need, "you"] : need).every(name => comment.resolvedBy[name]);
           if (done && !comment.resolved) comment.resolvedAt = record.at;
           comment.resolved = done;
         } else if (mark === who && who && !record.resolved) {
