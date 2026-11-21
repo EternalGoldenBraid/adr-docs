@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.161.1 - 2026-11-21
+
+- Fix: "Close for all" no longer refuses because the user's own seat (or another human) is listed as an addressee that "can still be reached" (thread d75ea297). Humans and `you` are not counted as pending agents.
+- Removed: nothing this time.
+
 ## 0.161.0 - 2026-11-21
 
 - Card tests can carry a machine check (thread 56b94a00 on /experiments/2026-11-21-live-data-loop): `check: {experiment, field, stat, op, value}` shows as a chip (`min(err) < 0.1`) on the test row. `measured: <number>` and `result: pass|fail` (written by the site's `verify_checks.py`) show as "0.03 pass (hypothesis)" or "measured, not met". A `result:` that is not pass/fail still means a result file path, as before.
