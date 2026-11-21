@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.156.0 - 2026-11-21
+
+- Lean panel (option A of workstreams/2026-11-21-lean-ui.md): the tabs sit in the header row, the thread header shows the page path as a badge first, the long state sentence is gone (the resolve chips and a tooltip on the path carry it), and the composer, messages and margins are tighter. About a third more of a 14" screen shows messages.
+- Removed: the separate tab row and the thread state sentence line.
+
 ## 0.155.3 - 2026-11-21
 
 - Fix: a thread closed when every addressee had resolved, even if you had not (thread 48d85716 on /ops.html). Your mark now counts, as the docs always said. Threads opened before 2026-11-21 keep the old rule so history does not reopen. Needs a preview restart.
