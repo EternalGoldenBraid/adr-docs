@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.163.0 - 2026-11-21
+
+- Removed: the **Close for all** button and its confirmation (thread d75ea297); threads close when everyone has resolved, and the 🔔 asks whoever is left.
+- Fix: a human in a thread's `to` (you, listed as a second "Alice") no longer needs a separate resolve; your own mark covers it. Only team agents are waited on.
+
 ## 0.162.0 - 2026-11-21
 
 - `@agent` in a comment or reply adds that team member to the thread's addressees (thread a1850ba0), so a mention wakes them; non-team handles and emails are ignored. Test added.

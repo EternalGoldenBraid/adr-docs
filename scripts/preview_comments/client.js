@@ -157,7 +157,7 @@
         <div class="thread-head"><button class="thread-back icon" type="button" title="Back (h)">‹</button>
         <span class="thread-path"></span><span class="thread-title"></span>
         <a class="thread-source" title="Open page (o)">↗ page</a>
-        <button class="thread-bell" type="button" title="Ring the bell: ask everyone who has not resolved to resolve, now" hidden>🔔</button><button class="thread-resolve" type="button" title="Resolve / reopen (r)">Resolve</button><button class="thread-closeall" type="button" title="Close the thread although others have not resolved" hidden>Close for all</button></div>
+        <button class="thread-bell" type="button" title="Ring the bell: ask everyone who has not resolved to resolve, now" hidden>🔔</button><button class="thread-resolve" type="button" title="Resolve / reopen (r)">Resolve</button></div>
         <div class="thread-state"></div>
         <details class="quote-box"><summary class="quote-summary">Selected content</summary><div class="quote thread-quote"></div></details>
         <div class="thread-links"></div>
@@ -1805,7 +1805,6 @@
     queueLine(comment, state.nextElementSibling);
     find(".thread-resolve").textContent = isNote(comment) ? "Remove" : comment.resolved ? "Reopen" : comment.resolvedBy?.you ? "Unresolve" : "Resolve";
     find(".thread-bell").hidden = Boolean(comment.resolved || isNote(comment) || !(comment.to ?? []).some(name => !comment.resolvedBy?.[name]));
-    find(".thread-closeall").hidden = Boolean(comment.resolved || isNote(comment) || !comment.resolvedBy?.you);
     markSeen(comment);
     renderLinks(comment);
     if (find(".to-reply").dataset.for !== comment.id) { setReplyTarget(null); find(".to-reply").dataset.for = comment.id; renderReplyTo(comment); }
@@ -1882,22 +1881,9 @@
     if (!comment.resolved && comment.resolvedBy?.you) return updateThread({ id: crypto.randomUUID(), resolved: false, partial: true }, id);
     return updateThread({ id: crypto.randomUUID(), resolved: !comment.resolved, ...(comment.resolved ? {} : { partial: true }) }, id);
   }
-  // Closing for all overrides whoever has not resolved; show who they are and whether they are reachable first.
-  async function confirmCloseAll(comment) {
-    const { members = [] } = await api("mesh").catch(() => ({}));
-    const human = name => { const m = members.find(x => x.slug === name); return name === "you" || (m && !m.session); };
-    // The user is closing; their own seat and other humans are not agents to wait for.
-    const pending = (comment.to ?? []).filter(name => !comment.resolvedBy?.[name] && !human(name));
-    const reachable = pending.filter(name => { const m = members.find(x => x.slug === name); return m && meshState(m) !== "offline"; });
-    if (reachable.length) { alert(`Cannot close for all: ${reachable.join(", ")} can still be reached. Ring the bell (🔔) instead.`); return false; }
-    const lines = pending.map(name => {
-      const m = members.find(x => x.slug === name);
-      return `  ${name}: ${m ? meshState(m) : "unknown"}${m?.open ? `, ${m.open} open` : ""}`;
-    });
-    return confirm(`Close for all?\n\nThese have not resolved:\n${lines.join("\n") || "  (nobody)"}\n\nThey will not be asked again.`);
-  }
   // Who has resolved: the user and each addressee, as the sectors of a small pie before the thread state.
-  const resolveMarks = comment => (comment.to?.length ? [{ name: "you", done: Boolean(comment.resolvedBy?.you || comment.resolved) }, ...comment.to.map(name => ({ name, done: Boolean(comment.resolvedBy?.[name] || comment.resolved) }))] : []);
+  const agentsIn = comment => (comment.to ?? []).filter(name => !settings.team?.length || settings.team.includes(name));
+  const resolveMarks = comment => (comment.to?.length ? [{ name: "you", done: Boolean(comment.resolvedBy?.you || comment.resolved) }, ...agentsIn(comment).map(name => ({ name, done: Boolean(comment.resolvedBy?.[name] || comment.resolved) }))] : []);
   // Awaiting: a thread the agent started, still open, with the agent's message last.
   const awaiting = comment => !comment.resolved && !comment.removed && !isNote(comment) && comment.author === "copilot" &&
     (comment.replies.at(-1)?.author ?? "copilot") === "copilot";
@@ -2079,7 +2065,7 @@
   }
   async function updateThread(values, commentId = selectedThread) {
     historySaving = true;
-    for (const selector of [".reply-send", ".thread-resolve", ".thread-bell", ".thread-closeall", ".thread-back", ".history-close", ".history-toggle", ".toggle"]) find(selector).disabled = true;
+    for (const selector of [".reply-send", ".thread-resolve", ".thread-bell", ".thread-back", ".history-close", ".history-toggle", ".toggle"]) find(selector).disabled = true;
     find(".thread-source").setAttribute("aria-disabled", "true");
     replyInput.readOnly = true;
     try {
@@ -2101,7 +2087,7 @@
       message(error.message + (values.reply !== undefined ? " Your reply draft is kept; press Reply to retry." : ""), true);
     } finally {
       historySaving = false;
-      for (const selector of [".reply-send", ".thread-resolve", ".thread-bell", ".thread-closeall", ".thread-back", ".history-close", ".history-toggle", ".toggle"]) find(selector).disabled = false;
+      for (const selector of [".reply-send", ".thread-resolve", ".thread-bell", ".thread-back", ".history-close", ".history-toggle", ".toggle"]) find(selector).disabled = false;
       find(".thread-source").removeAttribute("aria-disabled");
       replyInput.readOnly = false;
     }
@@ -2217,10 +2203,6 @@
       const { rung, unreachable, reasons = {} } = await api("bell", { id: comment.id });
       message(`🔔 Rung: ${rung.join(", ") || "nobody"}${unreachable.length ? `. Not reachable: ${unreachable.map(name => reasons[name] ? `${name} (${reasons[name]})` : name).join(", ")}` : ""}`);
     } catch (error) { message(error.message, true); }
-  });
-  find(".thread-closeall").addEventListener("click", async () => {
-    const comment = historyComments.find(c => c.id === selectedThread);
-    if (comment && await confirmCloseAll(comment)) updateThread({ id: crypto.randomUUID(), resolved: true, closeAll: true }, comment.id);
   });
   find(".thread-resolve").addEventListener("click", () => {
     const comment = historyComments.find(c => c.id === selectedThread);
