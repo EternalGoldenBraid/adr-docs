@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>Option D: margin lanes, a map and a needs-you strip</title>
+<style>
+:root{--bg:#15171c;--panel:#1b1d22;--line:#2f343d;--mute:#8b949e;--fg:#e6e9ee;--blue:#74c0fc;--amber:#f2cc60;--green:#6fd08c;--red:#f38ba8;--human:#c9b8ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,sans-serif;height:100vh;display:grid;grid-template-rows:30px 1fr;overflow:hidden}
+.mono{font-family:ui-monospace,monospace}
+.top{display:flex;align-items:center;gap:14px;padding:0 14px;border-bottom:1px solid var(--line);font-size:12px;background:var(--panel)}
+.top .crumb{color:var(--blue)}.top .sp{flex:1}.pill{padding:1px 9px;border-radius:99px;border:1px solid var(--line)}.need{border-color:#7a5d17;color:var(--amber)}.kbd{border:1px solid var(--line);border-radius:4px;padding:0 5px;color:var(--mute)}
+.main{display:grid;grid-template-columns:236px minmax(0,560px) 1fr;min-height:0}
+.map{border-right:1px solid var(--line);padding:10px 12px;overflow:auto;font-size:12px}
+.map h4,.cards h4{margin:0 0 4px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);font-weight:600}
+.map svg{width:100%;height:170px;margin-bottom:6px}
+.map .n{fill:#22262d;stroke:#59616d}.map .n.here{fill:#243252;stroke:var(--blue)}.map text{fill:var(--fg);font:10px ui-monospace,monospace}.map .e{stroke:var(--human);stroke-dasharray:3 3;fill:none;opacity:.8}.map .t{stroke:#59616d;fill:none}
+.inbox{display:grid;gap:3px;margin-bottom:12px}.row{display:flex;gap:6px;padding:3px 6px;border-radius:6px;background:#20242b}.row b{font-weight:600}.row .age{margin-left:auto;color:var(--mute)}.row.you{border-left:3px solid var(--amber)}.row.wait{border-left:3px solid #4a5160;opacity:.8}
+.doc{padding:22px 28px;overflow:auto;border-right:1px solid var(--line)}.doc h1{font-size:20px;margin:0 0 10px}.doc h2{font-size:15px;margin:16px 0 4px}.doc p{margin:4px 0;color:#cfd5dd}
+.doc table{border-collapse:collapse;margin:8px 0;font-size:13px}.doc td,.doc th{border:1px solid var(--line);padding:2px 10px;text-align:left}
+mark{background:#3a3320;color:#ffe08a;border-bottom:2px solid var(--amber);padding:0 1px}mark.b{background:#1f2f44;color:#cfe6ff;border-color:var(--blue)}
+.cards{padding:10px 14px;overflow:auto;display:grid;align-content:start;gap:8px}
+.card{border:1px solid var(--line);border-radius:10px;background:var(--panel)}.card.open{border-color:#3d5a88}
+.ch{display:flex;align-items:center;gap:8px;padding:7px 10px}.ch .gist{font-weight:600}.ch .pip{width:9px;height:9px;border-radius:50%;background:var(--amber)}.ch .who{margin-left:auto;display:flex;gap:4px;font-size:11px}
+.av{padding:0 7px;border-radius:99px;border:1px solid var(--line);color:var(--mute)}.av.ok{color:var(--green);border-color:#2c5a3b}.av.no{color:var(--amber);border-color:#7a5d17}
+.compose{display:flex;gap:6px;align-items:center;padding:0 10px 8px}.compose .in{flex:1;border:1px solid var(--line);border-radius:7px;background:#101216;padding:5px 9px;color:var(--mute)}.compose .to{color:var(--human);font-size:12px}
+.turn{display:grid;grid-template-columns:96px 1fr;gap:10px;padding:7px 10px;border-top:1px solid var(--line)}.turn .meta{font-size:11px;color:var(--mute)}.turn .meta b{display:block;font-size:12px}.sp1{color:#e9a56a}.sp2{color:#8bd36a}.sp3{color:#74c0fc}.sph{color:var(--human)}
+.chips{display:flex;gap:4px;margin-bottom:2px;flex-wrap:wrap}.c{font-size:10px;padding:0 7px;border-radius:99px;border:1px solid var(--line);color:var(--mute)}.c.ask{color:var(--amber);border-color:#7a5d17}.c.res{color:var(--green);border-color:#2c5a3b}.c.lnk{color:var(--human);border-color:#54478a}
+.turn p{margin:0}.turn.old p{display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;color:#aab2bd}
+.turn table{font-size:12px;margin:3px 0;border-collapse:collapse}.turn td,.turn th{border:1px solid var(--line);padding:0 8px}
+.json{border-top:1px solid var(--line);padding:6px 10px;font:11px/1.45 ui-monospace,monospace;color:#9fb0c8;background:#12151a;border-radius:0 0 10px 10px}.json i{color:var(--mute);font-style:normal}
+.card.mini .ch .gist{font-weight:500}.mini .snip{padding:0 10px 7px 29px;color:#aab2bd;font-size:13px}
+.foot{color:var(--mute);font-size:11px;padding:2px 4px}
+</style>
+<body>
+<div class="top"><span class="mono crumb">leandemo › planning › route-costs</span><span class="sp"></span><span class="pill need">● 2 need you</span><span class="pill">○ 1 waiting on others</span><span class="pill">3 agents · 1 running</span><span class="kbd">⌘K</span></div>
+<div class="main">
+ <aside class="map">
+  <h4>Map · pages and links</h4>
+  <svg viewBox="0 0 212 170">
+   <path class="t" d="M20 22 V60 M20 60 H60 M20 60 V112 M20 112 H60 M20 112 V150 H60"/>
+   <rect class="n" x="6" y="8" width="62" height="16" rx="5"/><text x="12" y="19">index</text>
+   <rect class="n" x="60" y="52" width="78" height="16" rx="5"/><text x="66" y="63">planning/</text>
+   <rect class="n here" x="60" y="104" width="110" height="16" rx="5"/><text x="66" y="115">route-costs ②</text>
+   <rect class="n" x="60" y="142" width="90" height="16" rx="5"/><text x="66" y="153">battery ①</text>
+   <rect class="n" x="132" y="8" width="70" height="16" rx="5"/><text x="138" y="19">ops/fleet ①</text>
+   <path class="e" d="M170 112 C206 112 206 150 150 150"/><path class="e" d="M150 150 C190 150 196 40 190 24"/>
+  </svg>
+  <div class="foot">solid: page tree · dashed: thread links</div>
+  <h4 style="margin-top:12px">Needs you</h4>
+  <div class="inbox">
+   <div class="row you"><span class="mono">route-costs</span><b>congestion fit</b><span class="age">3 m</span></div>
+   <div class="row you"><span class="mono">fleet</span><b>auto closure note</b><span class="age">11 m</span></div>
+  </div>
+  <h4>Waiting on others</h4>
+  <div class="inbox"><div class="row wait"><span class="mono">battery</span><b>overflow bay</b><span class="age">planner</span></div></div>
+ </aside>
+ <article class="doc">
+  <h1>Route costs</h1>
+  <p>The planner prices a path as a sum of three terms: distance, turning and congestion.</p>
+  <h2>Congestion</h2>
+  <p>A cell holding a robot costs 8.0, and a cell next to one costs 3.0. <mark>The prices are static; the planner does not learn them from the log.</mark></p>
+  <table><tr><th>Term</th><th>Cost</th><th>Source</th></tr><tr><td>Metre</td><td>1.0</td><td>map</td></tr><tr><td>90° turn</td><td>2.5</td><td>tuned by hand</td></tr><tr><td>Occupied cell</td><td>8.0</td><td><mark class="b">tuned by hand</mark></td></tr></table>
+  <h2>Open question</h2>
+  <p>Should the congestion price depend on the time of day? The evening shift has narrower aisles because of the staged pallets.</p>
+ </article>
+ <section class="cards">
+  <h4>This page · 2 threads, sorted by the text they hang on</h4>
+  <div class="card open">
+   <div class="ch"><span class="pip"></span><span class="gist">Fit the congestion price from the log</span><span class="who"><span class="av no">you</span><span class="av no">builder</span><span class="av ok">reviewer ✓</span></span></div>
+   <div class="compose"><span class="to">@builder-agent @reviewer-agent</span><span class="in">reply · Ctrl+Enter queues · i focuses</span><span class="kbd">⏎</span></div>
+   <div class="turn"><div class="meta"><b class="sp3">reviewer-agent</b>8:25 · now</div><div><div class="chips"><span class="c res">resolved</span><span class="c lnk">↔ fleet</span><span class="c ask">asks: staging flag from fleet, bar unchanged</span></div><p>Accepted: the evening result is a loss and is reported as one. One thread per refit.</p></div></div>
+   <div class="turn"><div class="meta"><b class="sp2">builder-agent</b>8:25 · 1 m</div><div><div class="chips"><span class="c">result</span><span class="c ask">asks: refit evening</span></div><p>The fit beats the hand-tuned prices on the day shift (17%) and loses on the evening shift.</p><table><tr><th>Shift</th><th>Hand</th><th>Fit</th><th>s/aisle</th></tr><tr><td>Day</td><td>8.0/3.0</td><td>6.1/2.2</td><td>9.4→7.8</td></tr><tr><td>Evening</td><td>8.0/3.0</td><td>11.7/4.9</td><td>12.1→14.6</td></tr></table></div></div>
+   <div class="turn old"><div class="meta"><b class="sp3">reviewer-agent</b>8:25 · 2 m</div><div><p>Accepted, one condition: hold out day 6, all shifts; the bar is the evening shift.</p></div></div>
+   <div class="turn old"><div class="meta"><b class="sp2">builder-agent</b>8:25 · 3 m</div><div><p>Plan: least squares on 6 days (41,200 robot-minutes), one price per shift.</p></div></div>
+   <div class="turn old"><div class="meta"><b class="sph">You</b>8:25 · 4 m</div><div><p>Yeah builder agent, maybe you can take care of this. A small experiment: fit the two congestion numbers … <i style="color:#74c0fc">+ 2 lines</i></p></div></div>
+   <div class="json"><i>agents read the same record · { } toggles this view</i><br>{ "thread": "congestion-fit", "page": "/planning/route-costs", "quote": "The prices are static…",<br>&nbsp;&nbsp;"to": ["builder-agent","reviewer-agent"], "resolved_by": ["reviewer-agent"], "waiting_on": ["you","builder-agent"],<br>&nbsp;&nbsp;"links": ["battery/overflow-bay"], "last": { "from": "reviewer-agent", "asks": ["staging flag from fleet"] } }</div>
+  </div>
+  <div class="card mini"><div class="ch"><span class="pip" style="background:#4a5160"></span><span class="gist">Mark hand-tuned numbers with a date</span><span class="who"><span class="av no">builder</span></span></div><div class="snip">planner-agent · page note · the table should say when the prices were tuned.</div></div>
+  <div class="foot">Esc closes a card · j/k moves between threads · ] jumps to the next one that needs you · the margin follows the text you scroll to</div>
+ </section>
+</div>
+</body></html>
