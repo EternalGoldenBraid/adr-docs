@@ -16,7 +16,7 @@ npm run readme                       # the landing page, with a graph demo
 npm run preview -- path/to/doc.md    # any Markdown file
 npm run export -- doc.md --page /x   # offline copy of one page; repeat --page for several (or the Export button / :export)
 npm run export -- site/index.md --serve   # whole site + public/ assets + serve.py, for pages that fetch files at run time
-adr path/to/doc.md 5190              # same, from anywhere (ln -s $PWD/bin/preview.mjs ~/.local/bin/adr)
+adr path/to/doc.md 5190              # same, from anywhere (needs the symlink below)
 adr path/to/site --port 5174         # a whole folder of pages, from its index.md
 adr path/to/site -d                  # run in the background (log in the state dir)
 adr list                             # running ADR servers: url, pid, store, folder
@@ -26,6 +26,12 @@ adr daemon install                   # once: systemd --user unit that starts kep
 adr tui                              # dark terminal list: j/k, r restart/start, x stop, o open, q quit
 adr <folder> --name mokki            # reachable as http://mokki.localhost:PORT; `:restart` in the page restarts it
 npm run example:paper                # fetch an arXiv paper for the example
+```
+
+The `adr` command is not installed by `npm ci`: link it once, and again if the checkout moves (a stale link gives `adr: command not found`):
+
+```bash
+ln -sfn "$PWD/bin/preview.mjs" ~/.local/bin/adr   # run in the adr-docs checkout; ~/.local/bin must be on PATH
 ```
 
 Open the printed `127.0.0.1` link. Viewing needs no agent. Comments are saved
