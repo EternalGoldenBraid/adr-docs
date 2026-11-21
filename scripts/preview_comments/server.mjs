@@ -364,9 +364,10 @@ export async function startCommentBridge({
     try { rows = readFileSync(nudgeLog, "utf8").split("\n").filter(Boolean).map(line => JSON.parse(line)); } catch { /* none yet */ }
     return answerRates(rows, (slug, thread) => (comments.get(thread)?.replies ?? []).filter(reply => reply.from && canon(reply.from) === slug).map(reply => Date.parse(reply.at)));
   };
-  // Humans named in `to` are covered by the user's own mark ("you"), not a second seat.
-  const agentsIn = c => (c.to ?? []).map(canon).filter(name => !teamNames().length || teamNames().includes(name));
-  const missingOn = id => { const c = comments.get(id); return c ? agentsIn(c).filter(name => !c.resolvedBy?.[name]) : []; };
+  // Members are members: the user's seat in `to` is the same seat as their own "you" mark, so it is one resolve, not two.
+  const humanSeat = () => roster().find(row => !row.session)?.slug;
+  const seatsIn = c => [...new Set((c.to ?? []).map(canon).map(name => name === humanSeat() ? "you" : name))];
+  const missingOn = id => { const c = comments.get(id); return c ? seatsIn(c).filter(name => !c.resolvedBy?.[name]).map(name => name === "you" ? humanSeat() ?? name : name) : []; };
   const isIdle = row => row.verified ? row.verified.state === "idle" : (row.activity ?? (row.statusLine?.state === "idle" ? "idle" : null)) === "idle";
   async function nudgeIdle() {
     const now = Date.now();
@@ -548,7 +549,7 @@ export async function startCommentBridge({
       if (record.resolved !== undefined) {
         // Each addressee resolves for itself, and so does the user (`you`); the thread closes when every addressee has. The user's mark is recorded only with `partial` (older records, which replay on start, closed for all); `closeAll` closes it for all, and reopening clears everyone's mark.
         const who = record.author === "copilot" && record.from ? canon(record.from) : null;
-        const need = agentsIn(comment);
+        const need = seatsIn(comment);
         // Threads opened before USER_MARK_FROM keep the old rule (addressees only), so history does not reopen.
         const mark = who && need.includes(who) ? who : record.author === "user" && record.partial && need.length ? "you" : null;
         if (mark && record.resolved) {

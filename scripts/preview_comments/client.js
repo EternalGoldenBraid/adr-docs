@@ -1882,8 +1882,9 @@
     return updateThread({ id: crypto.randomUUID(), resolved: !comment.resolved, ...(comment.resolved ? {} : { partial: true }) }, id);
   }
   // Who has resolved: the user and each addressee, as the sectors of a small pie before the thread state.
-  const agentsIn = comment => (comment.to ?? []).filter(name => !settings.team?.length || settings.team.includes(name));
-  const resolveMarks = comment => (comment.to?.length ? [{ name: "you", done: Boolean(comment.resolvedBy?.you || comment.resolved) }, ...agentsIn(comment).map(name => ({ name, done: Boolean(comment.resolvedBy?.[name] || comment.resolved) }))] : []);
+  const seat = () => settings.roster?.find(row => !row.session)?.slug;
+  const othersIn = comment => (comment.to ?? []).filter(name => name !== seat());
+  const resolveMarks = comment => (comment.to?.length ? [{ name: "you", done: Boolean(comment.resolvedBy?.you || comment.resolved) }, ...othersIn(comment).map(name => ({ name, done: Boolean(comment.resolvedBy?.[name] || comment.resolved) }))] : []);
   // Awaiting: a thread the agent started, still open, with the agent's message last.
   const awaiting = comment => !comment.resolved && !comment.removed && !isNote(comment) && comment.author === "copilot" &&
     (comment.replies.at(-1)?.author ?? "copilot") === "copilot";

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.163.1 - 2026-11-21
+
+- Fix: no human/agent split in resolving (thread d75ea297). Your name in `to` and your own Resolve are one seat, instead of "only agents are waited on"; everyone else in `to` is waited on alike. Test added.
+- Removed: the 0.163.0 filter that dropped non-team names from the resolve marks.
+
 ## 0.163.0 - 2026-11-21
 
 - Removed: the **Close for all** button and its confirmation (thread d75ea297); threads close when everyone has resolved, and the 🔔 asks whoever is left.

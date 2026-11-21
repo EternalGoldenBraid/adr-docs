@@ -689,3 +689,21 @@ test("an @agent in a reply adds that team member to the thread's addressees; unk
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test("the user's seat listed in `to` is the same seat as their own mark: one resolve closes it", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "preview-comments-"));
+  const sessionId = randomUUID(), bob = randomUUID();
+  writeFileSync(join(directory, "page.md"), "# Page\n\nText.");
+  writeFileSync(join(directory, "team.md"), `| Who | Session |\n|---|---|\n| Alice | — |\n| Bob | ${bob} |\n`);
+  const bridge = await startCommentBridge({ sessionId, documentRoot: directory, storageRoot: directory, previewOrigin: "http://127.0.0.1:8774", onError: error => assert.fail(error.message), notify: async () => {} });
+  try {
+    const id = bridge.add({ page: "/page", kind: "page", quote: "Page", comment: "a" }).id;
+    bridge.update({ id: randomUUID(), commentId: id, sessionId, reply: "hi", to: ["alice", "bob"] }, "user");
+    bridge.update({ id: randomUUID(), commentId: id, from: "bob", resolved: true });
+    bridge.update({ id: randomUUID(), commentId: id, sessionId, resolved: true, partial: true }, "user");
+    assert.equal(bridge.list().find(c => c.id === id).resolved, true);
+  } finally {
+    await bridge.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
