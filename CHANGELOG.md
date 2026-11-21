@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.155.2 - 2026-11-21
+
+- Fix: the 🔔 bell answered "Unknown comment endpoint." since 0.151.0. The Vite proxy that forwards the panel's requests to the comment bridge did not list `/bell`, and I had only tested the bridge directly. Needs a preview restart.
+- Test: every route the panel calls through `api()` must be on the proxy list.
+- Removed: nothing this time.
+
 ## 0.155.1 - 2026-11-20
 
 - Fix: calm mode no longer eats the page's own keys. It used to stop every key event at `document`, so handlers on `window` (the mokki /console W A S D) never saw them. ADR's own handlers now skip the event in calm mode and the event carries on to the page.

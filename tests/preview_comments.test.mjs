@@ -658,3 +658,11 @@ test("/latency reports how long your messages wait for an answer and how long th
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test("every route the panel calls through api() is let through by the Vite proxy", () => {
+  const client = readFileSync(new URL("../scripts/preview_comments/client.js", import.meta.url), "utf8");
+  const proxy = readFileSync(new URL("../scripts/preview_comments/vite-plugin.mjs", import.meta.url), "utf8");
+  const called = [...new Set([...client.matchAll(/\bapi\("([a-z-]+)"/g)].map(match => match[1]))];
+  assert.ok(called.includes("bell"));
+  for (const route of called) assert.ok(proxy.includes(`"/${route}"`), `proxy whitelist lacks /${route}`);
+});
