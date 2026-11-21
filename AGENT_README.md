@@ -14,6 +14,10 @@ Page replies must be scannable, never a wall of text:
 - Bold the one thing Nicklas must decide or do, last.
 - No history of how I got there.
 
+## Public repo, private content (standing rule from Nicklas, 2026-11-21)
+
+This repo is public. Nothing from the mokki site (screenshots, thread text, names, data) goes into a commit. Design work and screenshots made against mokki live in `~/Projects/Personal/adr/adr-private/` (not a git repo) and are shown from a preview there. Anything public (docs, tests, demos) uses synthetic content. Check `git status` for images before every commit.
+
 ## One in, two out (standing rule from Nicklas, 2026-11-20)
 
 Each change that adds something also removes two rough edges: a shortcut script, dead code, a duplicated path, an unclear name or a missing doc line. Before adding a feature, look over the whole graph. Keep removals small and inside ADR; propose openly anything that belongs to another agent.
