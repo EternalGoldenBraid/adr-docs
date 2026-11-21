@@ -114,6 +114,21 @@
       .region{position:fixed;inset:0;cursor:crosshair;background:rgba(0,0,0,.3);touch-action:none;user-select:none}
       .region-box{position:fixed;border:2px dashed #74c0fc;background:rgba(116,192,252,.15);pointer-events:none}
       .region-tip{position:fixed;top:12px;left:50%;transform:translateX(-50%);padding:6px 12px;border-radius:999px;background:#1b1d22;border:1px solid #59616d;pointer-events:none}
+      /* Lean layout (0.156.0): one header row, the page path first, a compact composer. */
+      .history-head{padding:7px 20px 5px;gap:8px}.history-head h2{font-size:13px;opacity:.7;font-weight:600}
+      .history-head .history-counts{font-size:11px}.history-head button{padding:2px 9px;font-size:12px}
+      .history-head .tabs{margin:0!important;border:0;flex:none}.tab{padding:4px 9px;font-size:12px}
+      .thread-head{padding:5px 20px;top:34px;margin:0 0 4px!important;gap:6px;border-bottom:0}
+      .thread-path{font:12px ui-monospace,monospace;color:#8ab4f8;background:#1d2a40;padding:1px 8px;border-radius:5px;white-space:nowrap}
+      .thread-title[hidden]{display:none}.thread-head button{padding:3px 10px;font-size:12px}
+      .history.full{padding:0 2vw}.history.full .note.mine{margin-left:6vw}.history.full .note.copilot{margin-right:6vw}
+      .thread-state{display:none}
+      .resolve-line{gap:4px}.resolve-chip{font-size:11px!important;padding:0 8px!important}
+      .thread-links{margin:0 20px 4px}.thread-links select{font-size:11px;padding:0 6px}
+      details.quote-box{margin-bottom:4px}details.quote-box summary{font-size:12px}
+      .note{margin:4px 0;padding:6px 10px}
+      .reply-form{padding:6px 20px 8px}.reply-form textarea{min-height:38px;padding:6px 8px}.reply-form .actions{margin-top:4px}.reply-form .actions button{padding:3px 10px;font-size:12px}
+      .to{display:flex;flex-wrap:wrap;gap:4px;margin:0 0 4px}.to button{white-space:nowrap}
     </style>
     <section class="panel" hidden aria-labelledby="comment-title">
       <h2 id="comment-title">Comment to Copilot</h2><small class="receiver"></small><div class="to to-new" hidden></div>
@@ -124,16 +139,15 @@
       <div class="actions"><button type="button" class="attach-region" title="Attach a screenshot of a region (s)">Region</button><button type="button" class="cancel">Cancel</button><button type="button" class="note-save">Save as note</button><label class="interrupt" title="Tick to interrupt the agent now; otherwise this waits in its queue until it is idle (Ctrl+Shift+Enter also interrupts)"><input type="checkbox" class="int-comment"> ⚠ interrupt</label><button class="primary" type="submit">Send</button></div></form>
     </section>
     <section class="panel history" hidden aria-labelledby="history-title">
-      <div class="history-head"><h2 id="history-title">Comment history</h2><small class="history-counts"></small>
+      <div class="history-head"><h2 id="history-title">Comment history</h2><div class="tabs" role="tablist"></div><small class="history-counts"></small>
       <button class="history-team" type="button" title="Team status (:mesh)">Team</button>
       <button class="history-refresh icon" type="button" title="Refresh">↻</button>
       <button class="history-full icon" type="button" title="Toggle full screen (f)" aria-label="Full screen">⛶</button>
       <button class="history-close icon" type="button" title="Close (Esc)" aria-label="Close">✕</button></div>
-      <div class="tabs" role="tablist"></div>
       <div class="thread-list" role="listbox"></div>
       <section class="thread" hidden>
         <div class="thread-head"><button class="thread-back icon" type="button" title="Back (h)">‹</button>
-        <span class="thread-title"></span>
+        <span class="thread-path"></span><span class="thread-title"></span>
         <a class="thread-source" title="Open page (o)">↗ page</a>
         <button class="thread-bell" type="button" title="Ring the bell: ask everyone who has not resolved to resolve, now" hidden>🔔</button><button class="thread-resolve" type="button" title="Resolve / reopen (r)">Resolve</button><button class="thread-closeall" type="button" title="Close the thread although others have not resolved" hidden>Close for all</button></div>
         <div class="thread-state"></div>
@@ -1728,6 +1742,8 @@
     modeLabel();
     if (!comment) return;
     find(".thread-title").textContent = comment.section;
+    find(".thread-path").textContent = pagePath(comment.url);
+    find(".thread-title").hidden = comment.section === find(".thread-path").textContent;
     find(".thread-source").href = here(comment.url);
     const quoteBox = find(".thread-quote");
     if (quoteBox.dataset.q !== comment.quote) {
@@ -1742,6 +1758,7 @@
     state.classList.toggle("resolved", comment.resolved);
     const marks = resolveMarks(comment);
     if (marks.length && !comment.resolved) state.textContent += ` · resolved by ${marks.filter(m => m.done).map(m => m.name).join(", ") || "nobody"} · waiting on ${marks.filter(m => !m.done).map(m => m.name).join(", ") || "nobody"}`;
+    find(".thread-path").title = state.textContent;
     delete state.dataset.marks;
     if (marks.length) state.dataset.marks = marks.map(m => `${m.done ? "✓" : "○"}${m.name}`).join(" ");
     state.style.setProperty("--pie", marks.length ? `conic-gradient(${marks.map((m, i) => `${m.done ? "#6fcf97" : "#f2c94c"} ${i * 360 / marks.length}deg ${(i + 1) * 360 / marks.length}deg`).join(",")})` : "none");
