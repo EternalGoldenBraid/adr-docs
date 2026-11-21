@@ -94,6 +94,8 @@ The agent can show a status line (`set_doc_review_status`) and attach a before/a
 
 ## Command line
 
+`:order newest` shows a thread newest reply first with the reply box on top (`:order oldest` restores the default). `j`/`k` and `g`/`G` follow what is on screen. The panel is also lean by default: tabs share the header row and the thread header starts with the page path.
+
 `:calm` silences ADR on the current page (`:calm site` for all pages, `:calm off` to restore): no shortcuts, comment popups, screenshots or marks, only `:` stays. For pages with their own controls.
 
 `:` opens a command line at the bottom of the page (Tab completes command names): `:help`, `:history`, `:threads`, `:chat`, `:comment`, `:tree`, `:new`, `:keys`, `:vim on|off`.
