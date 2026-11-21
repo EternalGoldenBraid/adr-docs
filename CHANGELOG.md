@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.159.0 - 2026-11-21
+
+- DocGraph code links (thread d75ea297 on /live-data-flow): a node can carry `code: "repo:path#L12"`. It shows `</>`; `o` in visual mode or a double-click opens it. `public/code-repos.json` maps each repo to a local checkout and a GitHub URL: a localhost preview opens `vscode://file/...`, any other host opens the GitHub blob. The node editor has a Code field.
+- Removed: nothing this time.
+
 ## 0.158.0 - 2026-11-21
 
 - `:rail on|off` (option C of workstreams/2026-11-21-lean-ui.md): a rail of open discussions grouped by page, `↔` for linked threads, beside the thread. Off by default, saved per browser, hidden below 1100 px. It is `:rail` because `:tree` already opens the page tree.

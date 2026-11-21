@@ -79,6 +79,12 @@ a JSON file in the document's `public/` folder. Press `?` for controls. Normal
 mode pans and zooms; edit mode moves and edits nodes; Vim keys work throughout.
 See `examples/public/graph/example.json` for the format.
 
+A node can carry `"code": "repo:path#L12"`. It shows a `</>` badge, and `o` in
+visual mode (or a double-click) opens it. A site-root `public/code-repos.json`,
+`{"repo": {"local": "/abs/checkout", "github": "https://github.com/o/r", "ref": "main"}}`,
+maps the repo: on a localhost preview the click opens `vscode://file/<local>/<path>:<line>`,
+anywhere else the GitHub blob at `ref`. One field, no dilemma in the graph JSON.
+
 `tools/fetch_arxiv.py <id> --root <docs>` turns an arXiv paper into a
 commentable page.
 

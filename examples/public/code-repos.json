@@ -1,0 +1,7 @@
+{
+  "adr-docs": {
+    "local": "/path/to/adr-docs",
+    "github": "https://github.com/EternalGoldenBraid/adr-docs",
+    "ref": "main"
+  }
+}

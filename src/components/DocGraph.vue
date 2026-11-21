@@ -32,7 +32,7 @@ const cmdInput = ref(null)
 const flash = ref('')
 const presenting = ref(null)
 const selTitle = computed(() => (selected.value && cy ? cy.getElementById(selected.value).data('title') || '' : ''))
-const HELP = "DOC-GRAPH(1)\n\nLAYERS\n  The page owns the keys. Click the graph to enter it\n  (mode line: GRAPH); Esc in NORMAL returns to the page.\nMODES\n  NORMAL  fly the view         VISUAL  walk node to node\n  INSERT  edit the graph       Esc     back to NORMAL\nNORMAL\n  h j k l   pan (H J K L: faster)\n  + - 0     zoom in / out / fit\n  v  visual     i  insert     u  up one layer\n  Enter     open the selected \u25b8 layer or \u2197 page\nVISUAL\n  h j k l   nearest node in that direction\n  Enter     open \u25b8 layer or \u2197 page, else zoom to node\n  c         comment on the node\n  s         attach a region screenshot\nINSERT\n  h j k l   select neighbour\n  arrows    nudge node (shift: x5)\n  Enter     edit text    o  new node    x  delete\nCOMMANDS\n  :help :man   this page     :w  export JSON\n  :fit         fit all       :q  close\n  :present     full-screen presentation (→ ← story, ↓ ↑ deeper, Esc exits)\nMOUSE / TRACKPAD\n  swipe pans \u00b7 pinch or shift+swipe zooms\n  dbl-click: \u2197 opens page, \u25b8 opens layer,\n    node/lane zooms, empty fits\nLINKS\n  a node with a \"link\" (e.g. \"/autonomy\") shows \u2197;\n  external URLs open as normal links"
+const HELP = "DOC-GRAPH(1)\n\nLAYERS\n  The page owns the keys. Click the graph to enter it\n  (mode line: GRAPH); Esc in NORMAL returns to the page.\nMODES\n  NORMAL  fly the view         VISUAL  walk node to node\n  INSERT  edit the graph       Esc     back to NORMAL\nNORMAL\n  h j k l   pan (H J K L: faster)\n  + - 0     zoom in / out / fit\n  v  visual     i  insert     u  up one layer\n  Enter     open the selected \u25b8 layer or \u2197 page\nVISUAL\n  h j k l   nearest node in that direction\n  Enter     open \u25b8 layer or \u2197 page, else zoom to node\n  o         open the node's </> code (editor locally, GitHub online)\n  c         comment on the node\n  s         attach a region screenshot\nINSERT\n  h j k l   select neighbour\n  arrows    nudge node (shift: x5)\n  Enter     edit text    o  new node    x  delete\nCOMMANDS\n  :help :man   this page     :w  export JSON\n  :fit         fit all       :q  close\n  :present     full-screen presentation (→ ← story, ↓ ↑ deeper, Esc exits)\nMOUSE / TRACKPAD\n  swipe pans \u00b7 pinch or shift+swipe zooms\n  dbl-click: \u2197 opens page, \u25b8 opens layer,\n    node/lane zooms, empty fits\nLINKS\n  a node with a \"link\" (e.g. \"/autonomy\") shows \u2197;\n  external URLs open as normal links"
 const topic = ref('')
 const activeTab = ref('')
 const TOPICS = ref([])
@@ -140,7 +140,7 @@ async function exportPng(scale = 3) {
 const scheduleLabels = () => { if (!labelFrame) labelFrame = requestAnimationFrame(drawLabels) }
 
 function nodeEl(n) {
-  const d = { id: n.id, title: n.title, body: n.body, status: n.status, kind: n.kind, topics: n.topics, link: n.link || '',
+  const d = { id: n.id, title: n.title, body: n.body, status: n.status, kind: n.kind, topics: n.topics, link: n.link || '', code: n.code || '',
     w: n.w, h: n.h, fill: n.fill, stroke: n.stroke, font: n.font }
   if (n.image) d.image = n.image
   if (n.video) d.video = n.video
@@ -209,7 +209,7 @@ function serialise() {
       const d = n.data()
       return { id: d.id, title: d.title, body: d.body, status: d.status, kind: d.kind, parent: d.parent || null, inside: d.inside || null,
         x: Math.round(n.position('x')), y: Math.round(n.position('y')), w: d.w, h: d.h,
-        fill: d.fill, stroke: d.stroke, font: d.font, topics: d.topics, ...(d.link ? { link: d.link } : {}), ...(d.image ? { image: d.image } : {}), ...(d.video ? { video: d.video } : {}), ...(d.shape ? { shape: d.shape } : {}) }
+        fill: d.fill, stroke: d.stroke, font: d.font, topics: d.topics, ...(d.link ? { link: d.link } : {}), ...(d.code ? { code: d.code } : {}), ...(d.image ? { image: d.image } : {}), ...(d.video ? { video: d.video } : {}), ...(d.shape ? { shape: d.shape } : {}) }
     }),
     edges: cy.edges().map(e => ({ id: e.id(), source: e.data('source'), target: e.data('target'),
       color: e.data('color'), dashed: !!e.data('dashed'), label: e.data('label') || '', ...(e.data('loop') != null ? { loop: e.data('loop') } : {}) })),
@@ -226,7 +226,7 @@ const childrenOf = id => cy.nodes().filter(n => n.data('inside') === id)
 function showBadges() {
   cy.nodes().forEach(n => {
     const k = childrenOf(n.id()).length
-    n.data('badge', (k ? `  ▸ ${k}` : '') + (n.data('link') ? '  ↗' : ''))
+    n.data('badge', (k ? `  ▸ ${k}` : '') + (n.data('link') ? '  ↗' : '') + (n.data('code') ? '  </>' : ''))
   })
 }
 
@@ -258,14 +258,14 @@ function startEdit() {
   const p = n.renderedPosition()
   const w = Math.max(240, n.renderedWidth())
   editorBox.value = { left: p.x - w / 2, top: p.y - n.renderedHeight() / 2, width: w }
-  editor.value = { title: n.data('title') || '', body: n.data('body') || '', status: n.data('status') || '', link: n.data('link') || '' }
+  editor.value = { title: n.data('title') || '', body: n.data('body') || '', status: n.data('status') || '', link: n.data('link') || '', code: n.data('code') || '' }
   nextTick(() => titleInput.value && titleInput.value.focus())
 }
 
 function commitEdit() {
   if (!editor.value) return
   const n = cy.getElementById(selected.value)
-  if (n.length) n.data({ title: editor.value.title, body: editor.value.body, status: editor.value.status, link: editor.value.link.trim() })
+  if (n.length) n.data({ title: editor.value.title, body: editor.value.body, status: editor.value.status, link: editor.value.link.trim(), code: editor.value.code.trim() })
   showBadges()
   editor.value = null
   save()
@@ -310,6 +310,26 @@ function openLink(n) {
   else router.go(withBase(link))
   return true
 }
+// A node's `code` is "repo:path#L12". The repo map (/code-repos.json: {repo: {local, github, ref}}) turns it into an editor link on a local preview
+// (vscode://file/...) and a GitHub blob link anywhere else, so one field serves both cases.
+let codeRepos = null
+const isLocalHost = () => /^(localhost|127\.0\.0\.1|\[::1\]|.*\.localhost)$/.test(location.hostname)
+function codeUrl(code) {
+  const m = /^([^:]+):([^#]+)(?:#L(\d+))?$/.exec(code || '')
+  const repo = m && codeRepos?.[m[1]]
+  if (!repo) return ''
+  const [, , path, line] = m
+  if (isLocalHost() && repo.local) return `vscode://file${repo.local.startsWith('/') ? '' : '/'}${repo.local.replace(/\/$/, '')}/${path}${line ? ':' + line : ''}`
+  return repo.github ? `${repo.github.replace(/\/$/, '')}/blob/${repo.ref || 'main'}/${path}${line ? '#L' + line : ''}` : ''
+}
+function openCode(n) {
+  const url = codeUrl(n.data('code'))
+  if (!url) { say(n.data('code') ? 'No repo mapping for this code link (see /code-repos.json)' : 'This node has no code link'); return false }
+  if (url.startsWith('vscode:')) location.href = url
+  else window.open(url, '_blank', 'noopener')
+  return true
+}
+const hasCode = () => Boolean(selected.value && cy.getElementById(selected.value).data('code'))
 const hasLink = () => Boolean(selected.value && cy.getElementById(selected.value).data('link'))
 const hasLayer = () => selected.value && childrenOf(selected.value).length > 0
 const back = () => { const o = cy.getElementById(layer.value); showLayer(o.data('inside') || null) }
@@ -391,6 +411,7 @@ onMounted(async () => {
   const fromFile = !data
   if (!data) data = await (await fetch(withBase(props.src))).json()
 
+  try { const r = await fetch(withBase('/code-repos.json')); if (r.ok) codeRepos = await r.json() } catch (_) { /* optional */ }
   TOPICS.value = [...new Set(data.nodes.flatMap(n => n.topics || []))].sort()
   document.addEventListener('preview-comment-vim', onVim)
   cy = cytoscape({
@@ -526,6 +547,7 @@ onMounted(async () => {
       return
     }
     if (openLink(e.target)) return
+    if (e.target.data('code') && !editMode.value && openCode(e.target)) return
     if (childrenOf(e.target.id()).length) showLayer(e.target.id())
     else if (editMode.value) { select(e.target); startEdit() }
     else cy.animate({ fit: { eles: e.target, padding: 120 }, duration: 250 })
@@ -642,10 +664,12 @@ function onKey(e) {
     if (k === 'Enter' && selected.value) {
       done()
       if (hasLink()) openLink(sel())
+      else if (hasCode()) openCode(sel())
       else if (hasLayer()) openSelected()
       else cy.animate({ fit: { eles: sel(), padding: 120 }, duration: 250 })
       return
     }
+    if (k === 'o' && selected.value) { done(); openCode(sel()); return }
     if (k === 'c' && selected.value) { done(); document.dispatchEvent(new CustomEvent('preview-comment-open', { detail: { id: selected.value } })) }
     return
   }
@@ -721,6 +745,7 @@ onUnmounted(() => { removeEventListener('hashchange', landOnNode); document.remo
       <input ref="titleInput" v-model="editor.title" placeholder="Title" @keydown.enter="commitEdit" />
       <input v-model="editor.status" placeholder="Status, e.g. ● MVP" @keydown.enter="commitEdit" />
       <input v-model="editor.link" placeholder="Link, e.g. /autonomy" @keydown.enter="commitEdit" />
+      <input v-model="editor.code" placeholder="Code, e.g. demo-ros:tools/rerun_sink.py#L9" @keydown.enter="commitEdit" />
       <textarea v-model="editor.body" rows="4" placeholder="Description" @keydown.ctrl.enter="commitEdit"></textarea>
       <div class="xp-actions"><button @click="commitEdit">Save</button><button @click="editor = null">Cancel</button></div>
     </div>

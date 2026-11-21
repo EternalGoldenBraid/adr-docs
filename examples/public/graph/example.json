@@ -30,7 +30,8 @@
       "y": 0,
       "w": 180,
       "h": 70,
-      "topics": []
+      "topics": [],
+      "code": "adr-docs:src/components/DocGraph.vue#L306"
     },
     {
       "fill": "#1e293b",
@@ -41,7 +42,7 @@
       "kind": "node",
       "id": "act",
       "title": "Act",
-      "body": "\u2022 Motors\n\u2022 Opens the Review page",
+      "body": "• Motors\n• Opens the Review page",
       "x": 560,
       "y": 0,
       "w": 180,
