@@ -201,7 +201,21 @@ export async function connectDocumentReview({
         if (store) return remoteBridge(stateRoot(), store, "/agent-status", { method: "POST", body: JSON.stringify(input) }).then(JSON.stringify, remoteFailure);
         return JSON.stringify(requirePreview().bridge.setStatus(input));
       },
-    }, {
+    }, ...[
+      ["request_doc_review_votes", "request", "Ask agents to price an item in a planning-poker round. Each named voter gets a queue item (and a mesh note) until they vote; you get one item when the last vote is in, or after the deadline an item to close on the votes that came.", { voters: { type: "array", items: { type: "string" }, description: "Agent slugs, 1 to 12." }, deadline_minutes: { type: "number", description: "Default 60." } }, ["voters"]],
+      ["cast_doc_review_vote", "vote", "Cast your effort vote on an item (Fibonacci 1 2 3 5 8 13 21), or add a note after a reveal. Casting removes the item from your queue.", { vote: { type: "number", description: "1, 2, 3, 5, 8, 13 or 21." }, note: { type: "string", description: "A justification instead of a vote (after a reveal)." } }, []],
+      ["reveal_doc_review_votes", "reveal", "Close the open round on an item: mean, variance, whether it converged. A converged round sets the weight.", {}, []],
+    ].map(([name, action, description, extra, required]) => ({
+      name, description,
+      parameters: { type: "object", required: ["page", "item", ...required], properties: { page: { type: "string", description: "Page path such as /experiments/x." }, item: { type: "string", description: "The test or item id being priced." }, ...extra, as: { type: "string", description: "Your agent slug if it differs from the session's." }, store: { type: "string", description: "Which `adr` server's site." } } },
+      handler: args => {
+        const { store: given, as, deadline_minutes: deadlineMinutes, ...rest } = args;
+        const input = { ...rest, action: rest.note !== undefined && action === "vote" ? "note" : action, ...(deadlineMinutes ? { deadlineMinutes } : {}), ...(as ? { from: as } : {}), fromSession: session.sessionId };
+        const store = remoteStore({ store: given });
+        if (store) return remoteBridge(stateRoot(), store, "/agent-vote", { method: "POST", body: JSON.stringify(input) }).then(JSON.stringify, remoteFailure);
+        return requirePreview().bridge.vote(input).then(JSON.stringify);
+      },
+    })), {
       name: "stop_doc_review",
       description: "Stop this session's document preview. Saved feedback remains on disk.",
       parameters: { type: "object", properties: {} },

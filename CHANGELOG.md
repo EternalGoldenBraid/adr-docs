@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.164.0 - 2026-11-22
+
+- Vote requests are state (thread 41d0772f): `request_doc_review_votes`, `cast_doc_review_vote` and `reveal_doc_review_votes` agent tools (also `adr-vote --request`) and `/agent-vote`. A request notifies each voter and writes `votes-queue.json` ("Vote on X" per voter; "Reveal X" for the requester when all have voted; "Close X on the votes in" after the deadline). Fixes agents having no `adr-vote` on their PATH. Test added.
+- Removed: nothing this time.
+
 ## 0.163.1 - 2026-11-21
 
 - Fix: no human/agent split in resolving (thread d75ea297). Your name in `to` and your own Resolve are one seat, instead of "only agents are waited on"; everyone else in `to` is waited on alike. Test added.

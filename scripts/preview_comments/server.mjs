@@ -21,7 +21,7 @@ import { readCell, writeCell } from "./table-edit.mjs";
 import { bareSession, readRoster, slugify } from "../../src/roster.mjs";
 import { answerRates, rank } from "../../src/nudge-plan.mjs";
 import { deriveState, disagrees, itemTurns } from "../../src/verified-state.mjs";
-import { addNote, applyVote, publicVotes, readVotes, reveal } from "../../src/votes.mjs";
+import { addNote, applyVote, publicVotes, readVotes, refreshQueue, requestVotes, reveal } from "../../src/votes.mjs";
 import { pageCards, readPageTree } from "../../src/page-tree.mjs";
 import { diffLines, hunks } from "./page-diff.mjs";
 
@@ -413,6 +413,26 @@ export async function startCommentBridge({
       try { await mesh.send(meshAddress(row).session, note, meshAddress(row).machine); if (nudgedThread) logNudge(row.slug, nudgedThread.id, "idle"); } catch (error) { seen.delete(pick.key); onError?.(error); }
     }
   }
+  // One entry for the page, the CLI and the agent tools: request, cast, note or reveal on an effort vote.
+  async function voteAction(input, as) {
+    const page = input.page, item = input.item;
+    if (input.action === "request" || input.request) {
+      const requester = as ?? input.requester ?? ownerName();
+      const row = requestVotes(root, { page, item, voters: input.voters, requester, deadlineMinutes: input.deadlineMinutes });
+      const rows = mesh ? await meshStatus().catch(() => []) : [];
+      const asked = [], unreachable = [];
+      for (const name of row.rounds.at(-1).requested) {
+        const target = rows.find(r => r.slug === name);
+        if (!target?.session || target.status === "offline") { unreachable.push(name); continue; }
+        const note = `ADR vote request from ${requester}: price ${item} on ${page}. Cast: cast_doc_review_vote(page="${page}", item="${item}", vote=<1|2|3|5|8|13|21>). It is in your queue until you do.`;
+        try { await mesh.send(meshAddress(target).session, note, meshAddress(target).machine); asked.push(name); } catch { unreachable.push(name); }
+      }
+      return { item: publicVotes([row])[0], asked, unreachable };
+    }
+    const row = input.action === "reveal" || input.reveal ? reveal(root, input) : input.action === "note" || input.note ? addNote(root, { ...input, text: input.note ?? input.text, agent: input.agent ?? as }) : applyVote(root, { ...input, agent: input.agent ?? as });
+    return { item: publicVotes([row])[0] };
+  }
+  const voteTimer = setInterval(() => { try { refreshQueue(root); } catch (error) { onError?.(error); } }, 60_000);
   const nudgeTimer = mesh && process.env.ADR_NUDGE !== "off" ? setInterval(() => nudgeIdle().catch(error => onError?.(error)), 5_000) : undefined;
   nudgeTimer?.unref();
   // .queue-events.jsonl at the site root (one line per test state change): a test turning done hands over to the doers it unblocks;
@@ -918,8 +938,7 @@ export async function startCommentBridge({
         for await (const chunk of request) { body.push(chunk); if (body.length > 16) break; }
         try {
           const input = JSON.parse(Buffer.concat(body).toString("utf8"));
-          const row = input.reveal ? reveal(root, input) : input.note ? addNote(root, { ...input, text: input.note }) : applyVote(root, input);
-          return reply(response, 200, { ok: true, item: publicVotes([row])[0] });
+          return reply(response, 200, { ok: true, ...(await voteAction(input)) });
         } catch (error) { return reply(response, 400, { error: error.message }); }
       }
       if (request.method === "GET" && request.url === "/settings") return reply(response, 200, effective());
@@ -1055,7 +1074,7 @@ export async function startCommentBridge({
         response.writeHead(200, { "Content-Type": "image/png", "Cache-Control": "private, max-age=31536000, immutable" });
         return response.end(readFileSync(imageFile(download[1])));
       }
-      if (request.method !== "POST" || !["/comments", "/updates", "/attachments", "/userseen", "/settings", "/agent-update", "/agent-add", "/agent-status", "/face-open", "/face-post", "/restart", "/tts", "/table-edit"].includes(request.url)) {
+      if (request.method !== "POST" || !["/comments", "/updates", "/attachments", "/userseen", "/settings", "/agent-update", "/agent-add", "/agent-status", "/agent-vote", "/face-open", "/face-post", "/restart", "/tts", "/table-edit"].includes(request.url)) {
         return reply(response, 404, { error: "Unknown comment endpoint." });
       }
       if (request.url === "/restart") {
@@ -1106,7 +1125,7 @@ export async function startCommentBridge({
           return reply(response, 400, { error: error.message });
         }
       }
-      if (["/settings", "/agent-update", "/agent-add", "/agent-status", "/face-open", "/face-post"].includes(request.url)) {
+      if (["/settings", "/agent-update", "/agent-add", "/agent-status", "/agent-vote", "/face-open", "/face-post"].includes(request.url)) {
         try {
           const body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
           if (request.url.startsWith("/face-")) {
@@ -1120,6 +1139,7 @@ export async function startCommentBridge({
           if (request.url === "/agent-update") return reply(response, 200, agentUpdate(body));
           if (request.url === "/agent-add") return reply(response, 200, api.add(body));
           if (request.url === "/agent-status") return reply(response, 200, api.setStatus(body));
+          if (request.url === "/agent-vote") return reply(response, 200, await api.vote(body));
           const next = { ...settings };
           if (body.owner !== undefined) {
             if (typeof body.owner !== "string" || !NAME.test(body.owner)) throw new Error("Owner must be a short name.");
@@ -1224,6 +1244,7 @@ export async function startCommentBridge({
       if (record.to?.length) announce(comments.get(record.id), record.comment, false, record.to, from);
       return { id: record.id, saved: true, url: record.url };
     },
+    vote: input => voteAction(input, input.from ? canon(slugify(input.from)) : input.fromSession ? nameFor(input.fromSession) : ownerName()),
     setStatus: ({ state = "working", text = "" }) => {
       if (state === "blocked" && !String(text).trim()) throw new Error("state 'blocked' needs a reason in text (up to 120 characters).");
       agentStatus = { state: String(state).slice(0, 24), text: String(text).slice(0, 120), at: new Date().toISOString() };
@@ -1240,6 +1261,7 @@ export async function startCommentBridge({
       clearInterval(nudgeTimer);
       clearInterval(eventsTimer);
       clearInterval(unblockTimer);
+      clearInterval(voteTimer);
       unlinkSync(connectionFile);
       await new Promise((accept, reject) => server.close(error => error ? reject(error) : accept()));
     },

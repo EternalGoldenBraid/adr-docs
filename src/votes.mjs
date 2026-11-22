@@ -20,7 +20,12 @@ const file = root => join(root, "votes.json");
 export const readVotes = root => {
   try { return existsSync(file(root)) ? JSON.parse(readFileSync(file(root), "utf8")) : []; } catch { return []; }
 };
-const save = (root, items) => { const tmp = file(root) + ".tmp"; writeFileSync(tmp, JSON.stringify(items, null, 1) + "\n"); renameSync(tmp, file(root)); };
+const save = (root, items) => {
+  const tmp = file(root) + ".tmp";
+  writeFileSync(tmp, JSON.stringify(items, null, 1) + "\n"); renameSync(tmp, file(root));
+  const queue = file(root).replace(/votes\.json$/, "votes-queue.json"), queueTmp = queue + ".tmp";
+  writeFileSync(queueTmp, JSON.stringify(voteQueue(items), null, 1) + "\n"); renameSync(queueTmp, queue);
+};
 
 const find = (items, page, item) => items.find(row => row.page === page && row.item === item);
 const open = row => row.rounds.find(round => !round.revealed);
@@ -36,6 +41,45 @@ export function applyVote(root, { page, item, agent, vote, owner }) {
   open(row).votes[agent] = Number(vote);
   save(root, items);
   return row;
+}
+
+// A request names who must vote; the open round remembers it. A voter's item ends when they vote; the requester gets one item
+// when the last vote is in, or, after the deadline, one to close on the votes that came.
+export function requestVotes(root, { page, item, voters, requester, deadlineMinutes = 60, now = new Date() }) {
+  const names = [...new Set((voters ?? []).map(String))].filter(Boolean);
+  if (!names.length || names.length > 12) throw new Error("Name 1 to 12 voters.");
+  const items = readVotes(root);
+  const row = find(items, page, item) ?? (items.push({ page, item, rounds: [] }), items.at(-1));
+  if (row.decidedAt) throw new Error("This item is decided; start a new item name for another vote.");
+  if (!open(row)) row.rounds.push({ round: row.rounds.length + 1, votes: {} });
+  Object.assign(open(row), { requested: names, requestedBy: requester ?? row.owner ?? "owner", requestedAt: now.toISOString(), deadlineMinutes: Math.max(1, Math.min(1440, Number(deadlineMinutes) || 60)) });
+  save(root, items);
+  return row;
+}
+
+export function voteQueue(items, now = new Date()) {
+  const out = [];
+  for (const row of items) {
+    const round = row.decidedAt ? undefined : open(row);
+    if (!round?.requested) continue;
+    const missing = round.requested.filter(name => round.votes[name] === undefined);
+    const base = { page: row.page, item: row.item, round: round.round };
+    for (const name of missing) out.push({ ...base, to: name, rank: 0, text: `Vote on ${row.item}` });
+    const late = now - Date.parse(round.requestedAt) > round.deadlineMinutes * 60000;
+    if (!missing.length) out.push({ ...base, to: round.requestedBy, rank: 0, text: `Reveal ${row.item}` });
+    else if (late && Object.keys(round.votes).length) out.push({ ...base, to: round.requestedBy, rank: 0, text: `Close ${row.item} on the votes in (${Object.keys(round.votes).length} of ${round.requested.length})` });
+  }
+  return out;
+}
+
+// Rewrites votes-queue.json when only time has changed it (a deadline passed); returns whether it did.
+export function refreshQueue(root) {
+  const items = readVotes(root);
+  if (!items.some(row => open(row)?.requested)) return false;
+  const queue = file(root).replace(/votes\.json$/, "votes-queue.json"), text = JSON.stringify(voteQueue(items), null, 1) + "\n";
+  try { if (readFileSync(queue, "utf8") === text) return false; } catch { /* not written yet */ }
+  writeFileSync(queue + ".tmp", text); renameSync(queue + ".tmp", queue);
+  return true;
 }
 
 export function reveal(root, { page, item }) {
