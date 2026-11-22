@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.166.13 - 2026-11-22
+
+- `Shift+R` in a thread pings everyone who has not resolved it: a short "resolve vote please" reply addressed only to them.
+- Removed: nothing this time.
+
 ## 0.166.12 - 2026-11-22
 
 - Fix: a thread could not resolve because the store's placeholder owner name (`agent-doc-review-site`, no session) had joined its members, for instance through a whisper, and held a seat nobody could fill. Seats are now only the human and roster agents, in the server's count and in the thread's resolve marks.
