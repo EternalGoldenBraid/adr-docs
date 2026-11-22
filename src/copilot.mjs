@@ -204,7 +204,7 @@ export async function connectDocumentReview({
     }, {
       name: "declare_doc_review_waiting",
       description: "Say what you are waiting on (a refit job, a question to the user) so ADR stops idle nudges for that long. Call with empty what to clear it. Unanswered nudges otherwise back off from 5 to 60 minutes.",
-      parameters: { type: "object", required: ["what"], properties: { what: { type: "string", description: "Up to 120 characters; empty clears." }, minutes: { type: "number", description: "How long, 1 to 1440; default 60." }, as: { type: "string", description: "Your agent slug if it differs from the session's." }, store: { type: "string", description: "Which `adr` server's site." } } },
+      parameters: { type: "object", required: ["what"], properties: { what: { type: "string", description: "Up to 120 characters; empty clears." }, minutes: { type: "number", description: "How long; default 60, at most 120 (1440 with a pid)." }, pid: { type: "integer", description: "A process id on the machine running this ADR server; the wait ends when it exits." }, as: { type: "string", description: "Your agent slug if it differs from the session's." }, store: { type: "string", description: "Which `adr` server's site." } } },
       handler: args => {
         const { store: given, as, ...rest } = args;
         const input = { ...rest, ...(as ? { from: as } : {}), fromSession: session.sessionId };

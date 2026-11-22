@@ -352,7 +352,9 @@ export async function startCommentBridge({
   const idleSince = new Map(), nudgedAt = new Map(), nudgedCount = new Map(), nudged = new Map(), streak = new Map(), waits = new Map();
   // An agent that says what it waits on ("a refit job") is not nudged until the time passes; each unanswered nudge doubles the gap (5, 10, 20, 40, 60 min).
   const backoff = slug => Math.min(NUDGE_THREAD_EVERY * 2 ** Math.min(streak.get(slug) ?? 0, 4), 60 * 60_000);
-  const waitingOn = slug => { const w = waits.get(slug); if (w && w.until <= Date.now()) { waits.delete(slug); return null; } return w ?? null; };
+  // A pid ties the wait to a local process: the nudges resume when it exits, so "waiting" cannot outlive the job it names.
+  const alive = pid => { try { process.kill(pid, 0); return true; } catch (error) { return error.code === "EPERM"; } };
+  const waitingOn = slug => { const w = waits.get(slug); if (w && (w.until <= Date.now() || w.pid && !alive(w.pid))) { waits.delete(slug); return null; } return w ?? null; };
   const readQueues = () => { try { return JSON.parse(readFileSync(join(documentRoot, "queues.json"), "utf8")); } catch { return {}; } };
   const openWork = slug => {
     const items = (readQueues()[slug] ?? []).filter(item => item.state !== "done" && !item.held).sort((a, b) => a.rank - b.rank);
@@ -1252,13 +1254,15 @@ export async function startCommentBridge({
       return { id: record.id, saved: true, url: record.url };
     },
     vote: input => voteAction(input, input.from ? canon(slugify(input.from)) : input.fromSession ? nameFor(input.fromSession) : ownerName()),
-    waiting: ({ what = "", minutes = 60, from, fromSession }) => {
+    waiting: ({ what = "", minutes = 60, pid, from, fromSession }) => {
       const slug = from ? canon(slugify(from)) : fromSession ? nameFor(fromSession) : ownerName();
       const text = String(what).trim().slice(0, 120);
       if (!text) { waits.delete(slug); return { saved: true, cleared: slug }; }
-      const until = Date.now() + Math.min(Math.max(Number(minutes) || 60, 1), 1440) * 60_000;
-      waits.set(slug, { what: text, until });
-      return { saved: true, agent: slug, what: text, until: new Date(until).toISOString() };
+      const process = Number.isInteger(pid) && pid > 1 ? pid : undefined;
+      // With a pid the wait ends with the process (capped at a day); without one it is capped at 2 hours, so it cannot quietly mute the queue.
+      const until = Date.now() + Math.min(Math.max(Number(minutes) || 60, 1), process ? 1440 : 120) * 60_000;
+      waits.set(slug, { what: text, until, pid: process });
+      return { saved: true, agent: slug, what: text, until: new Date(until).toISOString(), ...(process ? { pid: process } : {}) };
     },
     setStatus: ({ state = "working", text = "" }) => {
       if (state === "blocked" && !String(text).trim()) throw new Error("state 'blocked' needs a reason in text (up to 120 characters).");

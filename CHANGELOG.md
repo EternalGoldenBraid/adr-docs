@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.165.1 - 2026-11-22
+
+- `declare_doc_review_waiting` takes a local `pid`: the wait ends when the process exits (Alice's idea, thread f9ed8652). Without a pid it is capped at 2 hours, so it cannot quietly mute the queue.
+- Removed: nothing this time.
+
 ## 0.165.0 - 2026-11-22
 
 - Quieter idle nudge (thread f9ed8652): `declare_doc_review_waiting` stops nudges while an agent waits on a job or a question; each unanswered nudge doubles the gap up to 60 min; queue items with a non-empty `held` are skipped; the note no longer says "no reply needed" and says how to declare waiting.
