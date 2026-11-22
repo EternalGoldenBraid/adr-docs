@@ -1231,7 +1231,7 @@ export async function startCommentBridge({
       if (request.url === "/updates") {
         const result = saveUpdate(input);
         saved = true;
-        if (input.reply !== undefined && !input.note) announce(comments.get(input.commentId), input.reply, input.queued);
+        if (input.reply !== undefined && !input.note) announce(comments.get(input.commentId), input.reply, input.queued, input.whisper === true ? input.to : undefined);
         if (!input.queued) await notify();
         return reply(response, 200, { ...result, awaitingReview: !comments.get(input.commentId).seen });
       }

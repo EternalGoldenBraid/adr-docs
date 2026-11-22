@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.166.7 - 2026-11-22
+
+- Fix: a whisper sent from the thread panel still sent a mesh note to every member of the room (the whisper text itself stayed hidden). It now notifies only the people it names.
+- Removed: nothing this time.
+
 ## 0.166.6 - 2026-11-22
 
 - Typing `/w ` in a thread reply now completes team names like `@` does (a comma adds another name, a space ends the list).
