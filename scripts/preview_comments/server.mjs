@@ -793,7 +793,8 @@ export async function startCommentBridge({
     // No `as`: name the sender by its session in the team roster.
     if (author === "copilot" && !value.from && typeof input.fromSession === "string") {
       const row = rowForSession(input.fromSession);
-      if (row?.name) value.from = String(row.name).slice(0, 60);
+      // The slug, not the display name, so resolve marks and unanswered checks match the roster.
+      if (row?.slug) value.from = String(row.slug).slice(0, 60);
       // A session missing from the roster would be recorded as "copilot", and its resolve votes would count for nobody.
       else if (agents().length) throw new Error("This session is not in the team roster, so the update cannot be attributed. Pass as: your agent slug.");
     }
@@ -1280,7 +1281,7 @@ export async function startCommentBridge({
       let from = typeof input.from === "string" && /^[\w .@-]{1,60}$/.test(input.from.trim()) ? input.from.trim() : undefined;
       if (!from && typeof input.fromSession === "string") {
         const row = rowForSession(input.fromSession);
-        if (row?.name) from = String(row.name).slice(0, 60);
+        if (row?.slug) from = String(row.slug).slice(0, 60);
       }
       const record = {
         ...value, ...(from ? { from } : {}), ...(proposal ? { proposal } : {}), ...(refs.length ? { refs } : {}), input: value, event: "comment", author: "copilot", at: new Date().toISOString(), seen: true,

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.166.10 - 2026-11-22
+
+- Fix: a reply or resolve from an agent whose tool call named no `as` was recorded under its display name ("Predictive coding lead"), so its resolve mark and answers never counted. It is now recorded under its roster slug. Marks already recorded under a display name stay uncounted; resolve again to count it.
+- Removed: nothing this time.
+
 ## 0.166.9 - 2026-11-22
 
 - Fix: the whisper check counted names that have no chip (the owner, you), so it could name people you could not see and whisper with only one visible chip. Only the chips shown count now.
