@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.166.3 - 2026-11-22
+
+- Fix: a muted thread still produced an "Answer thread" queue item, because `threads.json` (which the site's queue generator reads) listed muted members. It now leaves them out.
+- Removed: nothing this time.
+
 ## 0.166.2 - 2026-11-22
 
 - A "thread xxxxxxxx" mention in a message (linked or plain) now opens that thread, on its own page if needed; before, a link to the page went nowhere near the thread. The thread header shows its 8-character id; click to copy.

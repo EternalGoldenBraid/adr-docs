@@ -525,7 +525,7 @@ export async function startCommentBridge({
     threadsTimer = undefined;
     if (!existsSync(join(documentRoot, "queues.json"))) return;
     const rows = [...comments.values()].filter(c => !c.removed && !c.resolved && !c.note && !c.highlight && c.to?.length).map(c => {
-      const addressees = [...new Set(c.to.map(canon))];
+      const addressees = [...new Set(c.to.filter(name => !c.muted?.[name]).map(canon))];
       const lastUser = [...c.replies].reverse().find(r => r.author === "user");
       const answered = addressees.filter(name => c.resolvedBy?.[name] || c.replies.some(r => r.author === "copilot" && r.from && canon(r.from) === name && (!lastUser || r.at > lastUser.at)));
       return { id: c.id, page: new URL(c.url).pathname, addressees, answered_by: answered, unresolved_by: addressees.filter(name => !c.resolvedBy?.[name]), at: lastUser?.at ?? c.at };
