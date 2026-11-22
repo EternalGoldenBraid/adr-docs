@@ -1934,7 +1934,7 @@
     if (!comment || comment.resolved) { message("Nothing to ping: the thread is resolved", true); return; }
     const missing = resolveMarks(comment).filter(mark => !mark.done && mark.name !== "you").map(mark => mark.name);
     if (!missing.length) { message("Everyone else has resolved", true); return; }
-    updateThread({ reply: "Resolve vote please: resolve if nothing is open from you, or say what is.", to: missing });
+    updateThread({ id: crypto.randomUUID(), reply: "Resolve vote please: resolve if nothing is open from you, or say what is.", to: missing });
     message(`Pinged ${missing.join(", ")}`);
   }
   const resolveMarks = comment => (comment.to?.length ? [{ name: "you", done: Boolean(comment.resolvedBy?.you || comment.resolved) }, ...othersIn(comment).filter(name => settings.team.includes(name)).map(name => ({ name, done: Boolean(comment.resolvedBy?.[name] || comment.resolved) }))] : []);

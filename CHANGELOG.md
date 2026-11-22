@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.166.14 - 2026-11-22
+
+- Fixed `Shift+R`: it failed with "Update ID must contain 1–36 UTF-8 bytes" because the ping carried no update id.
+- Removed: nothing this time.
+
 ## 0.166.13 - 2026-11-22
 
 - `Shift+R` in a thread pings everyone who has not resolved it: a short "resolve vote please" reply addressed only to them.
