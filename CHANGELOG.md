@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.165.2 - 2026-11-22
+
+- Waiting can name a catalog `run` (ends when done, unknown, or silent 10 min) or a `thread` (ends when someone else replies); a wait that names nothing is capped at 30 min (was 2 h). The team table shows what each agent waits on (thread f9ed8652).
+- Removed: nothing this time.
+
 ## 0.165.1 - 2026-11-22
 
 - `declare_doc_review_waiting` takes a local `pid`: the wait ends when the process exits (Alice's idea, thread f9ed8652). Without a pid it is capped at 2 hours, so it cannot quietly mute the queue.

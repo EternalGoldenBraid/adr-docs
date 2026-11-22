@@ -305,7 +305,7 @@ export async function startCommentBridge({
     return rows.map(row => {
       const seen = live.get(row.session) ?? remote.get(row.session);
       const proof = verified.get(row.session) ?? null;
-      return { ...row, verified: proof && { ...proof, mismatch: disagrees(statusLines.get(row.session)?.state, proof) }, status: !row.session ? "human" : seen ? seen.status : "unknown", lastSeen: seen?.last_heartbeat ?? null, kind: seen?.kind ?? (row.session ? "agent" : "human"), statusLine: statusLines.get(row.session) ?? null, activity: activity.get(seen?.cwd)?.state ?? null };
+      return { ...row, verified: proof && { ...proof, mismatch: disagrees(statusLines.get(row.session)?.state, proof) }, status: !row.session ? "human" : seen ? seen.status : "unknown", lastSeen: seen?.last_heartbeat ?? null, kind: seen?.kind ?? (row.session ? "agent" : "human"), statusLine: statusLines.get(row.session) ?? null, waiting: waits.get(row.slug)?.what ?? null, activity: activity.get(seen?.cwd)?.state ?? null };
     });
   }
   // Sessions on enrolled peer machines are sent through the mesh router with their machine name; a plain local send never reaches them.
@@ -354,7 +354,31 @@ export async function startCommentBridge({
   const backoff = slug => Math.min(NUDGE_THREAD_EVERY * 2 ** Math.min(streak.get(slug) ?? 0, 4), 60 * 60_000);
   // A pid ties the wait to a local process: the nudges resume when it exits, so "waiting" cannot outlive the job it names.
   const alive = pid => { try { process.kill(pid, 0); return true; } catch (error) { return error.code === "EPERM"; } };
-  const waitingOn = slug => { const w = waits.get(slug); if (w && (w.until <= Date.now() || w.pid && !alive(w.pid))) { waits.delete(slug); return null; } return w ?? null; };
+  // A catalog run ends the wait when its progress.phase is "done", when the service no longer knows it, or when it has reported nothing new for 10 minutes
+  // (the scalars.jsonl size is the report). A thread ends it when someone else replies there. Run and thread checks run at most every 30 s.
+  const CATALOG = process.env.ADR_CATALOG ?? "http://127.0.0.1:8766";
+  const runEnded = async w => {
+    try {
+      const res = await fetch(`${CATALOG}/runs/${w.run}`, { signal: AbortSignal.timeout(3000) });
+      if (!res.ok) return true;
+      const run = await res.json();
+      if (run.progress?.phase === "done") return true;
+      const file = run.items?.find(item => item.file === "scalars.jsonl")?.url;
+      const size = file ? (await fetch(`${CATALOG}${file}`, { signal: AbortSignal.timeout(3000) })).headers.get("content-length") : null;
+      const mark = `${run.progress?.step}|${size}`;
+      if (mark !== w.mark) { w.mark = mark; w.movedAt = Date.now(); }
+      return Date.now() - (w.movedAt ?? Date.now()) > 10 * 60_000;
+    } catch { return true; }
+  };
+  const threadAnswered = (slug, w) => (comments.get(w.thread)?.replies ?? []).some(reply => reply.from && canon(reply.from) !== slug && Date.parse(reply.at) > w.since) || !comments.get(w.thread);
+  const waitingOn = async slug => {
+    const w = waits.get(slug);
+    if (!w) return null;
+    let ended = w.until <= Date.now() || (w.pid && !alive(w.pid)) || (w.thread && threadAnswered(slug, w));
+    if (!ended && w.run && Date.now() - (w.checkedAt ?? 0) > 30_000) { w.checkedAt = Date.now(); ended = await runEnded(w); }
+    if (ended) { waits.delete(slug); return null; }
+    return w;
+  };
   const readQueues = () => { try { return JSON.parse(readFileSync(join(documentRoot, "queues.json"), "utf8")); } catch { return {}; } };
   const openWork = slug => {
     const items = (readQueues()[slug] ?? []).filter(item => item.state !== "done" && !item.held).sort((a, b) => a.rank - b.rank);
@@ -384,7 +408,7 @@ export async function startCommentBridge({
       const { items, threads, toResolve } = openWork(row.slug);
       const count = items.length + threads.length + toResolve.length;
       if (!count) { nudgedCount.delete(row.slug); nudged.delete(row.slug); streak.delete(row.slug); continue; }
-      if (waitingOn(row.slug)) continue;
+      if (await waitingOn(row.slug)) continue;
       // Progress since the last nudge (the backlog shrank) earns the next one soon, so the queue drains one by one; otherwise keep the slow pace.
       const progressed = count < (nudgedCount.get(row.slug) ?? 0);
       if (progressed) streak.delete(row.slug);
@@ -1254,15 +1278,20 @@ export async function startCommentBridge({
       return { id: record.id, saved: true, url: record.url };
     },
     vote: input => voteAction(input, input.from ? canon(slugify(input.from)) : input.fromSession ? nameFor(input.fromSession) : ownerName()),
-    waiting: ({ what = "", minutes = 60, pid, from, fromSession }) => {
+    waiting: ({ what = "", minutes = 60, pid, run, thread, from, fromSession }) => {
       const slug = from ? canon(slugify(from)) : fromSession ? nameFor(fromSession) : ownerName();
       const text = String(what).trim().slice(0, 120);
       if (!text) { waits.delete(slug); return { saved: true, cleared: slug }; }
       const process = Number.isInteger(pid) && pid > 1 ? pid : undefined;
-      // With a pid the wait ends with the process (capped at a day); without one it is capped at 2 hours, so it cannot quietly mute the queue.
-      const until = Date.now() + Math.min(Math.max(Number(minutes) || 60, 1), process ? 1440 : 120) * 60_000;
-      waits.set(slug, { what: text, until, pid: process });
-      return { saved: true, agent: slug, what: text, until: new Date(until).toISOString(), ...(process ? { pid: process } : {}) };
+      const runId = typeof run === "string" && /^[\w.-]+\/[\w.-]+$/.test(run) ? run : undefined;
+      const threadId = typeof thread === "string" ? [...comments.keys()].find(id => id === thread || id.startsWith(thread)) : undefined;
+      if (run && !runId) throw new Error("run must be <experiment>/<run>.");
+      if (thread && !threadId) throw new Error("No such thread.");
+      // A wait that names a process, run or thread ends with it (capped at a day); a time-only wait is capped at 30 minutes, so it cannot quietly mute the queue.
+      const named = process || runId || threadId;
+      const until = Date.now() + Math.min(Math.max(Number(minutes) || 60, 1), named ? 1440 : 30) * 60_000;
+      waits.set(slug, { what: text, until, pid: process, run: runId, thread: threadId, since: Date.now() });
+      return { saved: true, agent: slug, what: text, until: new Date(until).toISOString(), ...(process ? { pid: process } : {}), ...(runId ? { run: runId } : {}), ...(threadId ? { thread: threadId } : {}) };
     },
     setStatus: ({ state = "working", text = "" }) => {
       if (state === "blocked" && !String(text).trim()) throw new Error("state 'blocked' needs a reason in text (up to 120 characters).");

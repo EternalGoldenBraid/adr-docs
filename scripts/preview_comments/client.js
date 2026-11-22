@@ -1166,6 +1166,7 @@
         if (m.session) row.lastChild.style.color = agentLook(m.name).color;
         const v = m.verified;
         cell(st === "offline" ? m.status : v ? `${st}${v.detail ? " · " + v.detail : ""}${v.workingOn?.length ? " → " + v.workingOn.map(w => w.id.replace(/^thread-/, "")).join(", ") : v.state === "working" ? " → unattributed" : ""} (${Math.round(v.ageMs / 1000) < 90 ? Math.round(v.ageMs / 1000) + " s" : Math.round(v.ageMs / 60000) + " min"})` : st === "active" ? "active (unverified)" : st, st);
+        if (m.waiting) row.lastChild.append(` · waiting: ${m.waiting}`);
         if (v) row.lastChild.title = `Last event ${v.eventType} ${v.eventId} at ${v.at}\nLog position #${v.chain?.hash} (hash of the last ${v.chain?.n} event ids)` + (v.workingOn ?? []).map(w => `\n${w.id}: first named in event ${w.eventId} at ${w.at}`).join("");
         const d = row.lastChild.querySelector(".dot");
         if (d) { d.style.background = ["active", "offline"].includes(st) ? "none" : MESH_COLOURS[st]; if (["active", "offline"].includes(st)) d.style.boxShadow = `inset 0 0 0 2px ${MESH_COLOURS[st]}`; if (st === "offline") d.style.opacity = ".4"; }
