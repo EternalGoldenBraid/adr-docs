@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.166.9 - 2026-11-22
+
+- Fix: the whisper check counted names that have no chip (the owner, you), so it could name people you could not see and whisper with only one visible chip. Only the chips shown count now.
+- Removed: nothing this time.
+
 ## 0.166.8 - 2026-11-22
 
 - Fix: unticking the last To: chip in a thread reply put the store owner back, which 0.166.5 then sent as a whisper to the owner. A thread reply may now have no chip ticked, meaning a normal message to the whole room.

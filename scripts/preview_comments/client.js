@@ -1338,8 +1338,8 @@
       if (!at) {
         close();
         // Leaving someone out of a thread's To: chips whispers; say so before it is sent.
-        const chosen = whispers && !holder.hidden ? [...getSelected()] : [];
-        const room = whispers ? othersIn(currentThread() || {}) : [];
+        const chosen = whispers && !holder.hidden ? [...getSelected()].filter(name => recipients().includes(name)) : [];
+        const room = whispers ? othersIn(currentThread() || {}).filter(name => recipients().includes(name)) : [];
         if (chosen.length && room.some(name => !getSelected().has(name))) {
           box.className = "assist hint";
           box.textContent = `🤫 Whisper: only ${chosen.join(", ")} will get this (tick everyone for a normal message, none to notify the whole room)`;
@@ -2239,10 +2239,11 @@
       whisper = new Set(names); text = w[2];
     }
     // Picking fewer than the whole room is a whisper to the picked members; the default (everyone) is a normal room message.
-    const room = othersIn(currentThread() || {}), chosen = !find(".to-reply").hidden ? [...replyTo] : [];
+    // Only names shown as chips count: a thread's `to` can also hold the owner or you, who have no chip.
+    const room = othersIn(currentThread() || {}).filter(name => recipients().includes(name)), chosen = !find(".to-reply").hidden ? [...replyTo].filter(name => recipients().includes(name)) : [];
     if (!whisper && chosen.length && room.some(name => !replyTo.has(name))) whisper = new Set(chosen);
     const shots = replyShots.map(shot => shot.id);
-    updateThread({ id: draft.id, reply: text, ...(shots.length ? { images: shots } : {}), ...(whisper ? { whisper: true, to: [...whisper] } : {}), ...(queued ? { queued: true } : {}), ...(target ? { inReplyTo: { id: target.id, quote: target.quote } } : {}), ...(whisper ? {} : toValue(replyTo, !find(".to-reply").hidden)) });
+    updateThread({ id: draft.id, reply: text, ...(shots.length ? { images: shots } : {}), ...(whisper ? { whisper: true, to: [...whisper] } : {}), ...(queued ? { queued: true } : {}), ...(target ? { inReplyTo: { id: target.id, quote: target.quote } } : {}), ...(whisper || !chosen.length ? {} : { to: chosen }) });
     if (!whisper) rememberTo(replyTo);
   });
   find(".thread-id").addEventListener("click", () => { const id = selectedThread; if (id) navigator.clipboard?.writeText(id.slice(0, 8)).then(() => message(`Copied ${id.slice(0, 8)}`)); });
