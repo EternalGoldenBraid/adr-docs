@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.166.12 - 2026-11-22
+
+- Fix: a thread could not resolve because the store's placeholder owner name (`agent-doc-review-site`, no session) had joined its members, for instance through a whisper, and held a seat nobody could fill. Seats are now only the human and roster agents, in the server's count and in the thread's resolve marks.
+- Removed: nothing this time.
+
 ## 0.166.11 - 2026-11-22
 
 - Fix: opening a thread by link, bubble or "thread xxxxxxxx" mention switched the list to "all", so Back showed every thread on the site. The list now stays on the tab you had, which starts as "This page" (open threads written on or leading to the page).

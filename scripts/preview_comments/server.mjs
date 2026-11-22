@@ -397,7 +397,8 @@ export async function startCommentBridge({
   };
   // Members are members: the user's seat in `to` is the same seat as their own "you" mark, so it is one resolve, not two.
   const humanSeat = () => roster().find(row => !row.session)?.slug;
-  const seatsIn = c => [...new Set((c.to ?? []).filter(name => !c.muted?.[name]).map(canon).map(name => name === humanSeat() ? "you" : name))];
+  // A seat is someone who can answer: a roster agent or the human. The store's own placeholder owner name (no session) never can, so it must not hold a thread open.
+  const seatsIn = c => [...new Set((c.to ?? []).filter(name => !c.muted?.[name]).map(canon).filter(name => name === humanSeat() || !agents().length || agents().some(row => row.slug === name)).map(name => name === humanSeat() ? "you" : name))];
   const missingOn = id => { const c = comments.get(id); return c ? seatsIn(c).filter(name => !c.resolvedBy?.[name]).map(name => name === "you" ? humanSeat() ?? name : name) : []; };
   const isIdle = row => row.verified ? row.verified.state === "idle" : (row.activity ?? (row.statusLine?.state === "idle" ? "idle" : null)) === "idle";
   async function nudgeIdle() {
