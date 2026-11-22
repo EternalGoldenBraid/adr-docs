@@ -2000,7 +2000,6 @@
   async function openThreadById(id) {
     await openHistory();
     if (!historyComments.some(c => c.id === id)) await loadAllHistory();
-    historyFilter = "all";
     selectedThread = id;
     replyInput.value = replyDrafts.get(id)?.text || "";
     renderHistory();

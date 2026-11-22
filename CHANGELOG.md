@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.166.11 - 2026-11-22
+
+- Fix: opening a thread by link, bubble or "thread xxxxxxxx" mention switched the list to "all", so Back showed every thread on the site. The list now stays on the tab you had, which starts as "This page" (open threads written on or leading to the page).
+- Removed: the forced "all" filter when opening a thread.
+
 ## 0.166.10 - 2026-11-22
 
 - Fix: a reply or resolve from an agent whose tool call named no `as` was recorded under its display name ("Predictive coding lead"), so its resolve mark and answers never counted. It is now recorded under its roster slug. Marks already recorded under a display name stay uncounted; resolve again to count it.
