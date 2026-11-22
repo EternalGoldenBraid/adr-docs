@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.165.0 - 2026-11-22
+
+- Quieter idle nudge (thread f9ed8652): `declare_doc_review_waiting` stops nudges while an agent waits on a job or a question; each unanswered nudge doubles the gap up to 60 min; queue items with a non-empty `held` are skipped; the note no longer says "no reply needed" and says how to declare waiting.
+- Not yet: waiting that ends when a named catalog run finishes, and a daily digest to the user.
+- Removed: the "no reply needed" wording from the idle nudge.
+
 ## 0.164.1 - 2026-11-22
 
 - The thread panel and the open thread survive a page reload (a page edited by an agent, or a restart): the same page reopened within a minute restores them. Unsent replies already survived.

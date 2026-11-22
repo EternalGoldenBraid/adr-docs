@@ -349,10 +349,13 @@ export async function startCommentBridge({
   // then at most one per NUDGE_EVERY; none while it is working. Idle comes from the agent-notify hook or its status line (ticket|state|...).
   // Threads waiting on you are pinged after 10 s idle; other queue items after 1 min. Repeats: 5 min (threads) or 30 min (items) without progress, the same idle wait after progress.
   const NUDGE_AFTER = Number(process.env.ADR_NUDGE_MINUTES ?? 1) * 60_000, NUDGE_THREAD_AFTER = 10_000, NUDGE_THREAD_EVERY = 5 * 60_000, NUDGE_EVERY = 30 * 60_000;
-  const idleSince = new Map(), nudgedAt = new Map(), nudgedCount = new Map(), nudged = new Map();
+  const idleSince = new Map(), nudgedAt = new Map(), nudgedCount = new Map(), nudged = new Map(), streak = new Map(), waits = new Map();
+  // An agent that says what it waits on ("a refit job") is not nudged until the time passes; each unanswered nudge doubles the gap (5, 10, 20, 40, 60 min).
+  const backoff = slug => Math.min(NUDGE_THREAD_EVERY * 2 ** Math.min(streak.get(slug) ?? 0, 4), 60 * 60_000);
+  const waitingOn = slug => { const w = waits.get(slug); if (w && w.until <= Date.now()) { waits.delete(slug); return null; } return w ?? null; };
   const readQueues = () => { try { return JSON.parse(readFileSync(join(documentRoot, "queues.json"), "utf8")); } catch { return {}; } };
   const openWork = slug => {
-    const items = (readQueues()[slug] ?? []).filter(item => item.state !== "done").sort((a, b) => a.rank - b.rank);
+    const items = (readQueues()[slug] ?? []).filter(item => item.state !== "done" && !item.held).sort((a, b) => a.rank - b.rank);
     const { threads, toResolve } = unansweredFor(slug);
     return { items, threads, toResolve };
   };
@@ -378,12 +381,14 @@ export async function startCommentBridge({
       idleSince.set(row.slug, since);
       const { items, threads, toResolve } = openWork(row.slug);
       const count = items.length + threads.length + toResolve.length;
-      if (!count) { nudgedCount.delete(row.slug); nudged.delete(row.slug); continue; }
+      if (!count) { nudgedCount.delete(row.slug); nudged.delete(row.slug); streak.delete(row.slug); continue; }
+      if (waitingOn(row.slug)) continue;
       // Progress since the last nudge (the backlog shrank) earns the next one soon, so the queue drains one by one; otherwise keep the slow pace.
       const progressed = count < (nudgedCount.get(row.slug) ?? 0);
+      if (progressed) streak.delete(row.slug);
       const waiting = threads.length + toResolve.length > 0;
       const after = waiting ? NUDGE_THREAD_AFTER : NUDGE_AFTER;
-      if (now - since < after || now - (nudgedAt.get(row.slug) ?? 0) < (progressed ? after : NUDGE_THREAD_EVERY)) continue;
+      if (now - since < after || now - (nudgedAt.get(row.slug) ?? 0) < (progressed ? after : backoff(row.slug))) continue;
       // Name the first item not yet nudged at its current version, so a stuck item does not hide the ones behind it. An item comes back when its version
       // changes (a reply, a vote, a new test state) or, once everything has been named, after NUDGE_EVERY.
       if (row.statusLine?.state === "waiting" && Date.parse(row.statusLine.at) > (nudgedAt.get(row.slug) ?? 0)) continue;
@@ -401,13 +406,14 @@ export async function startCommentBridge({
       }
       seen.set(pick.key, pick.version);
       nudged.set(row.slug, seen);
-      const note = `ADR idle nudge (no reply needed): you have been idle ${Math.round((now - since) / 60000)} min with ${items.length} open queue item(s), ${threads.length} thread(s) waiting and ${toResolve.length} to resolve. ` +
+      const note = `ADR idle nudge: you have been idle ${Math.round((now - since) / 60000)} min with ${items.length} open queue item(s), ${threads.length} thread(s) waiting and ${toResolve.length} to resolve. ` +
         (pick.resolve ? `Thread ${pick.resolve.id.slice(0, 8)} on ${pick.resolve.page} needs your resolve vote (or a reply if you disagree). ` : "") +
         (pick.thread ? `Thread ${pick.thread.id.slice(0, 8)} on ${pick.thread.page} is waiting on you. ` : "") +
         (pick.item ? `Next in your queue: "${pick.item.test}" (rank ${pick.item.rank}${pick.item.weight ? `, weight ${pick.item.weight}` : ""}, ${pick.item.page}). ` : "") +
-        "Start it, or post what blocks it. When you finish one and go idle, the next one follows right after.";
+        "Start it, or say what you wait on with declare_doc_review_waiting (what, minutes) and the nudges stop until then. Each unanswered nudge doubles the gap.";
       nudgedAt.set(row.slug, now);
       nudgedCount.set(row.slug, count);
+      streak.set(row.slug, (streak.get(row.slug) ?? 0) + 1);
       const nudgedThread = pick.thread ?? pick.resolve;
       // A failed send keeps nudgedAt, so it is retried at the normal pace instead of every tick, and is not counted as a nudge.
       try { await mesh.send(meshAddress(row).session, note, meshAddress(row).machine); if (nudgedThread) logNudge(row.slug, nudgedThread.id, "idle"); } catch (error) { seen.delete(pick.key); onError?.(error); }
@@ -1074,7 +1080,7 @@ export async function startCommentBridge({
         response.writeHead(200, { "Content-Type": "image/png", "Cache-Control": "private, max-age=31536000, immutable" });
         return response.end(readFileSync(imageFile(download[1])));
       }
-      if (request.method !== "POST" || !["/comments", "/updates", "/attachments", "/userseen", "/settings", "/agent-update", "/agent-add", "/agent-status", "/agent-vote", "/face-open", "/face-post", "/restart", "/tts", "/table-edit"].includes(request.url)) {
+      if (request.method !== "POST" || !["/comments", "/updates", "/attachments", "/userseen", "/settings", "/agent-update", "/agent-add", "/agent-status", "/agent-vote", "/agent-waiting", "/face-open", "/face-post", "/restart", "/tts", "/table-edit"].includes(request.url)) {
         return reply(response, 404, { error: "Unknown comment endpoint." });
       }
       if (request.url === "/restart") {
@@ -1125,7 +1131,7 @@ export async function startCommentBridge({
           return reply(response, 400, { error: error.message });
         }
       }
-      if (["/settings", "/agent-update", "/agent-add", "/agent-status", "/agent-vote", "/face-open", "/face-post"].includes(request.url)) {
+      if (["/settings", "/agent-update", "/agent-add", "/agent-status", "/agent-vote", "/agent-waiting", "/face-open", "/face-post"].includes(request.url)) {
         try {
           const body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
           if (request.url.startsWith("/face-")) {
@@ -1139,6 +1145,7 @@ export async function startCommentBridge({
           if (request.url === "/agent-update") return reply(response, 200, agentUpdate(body));
           if (request.url === "/agent-add") return reply(response, 200, api.add(body));
           if (request.url === "/agent-status") return reply(response, 200, api.setStatus(body));
+          if (request.url === "/agent-waiting") return reply(response, 200, api.waiting(body));
           if (request.url === "/agent-vote") return reply(response, 200, await api.vote(body));
           const next = { ...settings };
           if (body.owner !== undefined) {
@@ -1245,6 +1252,14 @@ export async function startCommentBridge({
       return { id: record.id, saved: true, url: record.url };
     },
     vote: input => voteAction(input, input.from ? canon(slugify(input.from)) : input.fromSession ? nameFor(input.fromSession) : ownerName()),
+    waiting: ({ what = "", minutes = 60, from, fromSession }) => {
+      const slug = from ? canon(slugify(from)) : fromSession ? nameFor(fromSession) : ownerName();
+      const text = String(what).trim().slice(0, 120);
+      if (!text) { waits.delete(slug); return { saved: true, cleared: slug }; }
+      const until = Date.now() + Math.min(Math.max(Number(minutes) || 60, 1), 1440) * 60_000;
+      waits.set(slug, { what: text, until });
+      return { saved: true, agent: slug, what: text, until: new Date(until).toISOString() };
+    },
     setStatus: ({ state = "working", text = "" }) => {
       if (state === "blocked" && !String(text).trim()) throw new Error("state 'blocked' needs a reason in text (up to 120 characters).");
       agentStatus = { state: String(state).slice(0, 24), text: String(text).slice(0, 120), at: new Date().toISOString() };

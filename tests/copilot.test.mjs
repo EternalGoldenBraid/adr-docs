@@ -46,7 +46,7 @@ test("the Copilot plugin owns its preview and uses distinct tools with count-onl
     startPreview: async options => { passedOptions = options; return preview; },
   });
   const tools = Object.fromEntries(registered.tools.map(tool => [tool.name, tool.handler]));
-  assert.deepEqual(Object.keys(tools), ["start_doc_review", "list_workstreams", "list_doc_review_servers", "read_doc_review_comments", "unanswered_threads", "update_doc_review_comment", "add_doc_review_comment", "set_doc_review_status", "request_doc_review_votes", "cast_doc_review_vote", "reveal_doc_review_votes", "stop_doc_review"]);
+  assert.deepEqual(Object.keys(tools), ["start_doc_review", "list_workstreams", "list_doc_review_servers", "read_doc_review_comments", "unanswered_threads", "update_doc_review_comment", "add_doc_review_comment", "set_doc_review_status", "declare_doc_review_waiting", "request_doc_review_votes", "cast_doc_review_vote", "reveal_doc_review_votes", "stop_doc_review"]);
   assert.throws(() => tools.read_doc_review_comments({}), /Start a document preview/);
   const started = JSON.parse(await tools.start_doc_review({ document_path: "/docs/review.md" }));
   assert.equal(started.url, preview.url);

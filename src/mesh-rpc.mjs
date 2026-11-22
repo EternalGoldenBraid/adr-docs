@@ -5,7 +5,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
-export const ALLOWED = /^\/(read|unanswered|agent-update|agent-add|agent-status|agent-vote)(\?|$)/;
+export const ALLOWED = /^\/(read|unanswered|agent-update|agent-add|agent-status|agent-vote|agent-waiting)(\?|$)/;
 const CHUNK = 9000; // the mesh allows about nine sends per pair in a short window, so a response must fit in few chunks
 
 export const encodeResponse = (id, payload) => {

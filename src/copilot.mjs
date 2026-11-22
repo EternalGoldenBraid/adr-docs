@@ -201,6 +201,17 @@ export async function connectDocumentReview({
         if (store) return remoteBridge(stateRoot(), store, "/agent-status", { method: "POST", body: JSON.stringify(input) }).then(JSON.stringify, remoteFailure);
         return JSON.stringify(requirePreview().bridge.setStatus(input));
       },
+    }, {
+      name: "declare_doc_review_waiting",
+      description: "Say what you are waiting on (a refit job, a question to the user) so ADR stops idle nudges for that long. Call with empty what to clear it. Unanswered nudges otherwise back off from 5 to 60 minutes.",
+      parameters: { type: "object", required: ["what"], properties: { what: { type: "string", description: "Up to 120 characters; empty clears." }, minutes: { type: "number", description: "How long, 1 to 1440; default 60." }, as: { type: "string", description: "Your agent slug if it differs from the session's." }, store: { type: "string", description: "Which `adr` server's site." } } },
+      handler: args => {
+        const { store: given, as, ...rest } = args;
+        const input = { ...rest, ...(as ? { from: as } : {}), fromSession: session.sessionId };
+        const store = remoteStore({ store: given });
+        if (store) return remoteBridge(stateRoot(), store, "/agent-waiting", { method: "POST", body: JSON.stringify(input) }).then(JSON.stringify, remoteFailure);
+        return JSON.stringify(requirePreview().bridge.waiting(input));
+      },
     }, ...[
       ["request_doc_review_votes", "request", "Ask agents to price an item in a planning-poker round. Each named voter gets a queue item (and a mesh note) until they vote; you get one item when the last vote is in, or after the deadline an item to close on the votes that came.", { voters: { type: "array", items: { type: "string" }, description: "Agent slugs, 1 to 12." }, deadline_minutes: { type: "number", description: "Default 60." } }, ["voters"]],
       ["cast_doc_review_vote", "vote", "Cast your effort vote on an item (Fibonacci 1 2 3 5 8 13 21), or add a note after a reveal. Casting removes the item from your queue.", { vote: { type: "number", description: "1, 2, 3, 5, 8, 13 or 21." }, note: { type: "string", description: "A justification instead of a vote (after a reveal)." } }, []],
