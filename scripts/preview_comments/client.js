@@ -1289,10 +1289,12 @@
     let items = [], index = 0, start = 0;
     const addTo = name => { const selected = getSelected(); if (!selected.has(name)) { selected.add(name); chipRow(holder, selected); } };
     const close = () => { box.hidden = true; items = []; };
+    let whisperPick = false;
     const choose = name => {
       const end = input.selectionStart;
-      input.setRangeText(`@${name} `, start, end, "end");
-      addTo(name);
+      // "/w si" completes the name being typed; a comma keeps the list open for another, a space ends it.
+      input.setRangeText(whisperPick ? `${name} ` : `@${name} `, start, end, "end");
+      if (!whisperPick) addTo(name);
       close();
       input.dispatchEvent(new Event("input", { bubbles: true }));
     };
@@ -1300,7 +1302,7 @@
       box.replaceChildren(...items.map((name, i) => {
         const row = document.createElement("button");
         row.type = "button";
-        row.textContent = "@" + name;
+        row.textContent = (whisperPick ? "🤫 " : "@") + name;
         row.className = i === index ? "on" : "";
         row.addEventListener("mousedown", event => { event.preventDefault(); choose(name); });
         return row;
@@ -1309,6 +1311,18 @@
       box.hidden = !items.length;
     };
     const update = () => {
+      whisperPick = false;
+      const typing = whispers && /^(\/w[ \t]+(?:[\w.-]+,)*)([\w.-]*)$/.exec(input.value.slice(0, input.selectionStart));
+      if (typing) {
+        whisperPick = true;
+        start = typing[1].length;
+        const typed = typing[2].toLowerCase();
+        items = recipients().filter(name => name.toLowerCase().includes(typed)).sort((a, b) => Number(b.toLowerCase().startsWith(typed)) - Number(a.toLowerCase().startsWith(typed))).slice(0, 8);
+        index = Math.min(index, Math.max(items.length - 1, 0));
+        input.classList.add("whispering");
+        draw();
+        return;
+      }
       const whisper = /^\/w[ \t]+([\w.,-]+)[ \t]/.exec(input.value);
       input.classList.toggle("whispering", Boolean(whisper && whispers));
       if (whisper && whispers) {

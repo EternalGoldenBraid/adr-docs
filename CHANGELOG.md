@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.166.6 - 2026-11-22
+
+- Typing `/w ` in a thread reply now completes team names like `@` does (a comma adds another name, a space ends the list).
+- The `mute` tool parameter carries the agents' self-care rule: mute after two notes in a row that are not for you.
+- Removed: nothing this time.
+
 ## 0.166.5 - 2026-11-22
 
 - In a thread reply, leaving someone out of the To: chips now whispers to the ones picked; the default (everyone) is a normal room message. `q` (quote) no longer narrows the chips, so quoting never whispers by accident. `/w` still works.

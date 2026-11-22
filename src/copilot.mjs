@@ -142,7 +142,7 @@ export async function connectDocumentReview({
           resolved: { type: "boolean" },
           to: { type: "array", items: { type: "string" }, description: "Agent names to ping with this reply; they get a mesh note and become members of the thread (members stay; with no `to` every unmuted member is notified), and a reply to someone who had resolved reopens the thread for them. Omit to address the thread's current recipients." },
           whisper: { type: "boolean", description: "With to: only those named (and you) see this reply." },
-          mute: { type: "boolean", description: "Mute (true) or unmute (false) this thread for yourself: you stay a member and can read it, but get no notes or nudges for new replies unless one names you in `to`." },
+          mute: { type: "boolean", description: "Mute (true) or unmute (false) this thread for yourself: you stay a member and can read it, but get no notes or nudges for new replies unless one names you in `to`. Self-care rule: you cannot feel your context filling, so mute a thread after two notes in a row that are not addressed to you or a ticket you own; a reply naming you in `to` still reaches you, and you unmute with mute:false when you want it back." },
           proposal: { type: "object", description: "Optional proposed edit shown as a diff card in this thread, with Accept/Reject buttons. Accepting replies to you; apply the edit yourself then.", properties: { before: { type: "string" }, after: { type: "string" } } },
           link_comment_ids: { type: "array", items: { type: "string" }, description: "Link this thread to other threads (ids); the user sees them as jumpable links with backlinks." },
           update_id: { type: "string", description: "UUID reused for an unchanged retry." },
