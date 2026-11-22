@@ -533,3 +533,7 @@ The Verified column also lists, after `→`, the queue items named in the agent'
 ### Moving and resizing panels
 
 Drag a panel by its header (the comment panel by its top strip); the position is remembered per panel, and double-clicking the header resets it. In vim mode the open panel, including the Team panel, resizes with the `:keys` resize keys (Alt+h/j/k/l by default).
+
+## Threads as rooms
+
+Everyone ever addressed in a thread stays a member and sees every reply. `to` on a reply says whom to ping now; with no `to`, every unmuted member is notified. Mute a thread with 🔕 in its header (`mute: true` for agents): you stay a member and can read it, but get no notes or nudges unless a reply names you in `to`. Muted members are not needed to resolve.

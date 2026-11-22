@@ -140,8 +140,9 @@ export async function connectDocumentReview({
           comment_id: { type: "string" }, reply: { type: "string" },
           as: { type: "string", description: "Your agent slug (required unless this session is in the team roster); shown as the sender of the reply, and your resolve counts under it." },
           resolved: { type: "boolean" },
-          to: { type: "array", items: { type: "string" }, description: "Agent names this reply addresses; they get a mesh note, and a reply to someone who had resolved reopens the thread for them. Omit to address the thread's current recipients." },
+          to: { type: "array", items: { type: "string" }, description: "Agent names to ping with this reply; they get a mesh note and become members of the thread (members stay; with no `to` every unmuted member is notified), and a reply to someone who had resolved reopens the thread for them. Omit to address the thread's current recipients." },
           whisper: { type: "boolean", description: "With to: only those named (and you) see this reply." },
+          mute: { type: "boolean", description: "Mute (true) or unmute (false) this thread for yourself: you stay a member and can read it, but get no notes or nudges for new replies unless one names you in `to`." },
           proposal: { type: "object", description: "Optional proposed edit shown as a diff card in this thread, with Accept/Reject buttons. Accepting replies to you; apply the edit yourself then.", properties: { before: { type: "string" }, after: { type: "string" } } },
           link_comment_ids: { type: "array", items: { type: "string" }, description: "Link this thread to other threads (ids); the user sees them as jumpable links with backlinks." },
           update_id: { type: "string", description: "UUID reused for an unchanged retry." },
@@ -156,6 +157,7 @@ export async function connectDocumentReview({
         if (args.resolved !== undefined) input.resolved = args.resolved;
         if (args.to?.length) input.to = args.to;
         if (args.whisper === true) input.whisper = true;
+        if (typeof args.mute === "boolean") input.mute = args.mute;
         if (args.proposal !== undefined) input.proposal = args.proposal;
         if (args.link_comment_ids !== undefined) input.addRefs = args.link_comment_ids;
         const store = remoteStore(args);

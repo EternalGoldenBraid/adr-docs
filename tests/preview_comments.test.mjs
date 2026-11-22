@@ -707,3 +707,24 @@ test("the user's seat listed in `to` is the same seat as their own mark: one res
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test("a thread keeps everyone ever addressed, and a mute removes notices but not membership", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "adr-room-"));
+  writeFileSync(join(directory, "page.md"), "# Page\n\nText.");
+  const bridge = await startCommentBridge({ sessionId: randomUUID(), documentRoot: directory, storageRoot: directory, previewOrigin: "http://127.0.0.1:8774", onError: () => {}, notify: async () => {} });
+  try {
+    const id = bridge.add({ page: "/page", kind: "page", quote: "Page", comment: "hi", to: ["a-agent"], from: "x-agent" }).id;
+    bridge.update({ id: randomUUID(), commentId: id, reply: "Adding b.", to: ["b-agent"], from: "x-agent" });
+    assert.deepEqual(bridge.list()[0].to, ["a-agent", "b-agent"]);
+    bridge.update({ id: randomUUID(), commentId: id, reply: "Only b.", to: ["b-agent"], from: "x-agent" });
+    assert.deepEqual(bridge.list()[0].to, ["a-agent", "b-agent"]);
+    bridge.update({ id: randomUUID(), commentId: id, mute: true, from: "a-agent" });
+    assert.deepEqual(bridge.list()[0].to, ["a-agent", "b-agent"]);
+    assert.deepEqual(bridge.list()[0].muted, { "a-agent": true });
+    bridge.update({ id: randomUUID(), commentId: id, mute: false, from: "a-agent" });
+    assert.deepEqual(bridge.list()[0].muted, {});
+  } finally {
+    await bridge.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});

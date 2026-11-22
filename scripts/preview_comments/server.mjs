@@ -321,7 +321,7 @@ export async function startCommentBridge({
   // Without a hosting agent session (ownerViaMesh), the owner is also told this way, including of unaddressed comments.
   // Agent-authored threads and replies pass `only` (their recipients) and `sender`, who is not told of their own message.
   function announce(comment, text, queued = false, only, sender) {
-    const names = (only?.length ? only.map(canon) : comment.to?.length ? comment.to.map(canon) : ownerViaMesh ? [ownerName()] : []).filter(who => !sender || (who !== canon(sender) && who !== canon(slugify(sender))));
+    const names = (only?.length ? only.map(canon) : comment.to?.length ? comment.to.filter(name => !comment.muted?.[name]).map(canon) : ownerViaMesh ? [ownerName()] : []).filter(who => !sender || (who !== canon(sender) && who !== canon(slugify(sender))));
     if (!mesh) return;
     for (const who of names) {
       const target = agents().find(row => row.slug === who);
@@ -396,7 +396,7 @@ export async function startCommentBridge({
   };
   // Members are members: the user's seat in `to` is the same seat as their own "you" mark, so it is one resolve, not two.
   const humanSeat = () => roster().find(row => !row.session)?.slug;
-  const seatsIn = c => [...new Set((c.to ?? []).map(canon).map(name => name === humanSeat() ? "you" : name))];
+  const seatsIn = c => [...new Set((c.to ?? []).filter(name => !c.muted?.[name]).map(canon).map(name => name === humanSeat() ? "you" : name))];
   const missingOn = id => { const c = comments.get(id); return c ? seatsIn(c).filter(name => !c.resolvedBy?.[name]).map(name => name === "you" ? humanSeat() ?? name : name) : []; };
   const isIdle = row => row.verified ? row.verified.state === "idle" : (row.activity ?? (row.statusLine?.state === "idle" ? "idle" : null)) === "idle";
   async function nudgeIdle() {
@@ -627,7 +627,13 @@ export async function startCommentBridge({
         for (const name of cleared) delete comment.resolvedBy[name];
         if (cleared.length && comment.resolved) { comment.resolved = false; delete comment.resolvedAt; }
       }
-      if (record.to) comment.to = record.to;
+      // A thread is a room: addressees accumulate as members, and `to` on a reply only says whom to ping.
+      if (record.to) comment.to = [...new Set([...(comment.to ?? []), ...record.to])];
+      if (typeof record.mute === "boolean") {
+        const name = record.author === "copilot" && record.from ? canon(record.from) : humanSeat() ?? "you";
+        comment.muted = { ...comment.muted };
+        if (record.mute) comment.muted[name] = true; else delete comment.muted[name];
+      }
       if (record.color !== undefined) comment.color = record.color;
       if (record.removed !== undefined) comment.removed = record.removed;
       if (record.clear) Object.assign(comment, { comment: "", note: false, highlight: true, replies: [], resolved: false, seen: true });
@@ -744,9 +750,11 @@ export async function startCommentBridge({
       value.resolved = input.resolved;
     }
     if (names(input.to, "to")?.length) value.to = names(input.to, "to");
+    if (typeof input.mute === "boolean") value.mute = input.mute;
     if (value.reply !== undefined && !input.note) {
-      const extra = mentioned(value.reply).filter(name => !(value.to ?? comments.get(value.commentId).to ?? []).map(canon).includes(name));
-      if (extra.length) value.to = [...new Set([...(value.to ?? comments.get(value.commentId).to ?? []).map(canon), ...extra])].slice(0, 12);
+      const members = comments.get(value.commentId).to ?? [];
+      const extra = mentioned(value.reply).filter(name => !(value.to ?? members).map(canon).includes(name));
+      if (extra.length) value.to = [...new Set([...(value.to ?? members.filter(name => !comments.get(value.commentId).muted?.[name])).map(canon), ...extra])].slice(0, 12);
     }
     if (input.whisper === true && value.to?.length && value.reply !== undefined) value.whisper = true;
     if (author === "user" && COLORS.includes(input.color)) value.color = input.color;
@@ -795,7 +803,7 @@ export async function startCommentBridge({
     if (author === "user" && typeof input.removed === "boolean") value.removed = input.removed;
     if (value.reply === undefined && value.resolved === undefined && value.color === undefined && value.removed === undefined && !value.clear &&
         !value.promote && value.editComment === undefined && !value.editReply && !value.removeReply &&
-        !value.to && !value.addImages && !value.removeImages && !value.addRefs && !value.removeRefs) {
+        !value.to && value.mute === undefined && !value.addImages && !value.removeImages && !value.addRefs && !value.removeRefs) {
       throw new Error("An update needs a reply, resolved state, colour, image, link, edit or removal.");
     }
     const previous = updates.get(value.id);
@@ -832,13 +840,14 @@ export async function startCommentBridge({
   function unansweredFor(as) {
     const now = Date.now();
     const rows = [...comments.values()].filter(comment => !comment.removed && !comment.resolved && !comment.note && !comment.highlight && addressed(comment, as) && !comment.resolvedBy?.[as]).flatMap(comment => {
-      const last = comment.replies.at(-1) ?? { author: comment.author ?? "user", comment: comment.comment, at: comment.at };
+      const last = comment.replies.at(-1) ?? { author: comment.author ?? "user", comment: comment.comment, at: comment.at, to: comment.to };
       if (last.author !== "user") return [];
+      if (comment.muted?.[as] && !(last.to ?? []).map(canon).includes(as)) return [];
       const text = (last.reply ?? last.comment ?? "").replace(/\s+/g, " ");
       return [{ id: comment.id, version: String(last.at || comment.at), page: new URL(comment.url).pathname, ageMinutes: Math.round((now - Date.parse(last.at || comment.at)) / 60000), quote: text.length > 140 ? `${text.slice(0, 140)}…` : text }];
     }).sort((a, b) => b.ageMinutes - a.ageMinutes);
     // Open threads addressed to this agent whose last word is an agent's, so nothing is left to answer but its resolve vote is still missing.
-    const toResolve = [...comments.values()].filter(comment => !comment.removed && !comment.resolved && !comment.note && !comment.highlight && comment.to?.length && addressed(comment, as) && !comment.resolvedBy?.[as] && !rows.some(row => row.id === comment.id))
+    const toResolve = [...comments.values()].filter(comment => !comment.removed && !comment.resolved && !comment.note && !comment.highlight && comment.to?.length && addressed(comment, as) && !comment.muted?.[as] && !comment.resolvedBy?.[as] && !rows.some(row => row.id === comment.id))
       .map(comment => ({ id: comment.id, version: `${comment.replies.at(-1)?.at ?? comment.at}|${Object.keys(comment.resolvedBy ?? {}).length}`, page: new URL(comment.url).pathname }));
     return { checked: `${rows.length} unanswered, ${toResolve.length} to resolve`, as, threads: rows, toResolve };
   }

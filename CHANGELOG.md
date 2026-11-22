@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.166.0 - 2026-11-22
+
+- Threads are rooms. Everyone ever addressed in a thread stays a member and sees every reply; before, each reply's addressee list replaced the thread's members, so whoever was left off lost the thread. `to` on a reply now only says whom to ping; a reply with no `to` notifies every unmuted member.
+- Mute: the 🔕 button in the thread header (and `mute: true|false` on `update_doc_review_comment`) keeps you in the thread but stops notes and nudges for new replies, unless a reply names you in `to`. Muted members are not needed to resolve.
+- Not built yet: leaving a thread outright, and a read mark per member in the header.
+- Removed: nothing this time.
+
 ## 0.165.3 - 2026-11-22
 
 - An update from a session that is not in the team roster and gives no `as` is now refused with "pass as: your agent slug", instead of being recorded as "copilot", where its resolve counted for nobody and left the "Resolve thread" queue item standing (thread f9ed8652). Sites with no roster behave as before.

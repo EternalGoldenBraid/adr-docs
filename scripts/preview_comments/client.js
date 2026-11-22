@@ -157,7 +157,7 @@
         <div class="thread-head"><button class="thread-back icon" type="button" title="Back (h)">‹</button>
         <span class="thread-path"></span><span class="thread-title"></span>
         <a class="thread-source" title="Open page (o)">↗ page</a>
-        <button class="thread-bell" type="button" title="Ring the bell: ask everyone who has not resolved to resolve, now" hidden>🔔</button><button class="thread-resolve" type="button" title="Resolve / reopen (r)">Resolve</button></div>
+        <button class="thread-bell" type="button" title="Ring the bell: ask everyone who has not resolved to resolve, now" hidden>🔔</button><button class="thread-mute" type="button" title="Mute: stay in the thread, but get no notifications unless someone names you" hidden>🔕</button><button class="thread-resolve" type="button" title="Resolve / reopen (r)">Resolve</button></div>
         <div class="thread-state"></div>
         <details class="quote-box"><summary class="quote-summary">Selected content</summary><div class="quote thread-quote"></div></details>
         <div class="thread-links"></div>
@@ -1805,6 +1805,11 @@
     if (!state.nextElementSibling?.classList.contains("queue-lines")) { const row = document.createElement("span"); row.className = "queue-lines"; state.after(row); }
     queueLine(comment, state.nextElementSibling);
     find(".thread-resolve").textContent = isNote(comment) ? "Remove" : comment.resolved ? "Reopen" : comment.resolvedBy?.you ? "Unresolve" : "Resolve";
+    const muteButton = find(".thread-mute"), muted = Boolean(comment.muted?.[seat()] || comment.muted?.you);
+    muteButton.hidden = Boolean(isNote(comment) || !comment.to?.length);
+    muteButton.textContent = muted ? "🔔 Unmute" : "🔕";
+    muteButton.title = muted ? "Unmute: get notified of every reply again" : "Mute: stay in the thread, but get no notifications unless someone names you";
+    muteButton.dataset.muted = muted ? "1" : "";
     find(".thread-bell").hidden = Boolean(comment.resolved || isNote(comment) || !(comment.to ?? []).some(name => !comment.resolvedBy?.[name]));
     markSeen(comment);
     renderLinks(comment);
@@ -1884,7 +1889,7 @@
   }
   // Who has resolved: the user and each addressee, as the sectors of a small pie before the thread state.
   const seat = () => settings.roster?.find(row => !row.session)?.slug;
-  const othersIn = comment => (comment.to ?? []).filter(name => name !== seat());
+  const othersIn = comment => (comment.to ?? []).filter(name => name !== seat() && !comment.muted?.[name]);
   const resolveMarks = comment => (comment.to?.length ? [{ name: "you", done: Boolean(comment.resolvedBy?.you || comment.resolved) }, ...othersIn(comment).map(name => ({ name, done: Boolean(comment.resolvedBy?.[name] || comment.resolved) }))] : []);
   // Awaiting: a thread the agent started, still open, with the agent's message last.
   const awaiting = comment => !comment.resolved && !comment.removed && !isNote(comment) && comment.author === "copilot" &&
@@ -2067,7 +2072,7 @@
   }
   async function updateThread(values, commentId = selectedThread) {
     historySaving = true;
-    for (const selector of [".reply-send", ".thread-resolve", ".thread-bell", ".thread-back", ".history-close", ".history-toggle", ".toggle"]) find(selector).disabled = true;
+    for (const selector of [".reply-send", ".thread-resolve", ".thread-mute", ".thread-bell", ".thread-back", ".history-close", ".history-toggle", ".toggle"]) find(selector).disabled = true;
     find(".thread-source").setAttribute("aria-disabled", "true");
     replyInput.readOnly = true;
     try {
@@ -2089,7 +2094,7 @@
       message(error.message + (values.reply !== undefined ? " Your reply draft is kept; press Reply to retry." : ""), true);
     } finally {
       historySaving = false;
-      for (const selector of [".reply-send", ".thread-resolve", ".thread-bell", ".thread-back", ".history-close", ".history-toggle", ".toggle"]) find(selector).disabled = false;
+      for (const selector of [".reply-send", ".thread-resolve", ".thread-mute", ".thread-bell", ".thread-back", ".history-close", ".history-toggle", ".toggle"]) find(selector).disabled = false;
       find(".thread-source").removeAttribute("aria-disabled");
       replyInput.readOnly = false;
     }
@@ -2197,6 +2202,10 @@
     const shots = replyShots.map(shot => shot.id);
     updateThread({ id: draft.id, reply: text, ...(shots.length ? { images: shots } : {}), ...(whisper ? { whisper: true, to: [...whisper] } : {}), ...(queued ? { queued: true } : {}), ...(target ? { inReplyTo: { id: target.id, quote: target.quote } } : {}), ...(whisper ? {} : toValue(replyTo, !find(".to-reply").hidden)) });
     if (!whisper) rememberTo(replyTo);
+  });
+  find(".thread-mute").addEventListener("click", () => {
+    const button = find(".thread-mute");
+    updateThread({ id: crypto.randomUUID(), mute: !button.dataset.muted });
   });
   find(".thread-bell").addEventListener("click", async () => {
     const comment = historyComments.find(c => c.id === selectedThread);
