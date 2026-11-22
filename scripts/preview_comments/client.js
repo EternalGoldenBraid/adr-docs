@@ -120,7 +120,7 @@
       .history-head .tabs{margin:0!important;border:0;flex:none}.tab{padding:4px 9px;font-size:12px}
       .thread-head{padding:5px 20px;top:34px;margin:0 0 4px!important;gap:6px;border-bottom:0}
       .thread-path{font:12px ui-monospace,monospace;color:#8ab4f8;background:#1d2a40;padding:1px 8px;border-radius:5px;white-space:nowrap}
-      .thread-title[hidden]{display:none}.thread-head button{padding:3px 10px;font-size:12px}
+      .thread-id{font:11px monospace;opacity:.6;cursor:pointer;margin:0 6px}.thread-title[hidden]{display:none}.thread-head button{padding:3px 10px;font-size:12px}
       .history.full{padding:0 2vw}.history.full .note.mine{margin-left:6vw}.history.full .note.copilot{margin-right:6vw}
       .thread-state{display:none}
       .resolve-line{gap:4px}.resolve-chip{font-size:11px!important;padding:0 8px!important}
@@ -155,7 +155,7 @@
       <div class="thread-list" role="listbox"></div>
       <section class="thread" hidden>
         <div class="thread-head"><button class="thread-back icon" type="button" title="Back (h)">‹</button>
-        <span class="thread-path"></span><span class="thread-title"></span>
+        <span class="thread-path"></span><span class="thread-title"></span><span class="thread-id" title="Thread id (click to copy)"></span>
         <a class="thread-source" title="Open page (o)">↗ page</a>
         <button class="thread-bell" type="button" title="Ring the bell: ask everyone who has not resolved to resolve, now" hidden>🔔</button><button class="thread-mute" type="button" title="Mute: stay in the thread, but get no notifications unless someone names you" hidden>🔕</button><button class="thread-resolve" type="button" title="Resolve / reopen (r)">Resolve</button></div>
         <div class="thread-state"></div>
@@ -1440,11 +1440,18 @@
   // Inline Markdown for messages (bold, italic, code), built from DOM nodes so message text is never parsed as HTML.
   function inlineMarkdown(text) {
     const fragment = document.createDocumentFragment();
-    const pattern = /(!?)\[([^\]\n]*)\]\(((?:https?:\/\/|\.{1,2}\/|\/(?!\/)|#)[^\s)]+)\)|\*\*([^*\n]+?)\*\*|`([^`\n]+)`|(?<![\w*])\*([^*\s][^*\n]*?)\*(?![\w*])/g;
+    const pattern = /(!?)\[([^\]\n]*)\]\(((?:https?:\/\/|\.{1,2}\/|\/(?!\/)|#)[^\s)]+)\)|\*\*([^*\n]+?)\*\*|`([^`\n]+)`|(?<![\w*])\*([^*\s][^*\n]*?)\*(?![\w*])|\bthread ([0-9a-f]{8})\b/g;
     let last = 0, match;
     while ((match = pattern.exec(text))) {
       if (match.index > last) fragment.append(text.slice(last, match.index));
-      const [, bang, label, href, bold, code, italic] = match;
+      const [, bang, label, href, bold, code, italic, bare] = match;
+      if (bare) {
+        const link = Object.assign(document.createElement("a"), { href: "#", textContent: match[0], title: "Open this thread" });
+        link.addEventListener("click", event => { event.preventDefault(); jumpToThreadId(bare); });
+        fragment.append(link);
+        last = pattern.lastIndex;
+        continue;
+      }
       if (href && bang) {
         const link = document.createElement("a");
         const img = document.createElement("img");
@@ -1457,7 +1464,9 @@
       const el = document.createElement(href ? "a" : bold ? "strong" : code ? "code" : "em");
       if (bold || italic) el.append(inlineMarkdown(bold || italic));
       else el.textContent = label || href || code;
-      if (href) { el.href = href; if (!href.startsWith("#")) { el.target = "_blank"; el.rel = "noopener"; } }
+      const named = href && /\bthread[ -]?([0-9a-f]{8})/i.exec(label || "");
+      if (named) { el.href = "#"; el.title = "Open this thread"; el.addEventListener("click", event => { event.preventDefault(); jumpToThreadId(named[1]); }); }
+      else if (href) { el.href = href; if (!href.startsWith("#")) { el.target = "_blank"; el.rel = "noopener"; } }
       fragment.append(el);
       last = pattern.lastIndex;
     }
@@ -1770,6 +1779,7 @@
     modeLabel();
     renderRail(comment);
     if (!comment) return;
+    find(".thread-id").textContent = "#" + comment.id.slice(0, 8);
     find(".thread-title").textContent = comment.section;
     find(".thread-path").textContent = pagePath(comment.url);
     find(".thread-title").hidden = comment.section === find(".thread-path").textContent;
@@ -1901,6 +1911,12 @@
     const u = new URL(url);
     if (u.port === location.port && /^(127\.0\.0\.1|localhost|[a-z0-9-]+\.localhost)$/.test(u.hostname)) u.host = location.host;
     return u.href;
+  }
+  // A "thread xxxxxxxx" mention opens that thread, here or on its own page.
+  async function jumpToThreadId(prefix) {
+    let found = historyComments.find(c => c.id.startsWith(prefix));
+    if (!found) { await loadAllHistory().catch(() => {}); found = historyComments.find(c => c.id.startsWith(prefix)); }
+    if (found) goToThread(found); else message(`Thread ${prefix} is not in this store.`, true);
   }
   function goToThread(other) {
     if (other.kind === "session" || pagePath(other.url) === pagePath(location.href)) { openThreadById(other.id); return; }
@@ -2203,6 +2219,7 @@
     updateThread({ id: draft.id, reply: text, ...(shots.length ? { images: shots } : {}), ...(whisper ? { whisper: true, to: [...whisper] } : {}), ...(queued ? { queued: true } : {}), ...(target ? { inReplyTo: { id: target.id, quote: target.quote } } : {}), ...(whisper ? {} : toValue(replyTo, !find(".to-reply").hidden)) });
     if (!whisper) rememberTo(replyTo);
   });
+  find(".thread-id").addEventListener("click", () => { const id = selectedThread; if (id) navigator.clipboard?.writeText(id.slice(0, 8)).then(() => message(`Copied ${id.slice(0, 8)}`)); });
   find(".thread-mute").addEventListener("click", () => {
     const button = find(".thread-mute");
     updateThread({ id: crypto.randomUUID(), mute: !button.dataset.muted });

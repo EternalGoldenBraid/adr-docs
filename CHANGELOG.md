@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.166.2 - 2026-11-22
+
+- A "thread xxxxxxxx" mention in a message (linked or plain) now opens that thread, on its own page if needed; before, a link to the page went nowhere near the thread. The thread header shows its 8-character id; click to copy.
+- Removed: nothing this time.
+
 ## 0.166.1 - 2026-11-22
 
 - Fix for 0.166.0: replaying the log made old threads add everyone ever addressed as a member, so agents got nudges to resolve threads from days ago (11 for one agent). Members now accumulate only from records after 2026-11-22T08:30Z; older records keep the old rule.
