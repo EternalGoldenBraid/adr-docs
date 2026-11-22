@@ -1237,10 +1237,10 @@
     api("mesh").then(({ members }) => { meshRoster = members; const waiting = [...rosterWaiters]; rosterWaiters.clear(); waiting.forEach(draw => draw()); }).catch(() => {});
   }
   // Chips choose who a message is for. Hidden until a team is configured (:team), so single-agent use is unchanged.
-  function chipRow(holder, selected, onChange) {
+  function chipRow(holder, selected, onChange, allowEmpty = false) {
     holder.hidden = recipients().length < 2;
     if (holder.hidden) return;
-    refreshRoster(() => chipRow(holder, selected, onChange));
+    refreshRoster(() => chipRow(holder, selected, onChange, allowEmpty));
     const label = document.createElement("small");
     label.textContent = "To:";
     holder.replaceChildren(label, ...recipients().map(name => {
@@ -1253,9 +1253,9 @@
       chip.classList.toggle("on", selected.has(name));
       chip.addEventListener("click", () => {
         if (selected.has(name)) selected.delete(name); else selected.add(name);
-        if (!selected.size) selected.add(settings.owner);
+        if (!selected.size && !allowEmpty) selected.add(settings.owner);
         onChange?.();
-        chipRow(holder, selected, onChange);
+        chipRow(holder, selected, onChange, allowEmpty);
         [...holder.querySelectorAll("button")].find(button => button.dataset.name === name)?.focus();
       });
       return chip;
@@ -1277,7 +1277,7 @@
     }
     return best;
   }
-  const toValue = (selected, shown) => shown && recipients().length > 1 ? { to: [...selected] } : {};
+  const toValue = (selected, shown) => shown && selected.size && recipients().length > 1 ? { to: [...selected] } : {};
   // Under a textarea: a whisper banner while the text starts with "/w name…", and an @name picker.
   // Picking (or sending) an @name also adds that agent to the To: chips.
   const mentionedIn = text => [...text.matchAll(/(?:^|[\s(])@([\w.-]+)/g)].map(match => recipientFor(match[1])).filter(Boolean);
@@ -1335,7 +1335,18 @@
       }
       const before = input.value.slice(0, input.selectionStart);
       const at = /(?:^|[\s(])@([\w.-]*)$/.exec(before);
-      if (!at) { close(); return; }
+      if (!at) {
+        close();
+        // Leaving someone out of a thread's To: chips whispers; say so before it is sent.
+        const chosen = whispers && !holder.hidden ? [...getSelected()] : [];
+        const room = whispers ? othersIn(currentThread() || {}) : [];
+        if (chosen.length && room.some(name => !getSelected().has(name))) {
+          box.className = "assist hint";
+          box.textContent = `🤫 Whisper: only ${chosen.join(", ")} will get this (tick everyone for a normal message, none to notify the whole room)`;
+          box.hidden = false;
+        }
+        return;
+      }
       start = before.length - at[1].length - 1;
       const typed = at[1].toLowerCase();
       items = recipients().filter(name => name.toLowerCase().includes(typed)).sort((a, b) => Number(b.toLowerCase().startsWith(typed)) - Number(a.toLowerCase().startsWith(typed))).slice(0, 8);
@@ -2160,7 +2171,7 @@
   const replyAssist = attachAssist(replyInput, () => replyTo, find(".to-reply"), true);
   function renderReplyTo(comment) {
     replyTo = new Set(comment?.to?.length ? comment.to : defaultTo());
-    chipRow(find(".to-reply"), replyTo);
+    chipRow(find(".to-reply"), replyTo, () => replyAssist.update(), true);
   }
   // Replying to one message (optionally one highlighted passage of it): the reply is linked to it.
   let replyTarget = null;

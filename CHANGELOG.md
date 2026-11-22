@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.166.8 - 2026-11-22
+
+- Fix: unticking the last To: chip in a thread reply put the store owner back, which 0.166.5 then sent as a whisper to the owner. A thread reply may now have no chip ticked, meaning a normal message to the whole room.
+- A thread reply now shows "🤫 Whisper: only … will get this" under the box whenever the chips leave someone out, before you send.
+- Removed: nothing this time.
+
 ## 0.166.7 - 2026-11-22
 
 - Fix: a whisper sent from the thread panel still sent a mesh note to every member of the room (the whisper text itself stayed hidden). It now notifies only the people it names.
