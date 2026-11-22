@@ -10,6 +10,7 @@ import { execFile, spawn } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 const USER_MARK_FROM = "2026-11-21T00:00:00";
+const ROOMS_FROM = "2026-11-22T08:30:00Z";
 const meshCodeDirectory = join(homedir(), ".copilot", "extensions", "agent-mesh");
 // MESH_DIR, else ~/.agent-mesh, else the pre-move location inside the extension.
 function meshDataDirectory() {
@@ -628,7 +629,8 @@ export async function startCommentBridge({
         if (cleared.length && comment.resolved) { comment.resolved = false; delete comment.resolvedAt; }
       }
       // A thread is a room: addressees accumulate as members, and `to` on a reply only says whom to ping.
-      if (record.to) comment.to = [...new Set([...(comment.to ?? []), ...record.to])];
+      // Older records replay with the old rule (the last `to` is the member list), so history does not add people to threads they left.
+      if (record.to) comment.to = record.at >= ROOMS_FROM ? [...new Set([...(comment.to ?? []), ...record.to])] : record.to;
       if (typeof record.mute === "boolean") {
         const name = record.author === "copilot" && record.from ? canon(record.from) : humanSeat() ?? "you";
         comment.muted = { ...comment.muted };

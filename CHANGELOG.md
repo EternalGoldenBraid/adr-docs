@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.166.1 - 2026-11-22
+
+- Fix for 0.166.0: replaying the log made old threads add everyone ever addressed as a member, so agents got nudges to resolve threads from days ago (11 for one agent). Members now accumulate only from records after 2026-11-22T08:30Z; older records keep the old rule.
+- Removed: nothing this time.
+
 ## 0.166.0 - 2026-11-22
 
 - Threads are rooms. Everyone ever addressed in a thread stays a member and sees every reply; before, each reply's addressee list replaced the thread's members, so whoever was left off lost the thread. `to` on a reply now only says whom to ping; a reply with no `to` notifies every unmuted member.
