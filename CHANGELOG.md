@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.166.4 - 2026-11-22
+
+- "Unread" on a thread card now only ever means you have not seen a reply (the NEW mark). Whether an agent has read your message moved to a hover on the thread's status line: who has read it and who has not yet.
+- Removed: the "unread" card badge and its yellow card state (it meant "the agent has not read you", which looked like your own unread).
+
 ## 0.166.3 - 2026-11-22
 
 - Fix: a muted thread still produced an "Answer thread" queue item, because `threads.json` (which the site's queue generator reads) listed muted members. It now leaves them out.

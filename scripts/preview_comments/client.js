@@ -1726,7 +1726,7 @@
       card.type = "button";
       card.className = "thread-card";
       card.dataset.commentId = comment.id;
-      card.classList.add(comment.resolved && !hasFresh(comment) ? "done" : awaiting(comment) ? "waiting" : comment.seen || comment.note ? "open" : "unread");
+      card.classList.add(comment.resolved && !hasFresh(comment) ? "done" : awaiting(comment) ? "waiting" : "open");
       const top = document.createElement("div");
       top.className = "row-top";
       const section = document.createElement("strong");
@@ -1736,7 +1736,7 @@
       const links = (comment.refs?.length || 0) + historyComments.filter(c => !c.removed && c.refs?.includes(comment.id)).length;
       // Open threads with participants show your own resolve mark and how many of them have resolved.
       const marks = comment.resolved ? [] : resolveMarks(comment);
-      badge.textContent = [comment.resolved ? (hasFresh(comment) ? "resolved · new reply" : "resolved") : awaiting(comment) ? "awaiting you" : comment.seen || comment.note ? "" : "unread",
+      badge.textContent = [comment.resolved ? (hasFresh(comment) ? "resolved · new reply" : "resolved") : awaiting(comment) ? "awaiting you" : "",
         comment.replies.length ? `💬${comment.replies.length}` : "", links ? `🔗${links}` : "",
         comment.kind !== "session" && pagePath(comment.url) !== pagePath(location.href) ? pagePath(comment.url) : ""].filter(Boolean).join(" · ");
       const fresh = hasFresh(comment);
@@ -1792,6 +1792,9 @@
     }
     const state = find(".thread-state");
     state.textContent = `${isNote(comment) ? "Note" : comment.resolved ? "Resolved" : "Unresolved"} · ${comment.note ? "Private note" : comment.seen ? "Read by Copilot" : "Unread by Copilot"}${(pageLinks[pagePath(comment.url)]?.participants || []).length ? ` · on this page: ${pageLinks[pagePath(comment.url)].participants.join(", ")}` : ""}`;
+    const readers = Object.keys(comment.readBy || {});
+    const unreaders = (comment.to || []).filter(n => !comment.readBy?.[n]);
+    state.title = comment.note ? "" : `Read by: ${readers.join(", ") || (comment.seen ? "an agent" : "nobody yet")}${unreaders.length ? `\nNot yet: ${unreaders.join(", ")}` : ""}`;
     const quoteLine = (comment.quote || "").replace(/!?\[([^\]\n]*)\]\([^\s)]+\)/g, "$1").replace(/\s+/g, " ");
     find(".quote-summary").textContent = quoteLine ? `“${quoteLine.slice(0, 90)}${quoteLine.length > 90 ? "…" : ""}”` : "Selected content";
     state.classList.toggle("resolved", comment.resolved);
