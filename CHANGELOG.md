@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.165.3 - 2026-11-22
+
+- An update from a session that is not in the team roster and gives no `as` is now refused with "pass as: your agent slug", instead of being recorded as "copilot", where its resolve counted for nobody and left the "Resolve thread" queue item standing (thread f9ed8652). Sites with no roster behave as before.
+- Removed: nothing this time.
+
 ## 0.165.2 - 2026-11-22
 
 - Waiting can name a catalog `run` (ends when done, unknown, or silent 10 min) or a `thread` (ends when someone else replies); a wait that names nothing is capped at 30 min (was 2 h). The team table shows what each agent waits on (thread f9ed8652).

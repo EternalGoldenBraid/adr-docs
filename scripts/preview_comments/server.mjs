@@ -158,7 +158,8 @@ export async function startCommentBridge({
   const agents = () => roster().filter(row => row.session);
   const ownerName = () => agents().find(row => row.session === sessionId)?.slug ?? settings.owner;
   const teamNames = () => agents().length ? agents().map(row => row.slug) : settings.team;
-  const nameFor = value => agents().find(row => row.session === value)?.slug ?? value;
+  const rowForSession = session => agents().find(row => row.session === session);
+  const nameFor = value => rowForSession(value)?.slug ?? value;
   const effective = () => ({ ...settings, owner: ownerName(), team: teamNames(), roster: roster(), fromRoster: agents().length > 0 });
   const canon = name => agents().find(row => row.legacy === name && row.slug !== name)?.slug ?? name;
   const addressed = (comment, name) => comment.to?.length ? comment.to.map(canon).includes(name) : name === ownerName();
@@ -781,8 +782,10 @@ export async function startCommentBridge({
     if (author === "copilot" && typeof input.from === "string" && /^[\w .@-]{1,60}$/.test(input.from.trim())) value.from = input.from.trim();
     // No `as`: name the sender by its session in the team roster.
     if (author === "copilot" && !value.from && typeof input.fromSession === "string") {
-      const row = roster().find(member => member.session && member.session === input.fromSession);
+      const row = rowForSession(input.fromSession);
       if (row?.name) value.from = String(row.name).slice(0, 60);
+      // A session missing from the roster would be recorded as "copilot", and its resolve votes would count for nobody.
+      else if (agents().length) throw new Error("This session is not in the team roster, so the update cannot be attributed. Pass as: your agent slug.");
     }
     if (author === "copilot" && input.proposal && typeof input.proposal === "object") {
       value.proposal = { before: String(input.proposal.before ?? "").slice(0, 8000), after: String(input.proposal.after ?? "").slice(0, 8000) };
@@ -1265,7 +1268,7 @@ export async function startCommentBridge({
       const refs = Array.isArray(input.refs) ? [...new Set(input.refs.filter(id => comments.has(id)))].slice(0, 20) : [];
       let from = typeof input.from === "string" && /^[\w .@-]{1,60}$/.test(input.from.trim()) ? input.from.trim() : undefined;
       if (!from && typeof input.fromSession === "string") {
-        const row = roster().find(member => member.session && member.session === input.fromSession);
+        const row = rowForSession(input.fromSession);
         if (row?.name) from = String(row.name).slice(0, 60);
       }
       const record = {

@@ -138,7 +138,7 @@ export async function connectDocumentReview({
         type: "object", required: ["comment_id"],
         properties: {
           comment_id: { type: "string" }, reply: { type: "string" },
-          as: { type: "string", description: "Your agent name; shown as the sender of the reply and used as the recipient when the user replies to it." },
+          as: { type: "string", description: "Your agent slug (required unless this session is in the team roster); shown as the sender of the reply, and your resolve counts under it." },
           resolved: { type: "boolean" },
           to: { type: "array", items: { type: "string" }, description: "Agent names this reply addresses; they get a mesh note, and a reply to someone who had resolved reopens the thread for them. Omit to address the thread's current recipients." },
           whisper: { type: "boolean", description: "With to: only those named (and you) see this reply." },
