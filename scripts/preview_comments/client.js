@@ -2193,11 +2193,6 @@
     replyInput.setSelectionRange(replyInput.value.length, replyInput.value.length);
     fitReply();
     if (!replyTarget) setReplyTarget({ id: note.dataset.mid, author, quote });
-    // Address the reply like the quoted message. Agent replies don't record which agent wrote them, so use whoever the message before it was sent to.
-    const thread = currentThread(), items = thread ? [thread, ...thread.replies] : [], at = items.findIndex(m => m.id === note.dataset.mid);
-    let to = recipientFor(items[at]?.from ?? "") ? [recipientFor(items[at].from)] : undefined;
-    for (let i = author === "You" ? at : at - 1; i >= 0 && !to; i--) if (items[i].author !== "copilot" && items[i].to?.length) to = items[i].to;
-    if (to) { replyTo = new Set(to); chipRow(find(".to-reply"), replyTo); }
     replyInput.focus();
   }
   find(".reply-form").addEventListener("submit", event => {
@@ -2218,6 +2213,9 @@
       if (names.some(name => !name)) { message(`/w: unknown name in "${w[1]}". Use team names, e.g. /w sim-agent text`, true); return; }
       whisper = new Set(names); text = w[2];
     }
+    // Picking fewer than the whole room is a whisper to the picked members; the default (everyone) is a normal room message.
+    const room = othersIn(currentThread() || {}), chosen = !find(".to-reply").hidden ? [...replyTo] : [];
+    if (!whisper && chosen.length && room.some(name => !replyTo.has(name))) whisper = new Set(chosen);
     const shots = replyShots.map(shot => shot.id);
     updateThread({ id: draft.id, reply: text, ...(shots.length ? { images: shots } : {}), ...(whisper ? { whisper: true, to: [...whisper] } : {}), ...(queued ? { queued: true } : {}), ...(target ? { inReplyTo: { id: target.id, quote: target.quote } } : {}), ...(whisper ? {} : toValue(replyTo, !find(".to-reply").hidden)) });
     if (!whisper) rememberTo(replyTo);

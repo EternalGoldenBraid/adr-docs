@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.166.5 - 2026-11-22
+
+- In a thread reply, leaving someone out of the To: chips now whispers to the ones picked; the default (everyone) is a normal room message. `q` (quote) no longer narrows the chips, so quoting never whispers by accident. `/w` still works.
+- Removed: the `q` quote's automatic narrowing of recipients to the quoted message's author.
+
 ## 0.166.4 - 2026-11-22
 
 - "Unread" on a thread card now only ever means you have not seen a reply (the NEW mark). Whether an agent has read your message moved to a hover on the thread's status line: who has read it and who has not yet.
