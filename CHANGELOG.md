@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.164.1 - 2026-11-22
+
+- The thread panel and the open thread survive a page reload (a page edited by an agent, or a restart): the same page reopened within a minute restores them. Unsent replies already survived.
+- Removed: nothing this time.
+
 ## 0.164.0 - 2026-11-22
 
 - Vote requests are state (thread 41d0772f): `request_doc_review_votes`, `cast_doc_review_vote` and `reveal_doc_review_votes` agent tools (also `adr-vote --request`) and `/agent-vote`. A request notifies each voter and writes `votes-queue.json` ("Vote on X" per voter; "Reveal X" for the requester when all have voted; "Close X on the votes in" after the deadline). Fixes agents having no `adr-vote` on their PATH. Test added.

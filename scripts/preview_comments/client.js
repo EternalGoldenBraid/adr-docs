@@ -3792,6 +3792,10 @@
   }, 5000);
   const leave = () => fetch("/__preview_comments/viewed", { method: "POST", keepalive: true, headers: { "Content-Type": "application/json", "X-Preview-Comment": "1" }, body: JSON.stringify({ path: viewedPath }) }).catch(() => {});
   addEventListener("pagehide", leave);
+  // A reload (an agent edited a page, or a restart) keeps the thread panel and the open thread, for the same page within a minute.
+  addEventListener("pagehide", () => {
+    try { sessionStorage.setItem("adr-ui", JSON.stringify({ path: pathNow(), at: Date.now(), open: !history.hidden, thread: selectedThread || null })); } catch { /* storage off */ }
+  });
   async function syncMarks() {
     enhanceVideos();
     try { await refreshHistory(); } catch { /* the bridge may be offline; keep the last marks */ }
@@ -3800,6 +3804,12 @@
     if (pendingOpen && historyComments.some(c => c.id === pendingOpen)) {
       sessionStorage.removeItem("adr-open-thread");
       openThreadById(pendingOpen);
+    }
+    let ui = null;
+    try { ui = JSON.parse(sessionStorage.getItem("adr-ui") || "null"); } catch { ui = null; }
+    sessionStorage.removeItem("adr-ui");
+    if (ui?.open && !pendingOpen && ui.path === pathNow() && Date.now() - ui.at < 60000 && history.hidden) {
+      if (ui.thread) await openThreadById(ui.thread).catch(() => {}); else await openHistory();
     }
     if (sessionStorage.getItem("adr-open-threads")) { sessionStorage.removeItem("adr-open-threads"); commands.threads(); }
     applyMarks();
