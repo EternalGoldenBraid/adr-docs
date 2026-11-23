@@ -9,6 +9,7 @@ import { homedir, hostname } from "node:os";
 import { execFile, spawn } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
+const OWNER_CLOSE_FROM = "2026-11-23T05:30:00Z";
 const USER_MARK_FROM = "2026-11-21T00:00:00";
 const ROOMS_FROM = "2026-11-22T08:30:00Z";
 const meshCodeDirectory = join(homedir(), ".copilot", "extensions", "agent-mesh");
@@ -609,7 +610,18 @@ export async function startCommentBridge({
       if (record.addRefs) comment.refs = [...new Set([...(comment.refs || []), ...record.addRefs])];
       if (record.removeRefs) comment.refs = (comment.refs || []).filter(id => !record.removeRefs.includes(id));
       if (record.removeReply) comment.replies = comment.replies.filter(item => item.id !== record.removeReply);
-      if (record.resolved !== undefined) {
+      if (record.resolved !== undefined && record.at >= OWNER_CLOSE_FROM) {
+        // The human closes and reopens a thread; an agent's resolve is only a quiet "nothing more from me" mark and closes nothing.
+        const who = record.author === "copilot" && record.from ? canon(record.from) : null;
+        if (record.author === "user") {
+          if (record.resolved && !comment.resolved) comment.resolvedAt = record.at;
+          comment.resolved = record.resolved;
+          if (!record.resolved) delete comment.resolvedBy;
+        } else if (who) {
+          if (record.resolved) comment.resolvedBy = { ...comment.resolvedBy, [who]: record.at };
+          else delete comment.resolvedBy?.[who];
+        }
+      } else if (record.resolved !== undefined) {
         // Each addressee resolves for itself, and so does the user (`you`); the thread closes when every addressee has. The user's mark is recorded only with `partial` (older records, which replay on start, closed for all); `closeAll` closes it for all, and reopening clears everyone's mark.
         const who = record.author === "copilot" && record.from ? canon(record.from) : null;
         const need = seatsIn(comment);

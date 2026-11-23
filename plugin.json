@@ -1,6 +1,6 @@
 {
   "name": "adr-docs",
-  "version": "0.169.0",
+  "version": "0.170.0",
   "description": "Review live Markdown, equations and figures with persistent comments in the current Copilot CLI session",
   "extensions": "./extensions",
   "skills": "./skills"

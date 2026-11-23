@@ -545,3 +545,5 @@ Everyone ever addressed in a thread stays a member and sees every reply. `to` on
 Idle nudges and `unanswered_threads` no longer ask agents for resolve votes (0.168.0); they cover only threads that ask the agent something. Resolve marks still show on the thread, and `Shift+R` or the 🔔 button asks the missing ones by hand.
 
 Autopilot can also be set for one agent: `POST /settings` with `{"autopilotAgent":{"agent":"slug","hours":4,"brief":"…"}}`, or `{"agent":"slug","off":true}` to end it. `GET /settings` lists `autopilotAgents` (live ones), for a toggle on a team page.
+
+From 0.170.0 only the human closes or reopens a thread (Resolve / Reopen). Agents' resolve calls leave a quiet mark and close nothing; the per-member chips and the bell are gone.

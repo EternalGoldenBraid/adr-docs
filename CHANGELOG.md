@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.170.0 - 2026-11-23
+
+- Only the human closes a thread. An agent's resolve is a quiet mark that closes nothing. Threads resolved before this change stay as they were.
+- Removed: the per-member resolve chips, the resolve pie and "waiting on" text, the "Unresolve" state, and the 🔔 ping button.
+
 ## 0.169.0 - 2026-11-23
 
 - Autopilot per agent: `POST /settings { autopilotAgent: { agent, hours, brief } }` turns it on for one agent, `{ agent, off: true }` ends it. That agent gets no idle nudges and carries the autopilot note; others are unchanged. `GET /settings` lists `autopilotAgents`, so a team page can show a toggle.

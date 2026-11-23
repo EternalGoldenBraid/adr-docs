@@ -1867,13 +1867,13 @@
     })));
     if (!state.nextElementSibling?.classList.contains("queue-lines")) { const row = document.createElement("span"); row.className = "queue-lines"; state.after(row); }
     queueLine(comment, state.nextElementSibling);
-    find(".thread-resolve").textContent = isNote(comment) ? "Remove" : comment.resolved ? "Reopen" : comment.resolvedBy?.you ? "Unresolve" : "Resolve";
+    find(".thread-resolve").textContent = isNote(comment) ? "Remove" : comment.resolved ? "Reopen" : "Resolve";
     const muteButton = find(".thread-mute"), muted = Boolean(comment.muted?.[seat()] || comment.muted?.you);
     muteButton.hidden = Boolean(isNote(comment) || !comment.to?.length);
     muteButton.textContent = muted ? "🔔 Unmute" : "🔕";
     muteButton.title = muted ? "Unmute: get notified of every reply again" : "Mute: stay in the thread, but get no notifications unless someone names you";
     muteButton.dataset.muted = muted ? "1" : "";
-    find(".thread-bell").hidden = Boolean(comment.resolved || isNote(comment) || !(comment.to ?? []).some(name => !comment.resolvedBy?.[name]));
+    find(".thread-bell").hidden = true;
     markSeen(comment);
     renderLinks(comment);
     if (find(".to-reply").dataset.for !== comment.id) { setReplyTarget(null); find(".to-reply").dataset.for = comment.id; renderReplyTo(comment); }
@@ -1947,8 +1947,7 @@
     const ids = [...find(".thread-list").children].map(card => card.dataset.commentId);
     const at = ids.indexOf(id);
     pendingFocus = selectedThread === id && comment.resolved ? id : ids[at + 1] ?? ids[at - 1];
-    if (!comment.resolved && comment.resolvedBy?.you) return updateThread({ id: crypto.randomUUID(), resolved: false, partial: true }, id);
-    return updateThread({ id: crypto.randomUUID(), resolved: !comment.resolved, ...(comment.resolved ? {} : { partial: true }) }, id);
+    return updateThread({ id: crypto.randomUUID(), resolved: !comment.resolved }, id);
   }
   // Who has resolved: the user and each addressee, as the sectors of a small pie before the thread state.
   const seat = () => settings.roster?.find(row => !row.session)?.slug;
@@ -1962,7 +1961,7 @@
     updateThread({ id: crypto.randomUUID(), reply: "Resolve vote please: resolve if nothing is open from you, or say what is.", to: missing });
     message(`Pinged ${missing.join(", ")}`);
   }
-  const resolveMarks = comment => (comment.to?.length ? [{ name: "you", done: Boolean(comment.resolvedBy?.you || comment.resolved) }, ...othersIn(comment).filter(name => settings.team.includes(name)).map(name => ({ name, done: Boolean(comment.resolvedBy?.[name] || comment.resolved) }))] : []);
+  const resolveMarks = comment => (false ? [{ name: "you", done: Boolean(comment.resolvedBy?.you || comment.resolved) }, ...othersIn(comment).filter(name => settings.team.includes(name)).map(name => ({ name, done: Boolean(comment.resolvedBy?.[name] || comment.resolved) }))] : []);
   // Awaiting: a thread the agent started, still open, with the agent's message last.
   const awaiting = comment => !comment.resolved && !comment.removed && !isNote(comment) && comment.author === "copilot" &&
     (comment.replies.at(-1)?.author ?? "copilot") === "copilot";
