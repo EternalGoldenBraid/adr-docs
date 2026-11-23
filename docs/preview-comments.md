@@ -370,7 +370,7 @@ Start a reply with `/w name text` (several names with commas, team names such as
 
 ## Rooms
 
-The Team panel's **Room** tab (`-` then `m`) lists the rooms you are in. A room is a shared conversation among three or more mesh members, and its posts are visible only inside it, never as direct messages. **＋ New room** asks for a topic and members; agents can open one with `room_open`. Posting as you uses Ctrl+Enter. Rooms live in the mesh database, so any harness with the room tools sees the same room.
+The Team panel's **Room** tab (`-` then `m`) lists the rooms you are in. A room is a shared conversation among three or more mesh members, and its posts are visible only inside it, never as direct messages. **＋ New room** asks for a topic and members; agents can open one with `room_open`. Posting as you uses Enter (Shift+Enter is a new line). Rooms live in the mesh database, so any harness with the room tools sees the same room.
 
 ## Index toggle
 

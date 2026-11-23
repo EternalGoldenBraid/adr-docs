@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.191.0 - 2026-11-24
+
+- Enter sends in every comment, reply, edit and room box; Shift+Enter is a new line. Ctrl/Cmd+Enter still sends, and Ctrl+Shift+Enter still interrupts. Enter still picks from an open `@` list, and does not send while an IME is composing.
+- Removed: nothing this time.
+
 ## 0.190.0 - 2026-11-24
 
 - `Q` (Shift+q) on a focused agent message quotes it and whispers the reply to that agent alone: the To: chips narrow to them. `Q` on more agents' messages adds each one. A plain `q` quotes for the whole room again (thread 28abcf10).

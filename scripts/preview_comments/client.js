@@ -430,6 +430,8 @@
   // ":set": a vim-navigable list of the preferences kept in this browser; changes apply at once.
   const setPanel = find(".set-panel");
   const pref = (key, fallback) => localStorage.getItem(key) ?? fallback;
+  // Enter sends; Shift+Enter is a new line; Ctrl/Cmd+Enter still sends (with Shift it interrupts). An open @ picker takes Enter first.
+  const sendKey = event => event.key === "Enter" && !event.isComposing && !event.defaultPrevented && (event.ctrlKey || event.metaKey || !event.shiftKey);
   const clamp = (value, lo, hi) => Math.min(hi, Math.max(lo, value));
   const percent = (key, lo, hi, step, apply) => ({
     value: () => `${pref(key, 100)}%`,
@@ -1202,11 +1204,11 @@
           }
           const send = document.createElement("div");
           send.className = "room-send";
-          const input = Object.assign(document.createElement("textarea"), { placeholder: "Post to the room · Ctrl+Enter sends", value: typing });
+          const input = Object.assign(document.createElement("textarea"), { placeholder: "Post to the room · Enter sends, Shift+Enter new line", value: typing });
           const go = Object.assign(document.createElement("button"), { type: "button", textContent: "Post" });
           const post = () => { const content = input.value.trim(); if (content) api("face-post", { id: roomId, content }).then(() => { input.value = ""; roomSeen = ""; loadRooms(); }).catch(e => message(e.message, true)); };
           go.addEventListener("click", post);
-          input.addEventListener("keydown", e => { e.stopPropagation(); if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); post(); } });
+          input.addEventListener("keydown", e => { e.stopPropagation(); if (sendKey(e)) { e.preventDefault(); post(); } });
           send.append(input, go);
           holder.append(log, send);
           log.scrollTop = log.scrollHeight;
@@ -1720,7 +1722,7 @@
         const save = () => input.value.trim() && input.value !== text ? opts.onEdit(input.value) : cancel();
         const cancel = () => { input.replaceWith(body); tools.hidden = false; };
         input.addEventListener("keydown", event => {
-          if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) { event.preventDefault(); save(); }
+          if (sendKey(event)) { event.preventDefault(); save(); }
           if (event.key === "Escape") { event.stopPropagation(); cancel(); }
         });
         body.replaceWith(input);
@@ -3864,7 +3866,7 @@
     });
     const notes = threadNodes(comment, redo);
     const input = document.createElement("textarea");
-    input.placeholder = comment.comment ? "Reply… (Ctrl+Enter)" : "Add a comment… (Ctrl+Enter)";
+    input.placeholder = comment.comment ? "Reply… (Enter sends)" : "Add a comment… (Enter sends)";
     const popTo = new Set(comment.to?.length ? comment.to : defaultTo());
     const popRow = document.createElement("div");
     popRow.className = "to";
@@ -3876,7 +3878,7 @@
       pop.hidden = true;
     };
     input.addEventListener("keydown", event => {
-      if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) { event.preventDefault(); send(); }
+      if (sendKey(event)) { event.preventDefault(); send(); }
       if (event.key === "Escape") { event.stopPropagation(); pop.hidden = true; }
     });
     const actions = document.createElement("div");
@@ -3935,10 +3937,10 @@
     pill.setAttribute("aria-expanded", String(!toolbar.hidden));
   });
   textarea.addEventListener("keydown", event => {
-    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) { event.preventDefault(); interruptRequested = event.shiftKey; find("form").requestSubmit(); }
+    if (sendKey(event)) { event.preventDefault(); interruptRequested = event.shiftKey; find("form").requestSubmit(); }
   });
   replyInput.addEventListener("keydown", event => {
-    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) { event.preventDefault(); interruptRequested = event.shiftKey; find(".reply-form").requestSubmit(); }
+    if (sendKey(event)) { event.preventDefault(); interruptRequested = event.shiftKey; find(".reply-form").requestSubmit(); }
   });
   const clock = seconds => `${Math.floor(seconds / 60)}:${(seconds % 60).toFixed(2).padStart(5, "0")}`;
   const videoName = video => (video.currentSrc || video.src || "video").split("/").pop().split("?")[0];
