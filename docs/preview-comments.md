@@ -550,3 +550,5 @@ From 0.170.0 only the human closes or reopens a thread (Resolve / Reopen). Agent
 A page's front-matter `owner:` and the agent that started a thread also close it with their resolve (0.171.0).
 
 `:set` opens a settings list you drive with the keyboard: `j`/`k` move, `h`/`l` (or Enter, Space) change a value, `0` resets it, Esc closes. Site font size scales the page text; review UI size scales the panels and bubbles; the rest are thread order, vim keys, full-screen threads and read aloud. Values are kept in this browser.
+
+`Q` (Shift+q) on a focused agent message quotes it and whispers the reply to that agent only; `Q` on other agents' messages adds them to the whisper. A plain `q` quotes for the whole room again. `Q` on a message that is not from an agent only quotes, and says so.

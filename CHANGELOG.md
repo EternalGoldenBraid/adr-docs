@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.190.0 - 2026-11-24
+
+- `Q` (Shift+q) on a focused agent message quotes it and whispers the reply to that agent alone: the To: chips narrow to them. `Q` on more agents' messages adds each one. A plain `q` quotes for the whole room again (thread 28abcf10).
+- Removed: nothing this time.
+
 ## 0.189.0 - 2026-11-23
 
 - `:set` (also `:settings`) opens a vim-navigable settings list: j/k move, h/l change, 0 resets, Esc closes. It holds site font size (70–160%, page text), review UI size (80–150%, panels and bubbles), newest-first order, vim keys, full-screen threads and read aloud. Changes apply at once and stay in this browser.

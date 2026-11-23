@@ -2333,7 +2333,9 @@
   });
   let replyTo = new Set();
   const replyAssist = attachAssist(replyInput, () => replyTo, find(".to-reply"), true);
+  let quoteWhisper = false;
   function renderReplyTo(comment) {
+    quoteWhisper = false;
     replyTo = new Set(comment?.to?.length ? comment.to : defaultTo());
     chipRow(find(".to-reply"), replyTo, () => replyAssist.update(), true);
   }
@@ -2368,7 +2370,8 @@
   replyInput.addEventListener("input", fitReply);
   textarea.addEventListener("input", () => keepDraft(pageDraftKey(), textarea.value));
   textarea.addEventListener("input", () => { if (!autoSized) { textarea.style.height = "auto"; textarea.style.height = `${Math.min(textarea.scrollHeight + 2, 240)}px`; } });
-  function replyToMessage(item) {
+  // Q quotes and whispers to the quoted agent; further Q on other agents add them, and a plain q goes back to the whole room.
+  function replyToMessage(item, whisper = false) {
     const note = item?.closest?.(".note");
     if (!note?.dataset.mid) { message("Focus a message (j/k), optionally select text in it, then q", true); return; }
     const picked = shadow.getSelection?.() ?? getSelection();
@@ -2382,6 +2385,14 @@
     replyInput.setSelectionRange(replyInput.value.length, replyInput.value.length);
     fitReply();
     if (!replyTarget) setReplyTarget({ id: note.dataset.mid, author, quote });
+    const name = whisper && note.classList.contains("copilot") ? recipientFor(author) : undefined;
+    if (name) {
+      if (!quoteWhisper) { quoteWhisper = true; replyTo.clear(); }
+      replyTo.add(name);
+    } else if (whisper) message("Q whispers to an agent; this message is not from one", true);
+    else if (quoteWhisper) renderReplyTo(currentThread());
+    if (name) chipRow(find(".to-reply"), replyTo, () => replyAssist.update(), true);
+    replyAssist.update();
     replyInput.focus();
   }
   find(".reply-form").addEventListener("submit", event => {
@@ -2771,6 +2782,7 @@
       else if (readState && (key === "p" || key === "<" || key === ">")) readerStep(key === "p" ? 0 : key === "<" ? -1 : 1);
       else if (key === "p") readThreads([currentThread()]);
       else if (key === "q") replyToMessage(field);
+      else if (key === "Q") replyToMessage(field, true);
       else if (key === "R") pingResolve();
       else if (key === "u") field.querySelector?.(".quote-ref")?.click();
       else if (key === "i") replyInput.focus();
