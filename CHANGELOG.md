@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.172.0 - 2026-11-23
+
+- Code map: `scripts/codemap/codemap.py config.json` turns git repositories into one nested DocGraph, one level per click: repo → folders → files → classes and functions → methods, plus a machines level from compose files and a ROS level (publishers and subscribers joined by topic). Every box carries a `</>` source link; `--check` lists files no box points to.
+- DocGraph: Backspace goes up a layer, a clickable path (Top › folder › file) shows where you are, a layer with one box no longer zooms to fill the screen, and Enter or double click on a box with a layer opens the layer before the source (`o` still opens the source).
+- Removed: nothing this time.
+
 ## 0.171.1 - 2026-11-23
 
 - Fix: a page whose URL ends in `.html` now finds its file, so the page owner's resolve closes its threads there too.

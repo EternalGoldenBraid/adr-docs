@@ -89,6 +89,12 @@ The viewer reads only files inside a mapped checkout (no dot-folders, no key or
 secret-looking names, 2 MB cap) and only for loopback hosts. After changing
 the viewer, run `npm run build:code-viewer`.
 
+**Code map.** `python3 scripts/codemap/codemap.py config.json` builds a nested
+graph from git repos (`{"out": "public/graph/codemap.json", "repos": [{"name": "app", "path": "/abs/app"}], "compose": [{"repo": "app", "glob": "compose/*.yaml"}]}`):
+repo, folders, files, classes and functions, with every box linked to its
+source. Embed it with `<DocGraph src="/graph/codemap.json" />`; Enter or
+double-click opens a box, Backspace goes up. `--check` lists files no box points to.
+
 `tools/fetch_arxiv.py <id> --root <docs>` turns an arXiv paper into a
 commentable page.
 

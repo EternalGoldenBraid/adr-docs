@@ -32,7 +32,7 @@ const cmdInput = ref(null)
 const flash = ref('')
 const presenting = ref(null)
 const selTitle = computed(() => (selected.value && cy ? cy.getElementById(selected.value).data('title') || '' : ''))
-const HELP = "DOC-GRAPH(1)\n\nLAYERS\n  The page owns the keys. Click the graph to enter it\n  (mode line: GRAPH); Esc in NORMAL returns to the page.\nMODES\n  NORMAL  fly the view         VISUAL  walk node to node\n  INSERT  edit the graph       Esc     back to NORMAL\nNORMAL\n  h j k l   pan (H J K L: faster)\n  + - 0     zoom in / out / fit\n  v  visual     i  insert     u  up one layer\n  Enter     open the selected \u25b8 layer or \u2197 page\nVISUAL\n  h j k l   nearest node in that direction\n  Enter     open \u25b8 layer or \u2197 page, else zoom to node\n  o         open the node's </> code (local viewer, GitHub online)\n  c         comment on the node\n  s         attach a region screenshot\nINSERT\n  h j k l   select neighbour\n  arrows    nudge node (shift: x5)\n  Enter     edit text    o  new node    x  delete\nCOMMANDS\n  :help :man   this page     :w  export JSON\n  :fit         fit all       :q  close\n  :present     full-screen presentation (→ ← story, ↓ ↑ deeper, Esc exits)\nMOUSE / TRACKPAD\n  swipe pans \u00b7 pinch or shift+swipe zooms\n  dbl-click: \u2197 opens page, \u25b8 opens layer,\n    node/lane zooms, empty fits\nLINKS\n  a node with a \"link\" (e.g. \"/autonomy\") shows \u2197;\n  external URLs open as normal links"
+const HELP = "DOC-GRAPH(1)\n\nLAYERS\n  The page owns the keys. Click the graph to enter it\n  (mode line: GRAPH); Esc in NORMAL returns to the page.\nMODES\n  NORMAL  fly the view         VISUAL  walk node to node\n  INSERT  edit the graph       Esc     back to NORMAL\nNORMAL\n  h j k l   pan (H J K L: faster)\n  + - 0     zoom in / out / fit\n  v  visual     i  insert     u / Backspace  up one layer\n  Enter     open the selected \u25b8 layer or \u2197 page\n  (a path above the graph shows where you are; click to jump)\nVISUAL\n  h j k l   nearest node in that direction\n  Enter     open \u25b8 layer or \u2197 page, else zoom to node\n  o         open the node's </> code (local viewer, GitHub online)\n  c         comment on the node\n  s         attach a region screenshot\nINSERT\n  h j k l   select neighbour\n  arrows    nudge node (shift: x5)\n  Enter     edit text    o  new node    x  delete\nCOMMANDS\n  :help :man   this page     :w  export JSON\n  :fit         fit all       :q  close\n  :present     full-screen presentation (→ ← story, ↓ ↑ deeper, Esc exits)\nMOUSE / TRACKPAD\n  swipe pans \u00b7 pinch or shift+swipe zooms\n  dbl-click: \u2197 opens page, \u25b8 opens layer (else </> source),\n    node/lane zooms, empty fits\nLINKS\n  a node with a \"link\" (e.g. \"/autonomy\") shows \u2197;\n  external URLs open as normal links"
 const topic = ref('')
 const activeTab = ref('')
 const TOPICS = ref([])
@@ -220,6 +220,7 @@ const save = () => localStorage.setItem(STORE, JSON.stringify(serialise()))
 
 const layer = ref(null)
 const layerTitle = ref('')
+const crumbs = ref([])
 
 const childrenOf = id => cy.nodes().filter(n => n.data('inside') === id)
 
@@ -233,6 +234,9 @@ function showBadges() {
 function showLayer(id) {
   layer.value = id
   layerTitle.value = id ? cy.getElementById(id).data('title') : ''
+  const path = []
+  for (let c = id; c;) { const n = cy.getElementById(c); path.unshift({ id: c, title: n.data('title') }); c = n.data('inside') || null }
+  crumbs.value = path
   const visible = cy.nodes().filter(n => (n.data('inside') || null) === id && (n.data('kind') !== 'lane' || !id))
   cy.batch(() => {
     cy.elements().style('display', 'none')
@@ -244,6 +248,7 @@ function showLayer(id) {
   select(null)
   cy.resize()
   cy.fit(visible, 40)
+  if (cy.zoom() > 1.2) { cy.zoom(1.2); cy.center(visible) }
   moved = false
 }
 
@@ -546,8 +551,8 @@ onMounted(async () => {
       return
     }
     if (openLink(e.target)) return
+    if (childrenOf(e.target.id()).length) { showLayer(e.target.id()); return }
     if (e.target.data('code') && !editMode.value && openCode(e.target)) return
-    if (childrenOf(e.target.id()).length) showLayer(e.target.id())
     else if (editMode.value) { select(e.target); startEdit() }
     else cy.animate({ fit: { eles: e.target, padding: 120 }, duration: 250 })
   })
@@ -647,7 +652,7 @@ function onKey(e) {
     return
   }
   if (k === '0') { done(); fitAll(); return }
-  if (k === 'u' && layer.value) { done(); back(); return }
+  if ((k === 'u' || k === 'Backspace') && layer.value) { done(); back(); return }
   if (k === 'i') { done(); setMode('insert'); return }
   if (k === 'v' && mode.value !== 'visual') { done(); setMode('visual'); return }
 
@@ -663,8 +668,8 @@ function onKey(e) {
     if (k === 'Enter' && selected.value) {
       done()
       if (hasLink()) openLink(sel())
-      else if (hasCode()) openCode(sel())
       else if (hasLayer()) openSelected()
+      else if (hasCode()) openCode(sel())
       else cy.animate({ fit: { eles: sel(), padding: 120 }, duration: 250 })
       return
     }
@@ -711,7 +716,10 @@ onUnmounted(() => { removeEventListener('hashchange', landOnNode); document.remo
     <strong>{{ title }}</strong>
     <a v-if="backTo" class="xp-back" :href="withBase(backTo)">← {{ backLabel }}</a>
     <button v-if="layer" @click="back">← Back</button>
-    <strong v-if="layer">{{ layerTitle }}</strong>
+    <span v-if="layer" class="xp-crumbs">
+      <button @click="showLayer(null)">Top</button>
+      <template v-for="(c, i) in crumbs" :key="c.id">› <button v-if="i < crumbs.length - 1" @click="showLayer(c.id)">{{ c.title }}</button><strong v-else>{{ c.title }}</strong></template>
+    </span>
     <span v-if="tabList.length" class="xp-tabs">
       <button :class="{ on: !activeTab }" @click="pickTab(null)">All</button>
       <button v-for="t in tabList" :key="t.label" :class="{ on: activeTab === t.label }" @click="pickTab(t)">{{ t.label }}</button>
@@ -766,6 +774,7 @@ onUnmounted(() => { removeEventListener('hashchange', landOnNode); document.remo
 .xp-label b { font-weight: 700; }
 .xp-label code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.95em; background: #ffffff1f; border-radius: 3px; padding: 0 3px; }
 .xp-label span { white-space: pre-line; font-weight: 400; font-size: 0.92em; opacity: .9; overflow: hidden; -webkit-box-orient: vertical; }
+.xp-crumbs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 13px; }
 .xp-back { font-size: 13px; text-decoration: none; padding: 5px 10px; border: 1px solid var(--vp-c-divider); border-radius: 8px; }
 .xp-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
 .xp-tabs .on { background: var(--vp-c-brand-soft); border-color: var(--vp-c-brand-1); }
