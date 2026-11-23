@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.172.1 - 2026-11-23
+
+- Code map: the ROS level now flows left to right (cycles no longer push every node into one column), one edge per node pair with up to two topic names, and `"links"` in the config add edges the code does not show (e.g. a UDP link to a bridge). DocGraph: `o` opens the source of the selected box in normal mode too.
+- Removed: nothing this time.
+
 ## 0.172.0 - 2026-11-23
 
 - Code map: `scripts/codemap/codemap.py config.json` turns git repositories into one nested DocGraph, one level per click: repo → folders → files → classes and functions → methods, plus a machines level from compose files and a ROS level (publishers and subscribers joined by topic). Every box carries a `</>` source link; `--check` lists files no box points to.
