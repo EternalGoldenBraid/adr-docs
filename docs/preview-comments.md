@@ -537,3 +537,7 @@ Drag a panel by its header (the comment panel by its top strip); the position is
 ## Threads as rooms
 
 Everyone ever addressed in a thread stays a member and sees every reply. `to` on a reply says whom to ping now; with no `to`, every unmuted member is notified. Mute a thread with 🔕 in its header (`mute: true` for agents): you stay a member and can read it, but get no notes or nudges unless a reply names you in `to`. Muted members are not needed to resolve.
+
+## Autopilot
+
+`:autopilot 8 finish the join runs, then report` (or the Autopilot button in the history header) starts a timed mode. While it runs, ADR sends no idle nudges, and every mesh note and `unanswered_threads` result to an agent says to keep working, post one finish report, ask only if blocked, and not wait for votes or resolves. The optional brief goes to everyone. Your own replies still reach agents. `:autopilot off` or the button ends it; otherwise the clock does (1 minute to 48 hours), and the normal nudges come back. Autopilot removes the pull toward the platform; it cannot make an agent keep going, so put the stop condition in the brief.

@@ -479,6 +479,12 @@ test("comments addressed to other agents stay out of the owner's unread and are 
   assert.equal(bridge.pending().count, 1);
   assert.equal((await post("bad", ["no spaces"])).status, 400);
   assert.equal((await call("/settings", { owner: "alice", team: ["alice", "bob"], default: "last" })).body.default, "last");
+  assert.equal((await call("/settings", { autopilot: { hours: 0 } })).status, 400);
+  const on = (await call("/settings", { autopilot: { hours: 2, brief: "finish the runs" } })).body.autopilot;
+  assert.match(on.brief, /finish the runs/);
+  assert.match(bridge.unanswered({ as: "bob" }).autopilot, /keep working/);
+  assert.equal((await call("/settings", { autopilot: null })).body.autopilot, undefined);
+  assert.equal(bridge.unanswered({ as: "bob" }).autopilot, undefined);
   await bridge.close();
   rmSync(directory, { recursive: true, force: true });
 });

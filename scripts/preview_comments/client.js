@@ -148,6 +148,7 @@
     <section class="panel history" hidden aria-labelledby="history-title">
       <div class="history-head"><h2 id="history-title">Comment history</h2><div class="tabs" role="tablist"></div><small class="history-counts"></small>
       <button class="history-team" type="button" title="Team status (:mesh)">Team</button>
+      <button class="history-autopilot" type="button" title="Autopilot: no nudges or gates on work for a few hours (:autopilot)">Autopilot</button>
       <button class="history-refresh icon" type="button" title="Refresh">↻</button>
       <button class="history-full icon" type="button" title="Toggle full screen (f)" aria-label="Full screen">⛶</button>
       <button class="history-close icon" type="button" title="Close (Esc)" aria-label="Close">✕</button></div>
@@ -206,6 +207,7 @@
   const find = selector => shadow.querySelector(selector);
   // Calm mode (":calm"): ADR ignores keys, clicks and selections and hides its marks, so a page with its own controls (a console) is left alone.
   // Per page, or for the whole site with ":calm site". Only ":" still works. Registered first, so the later document listeners never see the event.
+  let autopilotActive = false;
   const CALM_KEY = "preview-comments-calm";
   const calmList = () => { try { return JSON.parse(localStorage.getItem(CALM_KEY) || "[]"); } catch { return []; } };
   const calmPath = () => location.pathname.replace(/\.html$/, "").replace(/\/index$/, "/");
@@ -355,7 +357,7 @@
     find(".sb-hint").textContent = !history.hidden ? (selectedThread
       ? "j/k scroll messages · J/K next/prev thread · q reply to message · p read · r resolve · i reply · o page · h back · Esc"
       : "j/k move · l open · o go to page · r resolve · [ ] tabs · P page H page history O open · R resolved · Esc") : visual ? "c comment · Esc cancel · hjkl extend" : caretMode ? `hjklwb move caret · ${KM.page.visual} select · V paragraph · ${KM.page.comment} comment · Esc scroll mode` : `j/k scroll · i caret · ${KM.page.visual} select text · ${KM.page.comment} comment · ${KM.leader}${KM.leaderKeys.history} threads · ] next awaiting · : commands · :help`;
-    find(".sb-mode").textContent = `-- ${mode}${prefix ? " " + prefix : ""} --`;
+    find(".sb-mode").textContent = `-- ${mode}${prefix ? " " + prefix : ""}${autopilotActive ? " · AUTOPILOT" : ""} --`;
     vimButton.setAttribute("aria-pressed", String(vimEnabled));
   }
   const cmdbar = find(".cmdbar"), cmdinput = find(".cmdinput");
@@ -390,7 +392,8 @@
     ]],
     ["Search & commands", [
       "/ or :grep [-d N] [-u N] [-s] [-p|-c] <regex> searches pages and threads (no flag: all pages; -d 0: this page; -d N: N levels below; -u N: N ancestors; -1 = all)",
-      "Commands: :help [section] :man :history :threads :chat :comment :tree :new :present :export [single|compress] :read [stop] :figure :restart :grep :vim off|on :order newest|oldest :rail [on|off] :calm [site|off] :keys",
+      "Commands: :help [section] :man :history :threads :chat :comment :tree :new :present :export [single|compress] :read [stop] :figure :restart :grep :vim off|on :order newest|oldest :rail [on|off] :calm [site|off] :autopilot HOURS [brief]|off :keys",
+      ":autopilot 8 finish the join runs: for that many hours ADR sends no nudges and every note to an agent says to keep working, post one finish report and not wait for votes or resolves. The brief goes to everyone. The Autopilot button in the history header does the same; :autopilot off ends it.",
       ":calm silences ADR on this page (:calm site: every page; :calm off restores): no shortcuts, comment popups, screenshots or marks, so a page with its own controls is left alone. Only : still works; the status bar shows CALM.",
       ":threads opens the threads about this page: those started on it and those whose text links to it. In the What's new list (n), 💬 N counts them and t opens the page with them.",
       "Keys are configured in ~/.config/agent-doc-review/keymap.json",
@@ -473,6 +476,7 @@
       message(on ? `Calm: ADR is quiet ${site ? "on every page" : "on this page"}; only ":" works. ":calm off" restores it.` : "Calm off: comments and keys are back.");
     },
     tts: arg => ["on", "off"].includes(arg) ? api("settings", { tts: arg === "on" }).then(v => { settings = v; message("Read aloud auto-start: " + arg); }).catch(e => message(e.message, true)) : message("Read-aloud auto-start is " + (settings.tts === false ? "off" : "on") + ". Usage: :tts on|off", true),
+    autopilot: (_first, line = "") => setAutopilot(line),
     default: arg => ["owner", "last"].includes(arg) ? api("settings", { default: arg }).then(v => { settings = v; message("Default recipients: " + arg); }).catch(e => message(e.message, true)) : message("Usage: :default owner|last", true),
     vim: arg => { if ((arg === "off") === vimEnabled) vimButton.click(); },
   };
@@ -1194,8 +1198,29 @@
   find(".mesh-panel").addEventListener("mouseenter", () => clearTimeout(peekTimer));
   corner.addEventListener("mouseleave", leavePeek);
   find(".history-team").addEventListener("click", () => openMesh());
+  // Autopilot: "8h brief text" starts it, "off" ends it. The server stops nudges and tells agents to keep working until the time is up.
+  function showAutopilot() {
+    const button = find(".history-autopilot"), ap = settings.autopilot;
+    autopilotActive = Boolean(ap);
+    button.classList.toggle("on", Boolean(ap));
+    button.textContent = ap ? `Autopilot · until ${new Date(ap.until).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "Autopilot";
+    button.title = ap ? `On${ap.brief ? ": " + ap.brief : ""}. Click to end.` : "Autopilot: no nudges or gates on work for a few hours (:autopilot)";
+  }
+  function setAutopilot(line) {
+    const text = String(line ?? "").trim(), off = /^(off|stop)$/i.test(text);
+    const match = text.match(/^(\d+(?:\.\d+)?)\s*h?\s*(.*)$/i);
+    if (!off && !match) { message("Usage: :autopilot HOURS [brief] · :autopilot off", true); return Promise.resolve(); }
+    return api("settings", { autopilot: off ? null : { hours: Number(match[1]), brief: match[2] } })
+      .then(v => { settings = v; showAutopilot(); modeLabel(); message(off ? "Autopilot off: nudges are back." : `Autopilot on until ${new Date(v.autopilot.until).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}.`); })
+      .catch(e => message(e.message, true));
+  }
+  find(".history-autopilot").addEventListener("click", () => {
+    if (settings.autopilot) return setAutopilot("off");
+    const answer = prompt("Autopilot for how many hours? Add a brief after it, for example: 8 finish the join runs, then report.", "8");
+    if (answer) setAutopilot(answer);
+  });
   let settings = { owner: "owner", team: [], default: "owner", last: [] };
-  const loadSettings = () => api("settings").then(value => { settings = value; }).catch(() => {});
+  const loadSettings = () => api("settings").then(value => { settings = value; showAutopilot(); }).catch(() => {});
   const recipients = () => [...new Set([settings.owner, ...settings.team])];
   // A message's `from` is a display name ("ADR agent"); recipients are slugs ("adr-agent"). Unknown names are dropped.
   const recipientFor = name => {

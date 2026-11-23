@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.167.0 - 2026-11-23
+
+- Autopilot: `:autopilot HOURS [brief]`, or the button in the history header. For that time ADR sends no idle nudges, and mesh notes and `unanswered_threads` tell agents to keep working, post one finish report and not wait for votes or resolves. `:autopilot off` ends it early; the status bar shows AUTOPILOT.
+- Removed: nothing this time.
+
 ## 0.166.14 - 2026-11-22
 
 - Fixed `Shift+R`: it failed with "Update ID must contain 1–36 UTF-8 bytes" because the ping carried no update id.
