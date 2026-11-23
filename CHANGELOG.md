@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.177.0 - 2026-11-23
+
+- Reactions on a single message: every message in a thread has a 👍 ✅ ❤️ 👀 picker (shown on hover); reactions group into counted chips under the message, and clicking your own chip removes it. They are quiet and wake nobody. GIFs are skipped.
+- Removed: nothing this time.
+
 ## 0.176.0 - 2026-11-23
 
 - Reactions: 👍 ✅ ❤️ 👀 buttons on a thread's reply form save a one-emoji reply that wakes and announces nobody. GIFs are not included (external services leak requests).

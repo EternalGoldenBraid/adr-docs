@@ -105,7 +105,7 @@
       .pill{position:relative}.pill.alert{border-color:#ff5a4f}.pill.alert::before{top:-4px;right:-2px}
       @keyframes ping{0%{box-shadow:0 0 0 0 #ff5a4faa}100%{box-shadow:0 0 0 9px #ff5a4f00}}
       .note{position:relative}.thread-messages>*:focus-visible{outline:2px solid #74c0fc;outline-offset:1px}.note .tools{display:flex;gap:6px;position:absolute;top:4px;right:8px;margin:0}.note .tools button{padding:2px 8px;font-size:12px}
-      .note.private{border-left:3px solid #ffb02e}.note textarea{width:100%;box-sizing:border-box;min-height:54px}
+      .note.private{border-left:3px solid #ffb02e}.note .reacts{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;align-items:center}.note .reacts button{padding:1px 6px;font-size:12px;border-radius:10px}.note .reacts .chip.mine{border-color:#74c0fc}.note .reacts .picker{opacity:0;transition:opacity .1s}.note:hover .reacts .picker,.note:focus-within .reacts .picker{opacity:1}.note textarea{width:100%;box-sizing:border-box;min-height:54px}
       .shots{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.shots:empty{display:none}
       .shot{position:relative}.shot img{display:block;max-width:120px;max-height:90px;border:1px solid #59616d;border-radius:6px}
       .shot button{position:absolute;top:2px;right:2px;padding:0 6px;border-radius:50%;font-size:12px;line-height:18px}
@@ -1654,6 +1654,29 @@
       if (opts.onDelete) tool("Delete", opts.onDelete);
       note.append(tools);
     }
+    if (opts.onReact) {
+      const row = document.createElement("div");
+      row.className = "reacts";
+      for (const chip of opts.reactions || []) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = chip.mine ? "chip mine" : "chip";
+        button.textContent = `${chip.emoji} ${chip.count}`;
+        button.title = chip.who.join(", ");
+        button.addEventListener("click", () => opts.onReact(chip.emoji, chip.mine));
+        row.append(button);
+      }
+      const picker = document.createElement("span");
+      picker.className = "picker";
+      for (const emoji of REACTIONS) {
+        const button = document.createElement("button");
+        button.type = "button"; button.textContent = emoji; button.title = `React ${emoji}`;
+        button.addEventListener("click", () => opts.onReact(emoji, false));
+        picker.append(button);
+      }
+      row.append(picker);
+      note.append(row);
+    }
     return note;
   }
   const imageUrls = new Map();
@@ -1711,17 +1734,38 @@
     card.append(row);
     return card;
   }
+  const REACTIONS = ["👍", "✅", "❤️", "👀"];
+  const reactionText = reply => reply.comment.replace(/^> [^\n]*\n\n/, "").trim();
   function threadNodes(comment, run) {
     const nodes = [];
+    const known = new Set([comment.id, ...comment.replies.map(r => r.id)]);
+    const reactions = new Map();
+    const isReaction = reply => reply.reaction && reply.inReplyTo && known.has(reply.inReplyTo.id);
+    for (const reply of comment.replies.filter(isReaction)) {
+      const key = reply.inReplyTo.id;
+      const chips = reactions.get(key) || new Map();
+      const chip = chips.get(reactionText(reply)) || { emoji: reactionText(reply), count: 0, who: [], mine: undefined };
+      chip.count += 1;
+      chip.who.push(reply.author !== "copilot" ? "You" : reply.from || "Copilot");
+      if (reply.author !== "copilot") chip.mine = reply.id;
+      chips.set(chip.emoji, chip);
+      reactions.set(key, chips);
+    }
+    const reactOn = (id, text) => ({
+      reactions: [...(reactions.get(id)?.values() || [])],
+      onReact: (emoji, mine) => mine ? run({ removeReply: mine })
+        : run({ id: crypto.randomUUID(), reply: emoji, reaction: true, inReplyTo: { id, quote: text.slice(0, 140) } }),
+    });
     if (comment.comment) {
       nodes.push(renderNote(comment.author === "copilot" ? comment.from || "Copilot" : "You", comment.comment, comment.at, {
         note: comment.note, edited: comment.commentEdited, mid: comment.id, from: comment.from, to: comment.author !== "copilot" ? comment.to : undefined,
-        onEdit: text => run({ editComment: text }),
+        onEdit: text => run({ editComment: text }), ...reactOn(comment.id, comment.comment),
       }));
     }
     if (comment.proposal) nodes.push(proposalCard(comment.proposal, comment, 0, run));
     if (comment.images?.length) nodes.push(thumbnails(comment.images, id => run({ removeImages: [id] })));
     for (const reply of comment.replies) {
+      if (isReaction(reply)) continue;
       const mine = reply.author !== "copilot";
       const sender = reply.from || "Copilot";
       const target = reply.inReplyTo;
@@ -1730,7 +1774,7 @@
         note: reply.note, edited: reply.edited, mid: reply.id, from: reply.from, to: mine ? reply.to : undefined, whisper: reply.whisper,
         ref: target && { id: target.id, quote: (target.quote || "").slice(0, 140), author: targetAuthor?.author === "copilot" ? targetAuthor.from || "Copilot" : "You" },
         onEdit: mine ? text => run({ editReply: { id: reply.id, text } }) : undefined,
-        onDelete: () => run({ removeReply: reply.id }),
+        onDelete: () => run({ removeReply: reply.id }), ...reactOn(reply.id, reactionText(reply)),
       }));
       if (reply.images?.length) nodes.push(thumbnails(reply.images));
       if (reply.proposal) nodes.push(proposalCard(reply.proposal, comment, comment.replies.indexOf(reply) + 1, run));
