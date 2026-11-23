@@ -14,6 +14,8 @@ const props = defineProps({ src: { type: String, required: true }, storageKey: {
 const router = useRouter()
 const STORE = props.storageKey || 'doc-graph:' + props.src
 const host = ref(null)
+const root = ref(null)
+const fullscreen = ref(false)
 const titleInput = ref(null)
 const selected = ref(null)
 const editor = ref(null)
@@ -34,7 +36,7 @@ const finderInput = ref(null)
 const flash = ref('')
 const presenting = ref(null)
 const selTitle = computed(() => (selected.value && cy ? cy.getElementById(selected.value).data('title') || '' : ''))
-const HELP = "DOC-GRAPH(1)\n\nLAYERS\n  The page owns the keys. Click the graph to enter it\n  (mode line: GRAPH); Esc in NORMAL returns to the page.\nMODES\n  NORMAL  fly the view         VISUAL  walk node to node\n  INSERT  edit the graph       Esc     back to NORMAL\nSEARCH\n  /         search this graph only (every layer, title/text/code/path);\n            Enter jumps to the node, Ctrl-n/p or arrows move, Esc closes.\n            The page's own / search works when the graph is not active.\nNORMAL\n  h j k l   pan (H J K L: faster)\n  + - 0     zoom in / out / fit\n  v  visual     i  insert     u / Backspace  up one layer\n  o         open the selected box's </> source\n  Enter     open the selected \u25b8 layer or \u2197 page\n  (a path above the graph shows where you are; click to jump)\nVISUAL\n  h j k l   nearest node in that direction\n  Enter     open \u25b8 layer or \u2197 page, else zoom to node\n  o         open the node's </> code (local viewer, GitHub online)\n  c         comment on the node\n  s         attach a region screenshot\nINSERT\n  h j k l   select neighbour\n  arrows    nudge node (shift: x5)\n  Enter     edit text    o  new node    x  delete\nCOMMANDS\n  :help :man   this page     :w  export JSON\n  :fit         fit all       :q  close\n  :grep RE     same as /\n  :present     full-screen presentation (→ ← story, ↓ ↑ deeper, Esc exits)\nMOUSE / TRACKPAD\n  swipe pans \u00b7 pinch or shift+swipe zooms\n  dbl-click: \u2197 opens page, \u25b8 opens layer (else </> source),\n    node/lane zooms, empty fits\nLINKS\n  a node with a \"link\" (e.g. \"/autonomy\") shows \u2197;\n  external URLs open as normal links"
+const HELP = "DOC-GRAPH(1)\n\nLAYERS\n  The page owns the keys. Click the graph to enter it\n  (mode line: GRAPH); Esc in NORMAL returns to the page.\nMODES\n  NORMAL  fly the view         VISUAL  walk node to node\n  INSERT  edit the graph       Esc     back to NORMAL\nSEARCH\n  /         search this graph only (every layer, title/text/code/path);\n            Enter jumps to the node, Ctrl-n/p or arrows move, Esc closes.\n            The page's own / search works when the graph is not active.\nNORMAL\n  h j k l   pan (H J K L: faster)\n  + - 0     zoom in / out / fit\n  v  visual     i  insert     u / Backspace  up one layer\n  o         open the selected box's </> source\n  Enter     open the selected \u25b8 layer or \u2197 page\n  (a path above the graph shows where you are; click to jump)\nVISUAL\n  h j k l   nearest node in that direction\n  Enter     open \u25b8 layer or \u2197 page, else zoom to node\n  o         open the node's </> code (local viewer, GitHub online)\n  c         comment on the node\n  s         attach a region screenshot\nINSERT\n  h j k l   select neighbour\n  arrows    nudge node (shift: x5)\n  Enter     edit text    o  new node    x  delete\nCOMMANDS\n  :help :man   this page     :w  export JSON\n  :fit         fit all       :q  close\n  f / :full    toggle full screen for the graph (Esc leaves)\n  :grep RE     same as /\n  :present     full-screen presentation (→ ← story, ↓ ↑ deeper, Esc exits)\nMOUSE / TRACKPAD\n  swipe pans \u00b7 pinch or shift+swipe zooms\n  dbl-click: \u2197 opens page, \u25b8 opens layer (else </> source),\n    node/lane zooms, empty fits\nLINKS\n  a node with a \"link\" (e.g. \"/autonomy\") shows \u2197;\n  external URLs open as normal links"
 const topic = ref('')
 const activeTab = ref('')
 const TOPICS = ref([])
@@ -617,6 +619,15 @@ function say(text) {
   setTimeout(() => { if (flash.value === text) flash.value = '' }, 3000)
 }
 
+function toggleFullscreen() {
+  if (document.fullscreenElement) document.exitFullscreen()
+  else root.value?.requestFullscreen?.().catch(() => say('Full screen was refused by the browser'))
+}
+const onFullscreen = () => {
+  fullscreen.value = document.fullscreenElement === root.value
+  nextTick(() => { if (cy) { cy.resize(); fitAll() } })
+}
+
 function present() {
   const nodes = cy.nodes().filter(n => !n.isParent() && !['text', 'dot'].includes(n.data('kind')))
     .map(n => ({ id: n.id(), title: n.data('title') || '', body: n.data('body') || '', link: n.data('link') || '', image: n.data('image') || '', video: n.data('video') || '' }))
@@ -670,6 +681,7 @@ function runCmd() {
   else if (c === 'grep' || c.startsWith('grep ')) { openFinder(); finder.value.q = c.slice(5) }
   else if (c === 'fit') fitAll()
   else if (['present', 'pres'].includes(c)) present()
+  else if (['full', 'fullscreen'].includes(c)) toggleFullscreen()
   else if (c) say('E492: Not an editor command: ' + c)
 }
 
@@ -700,6 +712,7 @@ function onKey(e) {
     return
   }
   if (k === '0') { done(); fitAll(); return }
+  if (k === 'f' || k === 'F') { done(); toggleFullscreen(); return }
   if ((k === 'u' || k === 'Backspace') && layer.value) { done(); back(); return }
   if (k === 'i') { done(); setMode('insert'); return }
   if (k === 'v' && mode.value !== 'visual') { done(); setMode('visual'); return }
@@ -745,12 +758,14 @@ onMounted(() => {
   window.addEventListener('keydown', onKey)
   document.addEventListener('adr-graph-active', onOther)
   document.addEventListener('adr-present', present)
+  document.addEventListener('fullscreenchange', onFullscreen)
   document.addEventListener('pointerdown', onOutside, true)
 })
 onUnmounted(() => {
   window.removeEventListener('keydown', onKey)
   document.removeEventListener('adr-graph-active', onOther)
   document.removeEventListener('adr-present', present)
+  document.removeEventListener('fullscreenchange', onFullscreen)
   document.removeEventListener('pointerdown', onOutside, true)
   deactivate()
 })
@@ -759,7 +774,7 @@ onUnmounted(() => { removeEventListener('hashchange', landOnNode); document.remo
 </script>
 
 <template>
-<div class="xp">
+<div ref="root" class="xp" :class="{ full: fullscreen }">
   <GraphPresenter v-if="presenting" :nodes="presenting.nodes" :edges="presenting.edges" @close="presenting = null" />
   <div class="xp-bar">
     <strong>{{ title }}</strong>
@@ -776,6 +791,7 @@ onUnmounted(() => { removeEventListener('hashchange', landOnNode); document.remo
       <button :class="{ on: !activeTab }" @click="pickTab(null)">All</button>
       <button v-for="t in tabList" :key="t.label" :class="{ on: activeTab === t.label }" @click="pickTab(t)">{{ t.label }}</button>
     </span>
+    <button :class="{ on: fullscreen }" title="Full screen (f in the graph, :full)" @click="toggleFullscreen">⛶ Full</button>
     <button title="Present full screen (:present)" @click="present">▶ Present</button>
     <button :class="{ on: help }" title="Controls (?)" @click="help = !help">?</button>
     <button :class="{ on: editMode }" @click="setMode(editMode ? 'normal' : 'insert')">{{ editMode ? '✎ Editing' : '✎ Edit mode' }}</button>
@@ -823,6 +839,9 @@ onUnmounted(() => { removeEventListener('hashchange', landOnNode); document.remo
 
 <style>
 .xp { padding: 8px 16px; color: var(--vp-c-text-1); }
+.xp:fullscreen { background: var(--vp-c-bg, #1b1b1f); padding: 8px 16px; overflow: auto; display: flex; flex-direction: column; }
+.xp:fullscreen .xp-main { flex: 1; min-height: 0; }
+.xp:fullscreen .xp-canvas { height: auto !important; }
 .xp-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 6px 0 10px; }
 .xp-muted { color: var(--vp-c-text-2); font-size: 13px; flex: 1; }
 .xp-main { display: flex; gap: 12px; }

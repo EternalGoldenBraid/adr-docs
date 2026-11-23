@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.182.0 - 2026-11-23
+
+- Graph full screen: with the graph active, `f` (or `:full`, or the ⛶ Full button) toggles browser full screen for the whole graph, toolbar and status line included; Esc leaves. The view refits on every change. Listed in the graph's `:help`.
+- Removed: nothing this time.
+
 ## 0.181.0 - 2026-11-23
 
 - A "typing" line in an open thread: when an addressed member's own session log says it is working, the thread shows "● name is working · thinking" (or the tool's name, "· on this thread" when its queue item names this thread, or "waiting on a permission prompt"). It reads only the log-derived state, never tool arguments, and polls every 6 s while a thread is open. It needs the mesh; without it nothing shows.
