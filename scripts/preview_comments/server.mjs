@@ -24,7 +24,7 @@ import { readCell, writeCell } from "./table-edit.mjs";
 import { bareSession, readRoster, slugify } from "../../src/roster.mjs";
 import { answerRates, rank } from "../../src/nudge-plan.mjs";
 import { deriveState, disagrees, itemTurns } from "../../src/verified-state.mjs";
-import { addNote, applyVote, dueCloseNotices, publicVotes, readVotes, refreshQueue, requestVotes, reveal } from "../../src/votes.mjs";
+import { QUORUM, addNote, applyVote, dueCloseNotices, publicVotes, readVotes, refreshQueue, reopen, requestVotes, reveal } from "../../src/votes.mjs";
 import { pageCards, readPageTree } from "../../src/page-tree.mjs";
 import { diffLines, hunks } from "./page-diff.mjs";
 
@@ -476,7 +476,7 @@ export async function startCommentBridge({
     if (input.action === "request" || input.request) {
       const requester = as ?? input.requester ?? ownerName();
       const items = [...new Set([item, ...(input.items ?? [])].filter(Boolean))];
-      const rows = items.map(name => requestVotes(root, { page, item: name, voters: input.voters, requester, closeTo: input.closeTo, deadlineMinutes: input.deadlineMinutes }));
+      const rows = items.map(name => requestVotes(root, { page, item: name, voters: input.voters, requester, closeTo: input.closeTo, deadlineMinutes: input.deadlineMinutes, reopen: input.reopen }));
       const status = mesh ? await meshStatus().catch(() => []) : [];
       const asked = [], unreachable = [];
       const minutes = rows[0].rounds.at(-1).deadlineMinutes;
@@ -491,7 +491,7 @@ export async function startCommentBridge({
       }
       return { item: publicVotes(rows)[0], items: publicVotes(rows), asked, unreachable };
     }
-    const row = input.action === "reveal" || input.reveal ? reveal(root, input) : input.action === "note" || input.note ? addNote(root, { ...input, text: input.note ?? input.text, agent: input.agent ?? as }) : applyVote(root, { ...input, agent: input.agent ?? as });
+    const row = input.action === "reopen" ? reopen(root, input) : input.action === "reveal" || input.reveal ? reveal(root, input) : input.action === "note" || input.note ? addNote(root, { ...input, text: input.note ?? input.text, agent: input.agent ?? as }) : applyVote(root, { ...input, agent: input.agent ?? as });
     closeNotices().catch(error => onError?.(error));
     return { item: publicVotes([row])[0] };
   }
@@ -499,7 +499,7 @@ export async function startCommentBridge({
   async function closeNotices() {
     for (const due of dueCloseNotices(root)) {
       let spread = "";
-      try { if (!due.voted.length) throw new Error("no votes"); const row = reveal(root, { page: due.page, item: due.item }), r = row.rounds.at(-1); spread = ` Revealed: ${r.min}–${r.max}, median ${r.median}${r.converged ? ", converged" : ", not converged"}.`; } catch { /* nothing to reveal */ }
+      try { if (due.short) { spread = ` Below the ${QUORUM}-vote quorum, so the round stays open and is not decided; nudge the missing voters or extend.`; throw new Error("short"); } const row = reveal(root, { page: due.page, item: due.item }), r = row.rounds.at(-1); spread = ` Revealed: ${r.min}–${r.max}, median ${r.median}${r.converged ? ", converged" : ", not converged"}.`; } catch { /* nothing to reveal */ }
       const rows = mesh ? await meshStatus().catch(() => []) : [];
       const target = rows.find(r => r.slug === due.to);
       if (!target?.session || target.status === "offline") continue;

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.186.0 - 2026-11-23
+
+- Votes need a quorum: a round decides an item only with 3 votes (fewer if fewer than 3 voters were asked). When the deadline passes below that, the lead is told once, the round stays open and nothing is decided or auto-revealed; `reveal_doc_review_votes` below the quorum needs `force` and never decides.
+- A decided item can be reopened: `request_doc_review_votes` with `reopen: true`, or `adr-vote --reopen PAGE ITEM`. The weight is cleared and the next request starts a new round.
+- Removed: nothing this time.
+
 ## 0.185.0 - 2026-11-23
 
 - A thread opened from its page bubble is a compact window again: no thread list, tabs, counts, Team/Autopilot buttons or rail, and Esc closes it. It is still the one thread UI (reactions, whisper completion, reload restore). `f` or ⛶ goes full screen with everything back, and leaving full screen returns to the compact window. `-` `h` still opens the full history.

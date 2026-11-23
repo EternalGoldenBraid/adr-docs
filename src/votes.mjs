@@ -29,6 +29,9 @@ const save = (root, items) => {
 
 const find = (items, page, item) => items.find(row => row.page === page && row.item === item);
 const open = row => row.rounds.find(round => !round.revealed);
+// A round decides or closes only with 3 votes (fewer when fewer than 3 voters were asked).
+export const QUORUM = 3;
+const quorum = round => Math.min(QUORUM, round.requested?.length ?? QUORUM);
 
 // Operations; each returns the updated item. A vote goes into the open round (a new item or a revealed round starts a new one).
 export function applyVote(root, { page, item, agent, vote, owner }) {
@@ -45,12 +48,13 @@ export function applyVote(root, { page, item, agent, vote, owner }) {
 
 // A request names who must vote; the open round remembers it. A voter's item ends when they vote; the requester gets one item
 // when the last vote is in, or, after the deadline, one to close on the votes that came.
-export function requestVotes(root, { page, item, voters, requester, closeTo, deadlineMinutes = 5, now = new Date() }) {
+export function requestVotes(root, { page, item, voters, requester, closeTo, deadlineMinutes = 5, reopen: again, now = new Date() }) {
   const names = [...new Set((voters ?? []).map(String))].filter(Boolean);
   if (!names.length || names.length > 12) throw new Error("Name 1 to 12 voters.");
   const items = readVotes(root);
   const row = find(items, page, item) ?? (items.push({ page, item, rounds: [] }), items.at(-1));
-  if (row.decidedAt) throw new Error("This item is decided; start a new item name for another vote.");
+  if (row.decidedAt && again) delete row.decidedAt, delete row.weight;
+  if (row.decidedAt) throw new Error("This item is decided; reopen it (reopen: true) or start a new item name for another vote.");
   if (!open(row)) row.rounds.push({ round: row.rounds.length + 1, votes: {} });
   Object.assign(open(row), { requested: names, requestedBy: requester ?? row.owner ?? "owner", requestedAt: now.toISOString(), deadlineMinutes: Math.max(1, Math.min(1440, Number(deadlineMinutes) || 5)), closeTo: closeTo || "site-manager", closeNotified: false });
   save(root, items);
@@ -67,7 +71,7 @@ export function voteQueue(items, now = new Date()) {
     for (const name of missing) out.push({ ...base, to: name, rank: 0, text: `Vote on ${row.item}` });
     const late = now - Date.parse(round.requestedAt) > round.deadlineMinutes * 60000;
     if (!missing.length) out.push({ ...base, to: round.requestedBy, rank: 0, text: `Reveal ${row.item}` });
-    else if (late && Object.keys(round.votes).length) out.push({ ...base, to: round.requestedBy, rank: 0, text: `Close ${row.item} on the votes in (${Object.keys(round.votes).length} of ${round.requested.length})` });
+    else if (late && Object.keys(round.votes).length >= quorum(round)) out.push({ ...base, to: round.requestedBy, rank: 0, text: `Close ${row.item} on the votes in (${Object.keys(round.votes).length} of ${round.requested.length})` });
   }
   return out;
 }
@@ -79,9 +83,9 @@ export function dueCloseNotices(root, now = new Date()) {
     const round = row.decidedAt ? undefined : open(row);
     if (!round?.requested || round.closeNotified) continue;
     const missing = round.requested.filter(name => round.votes[name] === undefined);
-    if (missing.length && now - Date.parse(round.requestedAt) <= round.deadlineMinutes * 60000) continue;
+    if (missing.length && (now - Date.parse(round.requestedAt) <= round.deadlineMinutes * 60000)) continue;
     round.closeNotified = true;
-    due.push({ page: row.page, item: row.item, round: round.round, to: round.closeTo ?? "site-manager", voted: Object.keys(round.votes), missing, requestedBy: round.requestedBy });
+    due.push({ page: row.page, item: row.item, round: round.round, to: round.closeTo ?? "site-manager", voted: Object.keys(round.votes), missing, requestedBy: round.requestedBy, short: Object.keys(round.votes).length < quorum(round) });
   }
   if (due.length) save(root, items);
   return due;
@@ -97,11 +101,23 @@ export function refreshQueue(root) {
   return true;
 }
 
-export function reveal(root, { page, item }) {
+// Below the quorum a reveal needs force, and never decides the item.
+export function reveal(root, { page, item, force }) {
   const items = readVotes(root), row = find(items, page, item), round = row && open(row);
   if (!round) throw new Error("No open round to reveal.");
+  const votes = Object.keys(round.votes).length, short = votes < quorum(round);
+  if (short && !force) throw new Error(`Only ${votes} of the ${quorum(round)} votes needed are in; the round stays open (force: true reveals without deciding).`);
   Object.assign(round, { revealed: true }, stats(round.votes));
-  if (round.converged) { row.weight = round.median; row.decidedAt = new Date().toISOString(); }
+  if (round.converged && !short) { row.weight = round.median; row.decidedAt = new Date().toISOString(); }
+  save(root, items);
+  return row;
+}
+
+// Takes a decided item back to voting: the weight is cleared and the next vote or request opens a new round.
+export function reopen(root, { page, item }) {
+  const items = readVotes(root), row = find(items, page, item);
+  if (!row) throw new Error("Unknown item.");
+  delete row.decidedAt, delete row.weight;
   save(root, items);
   return row;
 }

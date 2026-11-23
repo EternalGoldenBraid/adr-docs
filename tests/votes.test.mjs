@@ -15,7 +15,7 @@ test("a vote request queues one item per voter, then one reveal item for the req
     applyVote(root, { page: "/p", item: "t", agent: "a", vote: 3 });
     assert.deepEqual(key(queue()), ["b:Vote on t"]);
     const late = voteQueue(readVotes(root), new Date(Date.now() + 3600e3));
-    assert.deepEqual(key(late), ["b:Vote on t", "owner1:Close t on the votes in (1 of 2)"]);
+    assert.deepEqual(key(late), ["b:Vote on t"]);
     assert.equal(refreshQueue(root), false);
     applyVote(root, { page: "/p", item: "t", agent: "b", vote: 3 });
     assert.deepEqual(key(queue()), ["owner1:Reveal t"]);
@@ -36,5 +36,25 @@ test("the lead is told once when the window closes, early when everyone has vote
     requestVotes(root, { page: "/p", item: "u", voters: ["a"], requester: "owner1", closeTo: "lead" });
     applyVote(root, { page: "/p", item: "u", agent: "a", vote: 2 });
     assert.deepEqual(dueCloseNotices(root).map(d => [d.item, d.to]), [["u", "lead"]]);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test("a round needs 3 votes to close or decide; a decided item can be reopened", () => {
+  const root = mkdtempSync(join(tmpdir(), "adr-votes-"));
+  try {
+    const ask = extra => requestVotes(root, { page: "/p", item: "t", voters: ["a", "b", "c", "d"], requester: "o", ...extra });
+    ask();
+    applyVote(root, { page: "/p", item: "t", agent: "a", vote: 3 });
+    const late = new Date(Date.now() + 6 * 60e3);
+    assert.deepEqual(dueCloseNotices(root, late).map(d => d.short), [true]);
+    assert.throws(() => reveal(root, { page: "/p", item: "t" }), /Only 1 of the 3/);
+    assert.equal(reveal(root, { page: "/p", item: "t", force: true }).decidedAt, undefined);
+    ask();
+    for (const agent of ["a", "b", "c"]) applyVote(root, { page: "/p", item: "t", agent, vote: 2 });
+    assert.deepEqual(dueCloseNotices(root, late).map(d => d.short), [false]);
+    assert.equal(reveal(root, { page: "/p", item: "t" }).weight, 2);
+    assert.throws(() => ask(), /reopen/);
+    assert.equal(ask({ reopen: true }).weight, undefined);
+    assert.equal(readVotes(root)[0].rounds.at(-1).votes.a, undefined);
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
