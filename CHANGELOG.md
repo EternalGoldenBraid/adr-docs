@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.188.0 - 2026-11-23
+
+- The discussions rail beside a thread (`:rail`) is gone: the tabs and the thread list already show the same open and waiting threads, and it was off by default and unused.
+- Removed: the `:rail` command, the rail panel and its stored preference.
+
 ## 0.187.0 - 2026-11-23
 
 - `cast_doc_review_vote`, `request_doc_review_votes` and `reveal_doc_review_votes` return their error as text instead of "Tool execution failed", and say to pass `store` when the session has no preview of its own (the likely cause of the failed casts on the start-value vote).

@@ -96,7 +96,6 @@ The agent can show a status line (`set_doc_review_status`) and attach a before/a
 
 `:order newest` shows a thread newest reply first with the reply box on top (`:order oldest` restores the default). `j`/`k` and `g`/`G` follow what is on screen. The panel is also lean by default: tabs share the header row and the thread header starts with the page path.
 
-`:rail on` shows a left rail beside a thread: every open discussion grouped by page (your current page first, counts per page), `↔` marking threads that link to others, amber for ones waiting on you. Click one to switch. `:rail off` hides it; it is also hidden on screens narrower than 1100 px. `:tree` is still the page tree.
 
 `:calm` silences ADR on the current page (`:calm site` for all pages, `:calm off` to restore): no shortcuts, comment popups, screenshots or marks, only `:` stays. For pages with their own controls.
 

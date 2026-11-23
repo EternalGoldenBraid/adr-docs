@@ -38,7 +38,7 @@
       .vim-caret{position:fixed;width:2px;background:#74c0fc;pointer-events:none}
       .toolbar{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;max-width:calc(100vw - 48px)}
       .history{width:min(var(--pw,720px),calc(100vw - 48px));max-height:min(var(--ph,100vh),calc(100vh - 120px));overflow:auto}
-      .history.mini:not(.full) :is(.tabs,.history-counts,.history-team,.history-autopilot,.history-refresh,.dtree,.thread-back,.thread-list){display:none!important}
+      .history.mini:not(.full) :is(.tabs,.history-counts,.history-team,.history-autopilot,.history-refresh,.thread-back,.thread-list){display:none!important}
       .history.full{position:fixed;inset:0;width:auto;max-height:none;height:100vh;margin:0;border-radius:0;z-index:5}
       .history.full{padding:0 4vw}.history.full>*{margin-left:0;margin-right:0}.history.full .history-head{padding-left:0;padding-right:0}.history.full .note{margin-right:0}.history.full .note.mine{margin-left:12vw}.history.full .note.copilot{margin-right:12vw}
       .history-head{display:flex;justify-content:space-between;align-items:center;gap:8px}.drag-handle{cursor:grab;touch-action:none}.drag-handle:active{cursor:grabbing}
@@ -131,12 +131,6 @@
       .note{margin:4px 0;padding:6px 10px}
       .reply-form{padding:6px 20px 8px}.reply-form textarea{min-height:38px;padding:6px 8px}.reply-form .actions{margin-top:4px}.react{display:inline-flex;gap:2px;margin-right:6px}.react button{padding:2px 6px}.reply-form .actions button{padding:3px 10px;font-size:12px}
       .thread.newest .reply-form{position:sticky;top:34px;bottom:auto;border-top:0;border-bottom:1px solid #3a404a;z-index:2}
-      .dtree{position:sticky;top:34px;float:left;width:204px;max-height:calc(100vh - 160px);overflow:auto;margin:6px 0 0 14px!important;font-size:12px;border-right:1px solid #3a404a;padding-right:8px}
-      .dtree[hidden]{display:none}.dtree .dt-page{margin:8px 0 2px;font:11px ui-monospace,monospace;color:#8ab4f8;display:flex;justify-content:space-between}.dtree .dt-page.here{color:#ffd43b}
-      .dtree button{display:block;width:100%;text-align:left;border:0;border-left:3px solid #3a404a;background:transparent;color:inherit;font:inherit;padding:2px 6px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-      .dtree button.waiting{border-color:#ffb02e}.dtree button.on{background:#1d2a40;border-color:#74c0fc}.dtree button:hover{background:#20242b}
-      .history.rail-on .thread,.history.rail-on .thread-list{margin-left:232px!important}
-      @media(max-width:1100px){.dtree{display:none!important}.history.rail-on .thread,.history.rail-on .thread-list{margin-left:0!important}}
       .to{display:flex;flex-wrap:wrap;gap:4px;margin:0 0 4px}.to button{white-space:nowrap}
     </style>
     <section class="panel" hidden aria-labelledby="comment-title">
@@ -154,7 +148,6 @@
       <button class="history-refresh icon" type="button" title="Refresh">↻</button>
       <button class="history-full icon" type="button" title="Toggle full screen (f)" aria-label="Full screen">⛶</button>
       <button class="history-close icon" type="button" title="Close (Esc)" aria-label="Close">✕</button></div>
-      <nav class="dtree" aria-label="Open discussions by page" hidden></nav>
       <div class="thread-list" role="listbox"></div>
       <section class="thread" hidden>
         <div class="thread-head"><button class="thread-back icon" type="button" title="Back (h)">‹</button>
@@ -407,7 +400,7 @@
     ]],
     ["Search & commands", [
       "/ or :grep [-d N] [-u N] [-s] [-p|-c] <regex> searches pages and threads (no flag: all pages; -d 0: this page; -d N: N levels below; -u N: N ancestors; -1 = all)",
-      "Commands: :help [section] :man :history :threads :chat :comment :tree :new :present :export [single|compress] :read [stop] :figure :restart :grep :vim off|on :order newest|oldest :rail [on|off] :calm [site|off] :autopilot HOURS [brief]|off :keys",
+      "Commands: :help [section] :man :history :threads :chat :comment :tree :new :present :export [single|compress] :read [stop] :figure :restart :grep :vim off|on :order newest|oldest :calm [site|off] :autopilot HOURS [brief]|off :keys",
       ":autopilot 8 finish the join runs: for that many hours ADR sends no nudges and every note to an agent says to keep working, post one finish report and not wait for votes or resolves. The brief goes to everyone. The Autopilot button in the history header does the same; :autopilot off ends it.",
       ":calm silences ADR on this page (:calm site: every page; :calm off restores): no shortcuts, comment popups, screenshots or marks, so a page with its own controls is left alone. Only : still works; the status bar shows CALM.",
       ":threads opens the threads about this page: those started on it and those whose text links to it. In the What's new list (n), 💬 N counts them and t opens the page with them.",
@@ -469,12 +462,6 @@
     },
     owner: name => name ? api("settings", { owner: name }).then(v => { settings = v; message("Owner: " + name); }).catch(e => message(e.message, true)) : message("Usage: :owner NAME (this preview's agent)", true),
     team: (_first, line = "") => api("settings", { team: line.trim().split(/[\s,]+/).filter(Boolean) }).then(v => { settings = v; message("Team: " + (v.team.join(", ") || "(none)")); }).catch(e => message(e.message, true)),
-    rail: arg => {
-      const on = arg === "off" ? false : arg === "on" ? true : !railOn();
-      localStorage.setItem("preview-comments-rail", on ? "on" : "off");
-      renderHistory();
-      message(on ? "Rail on: open discussions by page beside the thread. :rail off hides it." : "Rail off.");
-    },
     order: arg => {
       if (arg !== "newest" && arg !== "oldest") return message(`Thread order: ${newestFirst() ? "newest" : "oldest"} first. Usage: :order newest|oldest`, !arg ? false : true);
       localStorage.setItem("preview-comments-order", arg);
@@ -1911,7 +1898,6 @@
       [...list.children].find(card => card.dataset.commentId === focusedComment)?.focus();
     }
     modeLabel();
-    renderRail(comment);
     if (!comment) return;
     find(".thread-id").textContent = "#" + comment.id.slice(0, 8);
     find(".thread-title").textContent = comment.section;
@@ -1991,37 +1977,6 @@
     } catch { line.hidden = true; } finally { workingBusy = false; }
   }
   setInterval(() => { if (currentThread() && !document.hidden) refreshWorking(); }, 6000);
-  // ":rail on|off": open discussions grouped by page, linked threads marked ↔, beside the thread (hidden on narrow screens).
-  const railOn = () => localStorage.getItem("preview-comments-rail") === "on";
-  function renderRail(current) {
-    const rail = find(".dtree");
-    find(".history").classList.toggle("rail-on", railOn());
-    rail.hidden = !railOn();
-    if (!railOn()) return;
-    const open = historyComments.filter(c => !c.removed && !isNote(c) && c.kind !== "session" && (!c.resolved || hasFresh(c)));
-    const byPage = new Map();
-    for (const c of open) { const p = pagePath(c.url); (byPage.get(p) || byPage.set(p, []).get(p)).push(c); }
-    const here = pagePath(location.href);
-    const pages = [...byPage.keys()].sort((a, b) => (b === here) - (a === here) || a.localeCompare(b));
-    const nodes = [];
-    for (const p of pages) {
-      const head = Object.assign(document.createElement("div"), { className: `dt-page${p === here ? " here" : ""}`, textContent: p, title: p });
-      head.append(Object.assign(document.createElement("span"), { textContent: byPage.get(p).length }));
-      nodes.push(head);
-      for (const c of byPage.get(p)) {
-        const linked = (c.refs?.length || 0) + historyComments.some(o => !o.removed && o.refs?.includes(c.id));
-        const item = document.createElement("button");
-        item.type = "button"; item.tabIndex = -1;
-        item.className = `${awaiting(c) ? "waiting" : ""}${c.id === current?.id ? " on" : ""}`;
-        const text = plainMarkdown(c.comment).replace(/\s+/g, " ");
-        item.textContent = `${linked ? "↔ " : ""}${c.section === pagePath(c.url) || !c.section ? text : c.section}`;
-        item.title = text.slice(0, 160);
-        item.addEventListener("click", () => selectThread(c.id));
-        nodes.push(item);
-      }
-    }
-    rail.replaceChildren(...(nodes.length ? nodes : [Object.assign(document.createElement("div"), { textContent: "No open discussions." })]));
-  }
   function selectThread(id) {
     selectedThread = id;
     replyShots = []; renderReplyShots();
