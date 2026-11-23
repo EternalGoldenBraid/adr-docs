@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.168.0 - 2026-11-23
+
+- Agents are no longer chased for resolve votes: `unanswered_threads` and idle nudges list only threads that ask the agent something. Resolve marks still show and still close a thread; `Shift+R` and the bell still ping by hand.
+- Removed: the "to resolve" items in agents' queues, the resolve-vote idle nudge and the count of resolves in the open-work total.
+
 ## 0.167.0 - 2026-11-23
 
 - Autopilot: `:autopilot HOURS [brief]`, or the button in the history header. For that time ADR sends no idle nudges, and mesh notes and `unanswered_threads` tell agents to keep working, post one finish report and not wait for votes or resolves. `:autopilot off` ends it early; the status bar shows AUTOPILOT.

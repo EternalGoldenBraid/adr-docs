@@ -855,9 +855,8 @@ export async function startCommentBridge({
       const text = (last.reply ?? last.comment ?? "").replace(/\s+/g, " ");
       return [{ id: comment.id, version: String(last.at || comment.at), page: new URL(comment.url).pathname, ageMinutes: Math.round((now - Date.parse(last.at || comment.at)) / 60000), quote: text.length > 140 ? `${text.slice(0, 140)}…` : text }];
     }).sort((a, b) => b.ageMinutes - a.ageMinutes);
-    // Open threads addressed to this agent whose last word is an agent's, so nothing is left to answer but its resolve vote is still missing.
-    const toResolve = [...comments.values()].filter(comment => !comment.removed && !comment.resolved && !comment.note && !comment.highlight && comment.to?.length && addressed(comment, as) && !comment.muted?.[as] && !comment.resolvedBy?.[as] && !rows.some(row => row.id === comment.id))
-      .map(comment => ({ id: comment.id, version: `${comment.replies.at(-1)?.at ?? comment.at}|${Object.keys(comment.resolvedBy ?? {}).length}`, page: new URL(comment.url).pathname }));
+    // Resolve votes are no longer chased: an agent is told only of threads that ask it something. The list stays empty for older callers.
+    const toResolve = [];
     return { checked: `${rows.length} unanswered, ${toResolve.length} to resolve`, as, threads: rows, toResolve, ...(autopilot() ? { autopilot: autopilotNote() } : {}) };
   }
   function readAs(as, includeSeen = false) {
