@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.174.1 - 2026-11-23
+
+- Code map profiles are a dropdown on the graph instead of extra top-level boxes: a map may list `profiles` and give nodes `profiles: {name: [x, y]}`; choosing one hides the other nodes and lays the rest out again. The generator builds them from the config's `profiles` (regex excludes on tracked file paths), so only files on disk count.
+- Removed: the per-profile top-level ROS boxes of 0.173.1.
+
 ## 0.174.0 - 2026-11-23
 
 - Voting window: `request_doc_review_votes` defaults to a 5-minute window and takes `close_to` (default `site-manager`). When the window closes, or the last voter casts, that lead gets one mesh note with who voted and who is missing; they host the min/max discussion and the owner reopens the next round with another request.

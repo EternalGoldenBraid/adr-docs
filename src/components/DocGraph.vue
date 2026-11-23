@@ -147,6 +147,7 @@ function nodeEl(n) {
   if (SHAPES.has(n.shape)) d.shape = n.shape
   if (n.parent) d.parent = n.parent
   if (n.inside) d.inside = n.inside
+  if (n.profiles) { d.profiles = n.profiles; d.home = [n.x, n.y] }
   return { group: 'nodes', data: d, position: { x: n.x, y: n.y } }
 }
 
@@ -209,15 +210,20 @@ function serialise() {
       const d = n.data()
       return { id: d.id, title: d.title, body: d.body, status: d.status, kind: d.kind, parent: d.parent || null, inside: d.inside || null,
         x: Math.round(n.position('x')), y: Math.round(n.position('y')), w: d.w, h: d.h,
-        fill: d.fill, stroke: d.stroke, font: d.font, topics: d.topics, ...(d.link ? { link: d.link } : {}), ...(d.code ? { code: d.code } : {}), ...(d.image ? { image: d.image } : {}), ...(d.video ? { video: d.video } : {}), ...(d.shape ? { shape: d.shape } : {}) }
+        fill: d.fill, stroke: d.stroke, font: d.font, topics: d.topics, ...(d.link ? { link: d.link } : {}), ...(d.code ? { code: d.code } : {}), ...(d.image ? { image: d.image } : {}), ...(d.video ? { video: d.video } : {}), ...(d.shape ? { shape: d.shape } : {}), ...(d.profiles ? { profiles: d.profiles } : {}) }
     }),
     edges: cy.edges().map(e => ({ id: e.id(), source: e.data('source'), target: e.data('target'),
       color: e.data('color'), dashed: !!e.data('dashed'), label: e.data('label') || '', ...(e.data('loop') != null ? { loop: e.data('loop') } : {}) })),
+    ...(profiles.value.length ? { profiles: profiles.value } : {}),
   }
 }
 
 const save = () => localStorage.setItem(STORE, JSON.stringify(serialise()))
 
+// A map can offer profiles (setups); a node with `profiles: {name: [x, y]}` shows only in those, at that position.
+const profiles = ref([])
+const profile = ref('')
+const inProfile = n => !profile.value || !n.data('profiles') || !!n.data('profiles')[profile.value]
 const layer = ref(null)
 const layerTitle = ref('')
 const crumbs = ref([])
@@ -237,8 +243,9 @@ function showLayer(id) {
   const path = []
   for (let c = id; c;) { const n = cy.getElementById(c); path.unshift({ id: c, title: n.data('title') }); c = n.data('inside') || null }
   crumbs.value = path
-  const visible = cy.nodes().filter(n => (n.data('inside') || null) === id && (n.data('kind') !== 'lane' || !id))
+  const visible = cy.nodes().filter(n => (n.data('inside') || null) === id && (n.data('kind') !== 'lane' || !id) && inProfile(n))
   cy.batch(() => {
+    visible.forEach(n => { const at = n.data('profiles')?.[profile.value] || n.data('home'); if (at) n.position({ x: at[0], y: at[1] }) })
     cy.elements().style('display', 'none')
     visible.style('display', 'element')
     visible.edgesWith(visible).style('display', 'element')
@@ -417,6 +424,7 @@ onMounted(async () => {
   if (!data) data = await (await fetch(withBase(props.src))).json()
 
   try { const r = await fetch(withBase('/code-repos.json')); if (r.ok) codeRepos = await r.json() } catch (_) { /* optional */ }
+  profiles.value = data.profiles || []
   TOPICS.value = [...new Set(data.nodes.flatMap(n => n.topics || []))].sort()
   document.addEventListener('preview-comment-vim', onVim)
   cy = cytoscape({
@@ -718,6 +726,9 @@ onUnmounted(() => { removeEventListener('hashchange', landOnNode); document.remo
     <strong>{{ title }}</strong>
     <a v-if="backTo" class="xp-back" :href="withBase(backTo)">← {{ backLabel }}</a>
     <button v-if="layer" @click="back">← Back</button>
+    <label v-if="profiles.length" class="xp-profile">Profile
+      <select v-model="profile" @change="showLayer(layer)"><option value="">All</option><option v-for="p in profiles" :key="p.name" :value="p.name">{{ p.title }}</option></select>
+    </label>
     <span v-if="layer" class="xp-crumbs">
       <button @click="showLayer(null)">Top</button>
       <template v-for="(c, i) in crumbs" :key="c.id">› <button v-if="i < crumbs.length - 1" @click="showLayer(c.id)">{{ c.title }}</button><strong v-else>{{ c.title }}</strong></template>
@@ -776,6 +787,7 @@ onUnmounted(() => { removeEventListener('hashchange', landOnNode); document.remo
 .xp-label b { font-weight: 700; }
 .xp-label code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.95em; background: #ffffff1f; border-radius: 3px; padding: 0 3px; }
 .xp-label span { white-space: pre-line; font-weight: 400; font-size: 0.92em; opacity: .9; overflow: hidden; -webkit-box-orient: vertical; }
+.xp-profile { font-size: 13px; display: flex; gap: 6px; align-items: center; }
 .xp-crumbs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 13px; }
 .xp-back { font-size: 13px; text-decoration: none; padding: 5px 10px; border: 1px solid var(--vp-c-divider); border-radius: 8px; }
 .xp-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
