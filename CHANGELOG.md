@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.187.0 - 2026-11-23
+
+- `cast_doc_review_vote`, `request_doc_review_votes` and `reveal_doc_review_votes` return their error as text instead of "Tool execution failed", and say to pass `store` when the session has no preview of its own (the likely cause of the failed casts on the start-value vote).
+- Removed: nothing this time.
+
 ## 0.186.0 - 2026-11-23
 
 - Votes need a quorum: a round decides an item only with 3 votes (fewer if fewer than 3 voters were asked). When the deadline passes below that, the lead is told once, the round stays open and nothing is decided or auto-revealed; `reveal_doc_review_votes` below the quorum needs `force` and never decides.

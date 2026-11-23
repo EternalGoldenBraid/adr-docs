@@ -226,7 +226,9 @@ export async function connectDocumentReview({
         const input = { ...rest, action: rest.note !== undefined && action === "vote" ? "note" : action, ...(deadlineMinutes ? { deadlineMinutes } : {}), ...(closeTo ? { closeTo } : {}), ...(as ? { from: as } : {}), fromSession: session.sessionId };
         const store = remoteStore({ store: given });
         if (store) return remoteBridge(stateRoot(), store, "/agent-vote", { method: "POST", body: JSON.stringify(input) }).then(JSON.stringify, remoteFailure);
-        return requirePreview().bridge.vote(input).then(JSON.stringify);
+        // Returned as text: the host shows a thrown error only as "Tool execution failed".
+        const failed = error => `Error: ${error.message}${active ? "" : ' Pass store="demo" (the server that holds the vote) when this session has no preview.'}`;
+        try { return requirePreview().bridge.vote(input).then(JSON.stringify, failed); } catch (error) { return failed(error); }
       },
     })), {
       name: "stop_doc_review",
