@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.180.0 - 2026-11-23
+
+- The comment panel survives a reload: full screen is remembered as a preference, and the open thread, its scroll position, the focused message (or list card) and the list tab come back too, for the same page within ten minutes (was one minute).
+- Removed: nothing this time.
+
 ## 0.179.0 - 2026-11-23
 
 - Comments render math: `$…$` inline and `$$…$$` display LaTeX become MathML (Temml, bundled), which is real text you can select and copy; hover shows the TeX. `$5 and $6` stays plain. Fenced code blocks (```), also inside a `>` quote, now render as code instead of showing the fences.

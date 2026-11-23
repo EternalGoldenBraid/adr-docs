@@ -2613,7 +2613,13 @@
     if (to) { composeTo = new Set(to); chipRow(find(".to-new"), composeTo); }
   }
   branchButton.addEventListener("click", branchThread);
-  find(".history-full").addEventListener("click", () => history.classList.toggle("full"));
+  // Full screen is a preference: a reload or a new page opens the panel the same size.
+  const FULL_KEY = "preview-comments-full";
+  history.classList.toggle("full", localStorage.getItem(FULL_KEY) === "1");
+  find(".history-full").addEventListener("click", () => {
+    const full = history.classList.toggle("full");
+    try { localStorage.setItem(FULL_KEY, full ? "1" : "0"); } catch { /* storage off */ }
+  });
   find(".attach-region").addEventListener("click", regionDraft);
   // Dropped or pasted images are re-encoded as PNG, the only format the store accepts.
   async function uploadImage(file) {
@@ -3953,9 +3959,10 @@
   }, 5000);
   const leave = () => fetch("/__preview_comments/viewed", { method: "POST", keepalive: true, headers: { "Content-Type": "application/json", "X-Preview-Comment": "1" }, body: JSON.stringify({ path: viewedPath }) }).catch(() => {});
   addEventListener("pagehide", leave);
-  // A reload (an agent edited a page, or a restart) keeps the thread panel and the open thread, for the same page within a minute.
+  // A reload (an agent edited a page, or a restart) keeps the thread panel, the open thread, the scroll position and the focused message, for the same page within ten minutes.
   addEventListener("pagehide", () => {
-    try { sessionStorage.setItem("adr-ui", JSON.stringify({ path: pathNow(), at: Date.now(), open: !history.hidden, thread: selectedThread || null })); } catch { /* storage off */ }
+    try { sessionStorage.setItem("adr-ui", JSON.stringify({ path: pathNow(), at: Date.now(), open: !history.hidden, thread: selectedThread || null,
+      scroll: history.scrollTop, mid: shadow.activeElement?.dataset?.mid || null, card: shadow.activeElement?.dataset?.commentId || null, filter: historyFilter })); } catch { /* storage off */ }
   });
   async function syncMarks() {
     enhanceVideos();
@@ -3969,8 +3976,22 @@
     let ui = null;
     try { ui = JSON.parse(sessionStorage.getItem("adr-ui") || "null"); } catch { ui = null; }
     sessionStorage.removeItem("adr-ui");
-    if (ui?.open && !pendingOpen && ui.path === pathNow() && Date.now() - ui.at < 60000 && history.hidden) {
+    if (ui?.open && !pendingOpen && ui.path === pathNow() && Date.now() - ui.at < 600000 && history.hidden) {
+      if (!ui.thread && FILTERS.some(([value]) => value === ui.filter)) historyFilter = ui.filter;
       if (ui.thread) await openThreadById(ui.thread).catch(() => {}); else await openHistory();
+      // The panel re-renders as history loads, so the focus and scroll are put back again once it settles.
+      let touched = false;
+      const touch = () => { touched = true; };
+      history.addEventListener("wheel", touch, { once: true, passive: true });
+      addEventListener("keydown", touch, { once: true, capture: true });
+      const restore = () => {
+        if (touched || history.hidden || shadow.activeElement?.matches("textarea, input, select")) return;
+        const focused = (ui.mid && find(`.thread-messages [data-mid="${ui.mid}"]`)) || (ui.card && find(`.thread-card[data-comment-id="${ui.card}"]`));
+        if (shadow.activeElement !== focused) focused?.focus({ preventScroll: true });
+        history.scrollTop = ui.scroll || 0;
+      };
+      restore();
+      for (const wait of [300, 900, 2000]) setTimeout(restore, wait);
     }
     if (sessionStorage.getItem("adr-open-threads")) { sessionStorage.removeItem("adr-open-threads"); commands.threads(); }
     applyMarks();
