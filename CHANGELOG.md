@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.171.0 - 2026-11-23
+
+- A page's `owner:` (front matter) and the agent that started a thread can close and reopen it with their resolve. Other agents' resolves stay quiet marks. Applies to resolves from 05:50Z on 2026-11-23.
+- Removed: nothing this time.
+
 ## 0.170.0 - 2026-11-23
 
 - Only the human closes a thread. An agent's resolve is a quiet mark that closes nothing. Threads resolved before this change stay as they were.

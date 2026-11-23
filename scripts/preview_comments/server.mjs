@@ -10,6 +10,7 @@ import { execFile, spawn } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 const OWNER_CLOSE_FROM = "2026-11-23T05:30:00Z";
+const PAGE_OWNER_FROM = "2026-11-23T05:50:00Z";
 const USER_MARK_FROM = "2026-11-21T00:00:00";
 const ROOMS_FROM = "2026-11-22T08:30:00Z";
 const meshCodeDirectory = join(homedir(), ".copilot", "extensions", "agent-mesh");
@@ -406,6 +407,18 @@ export async function startCommentBridge({
   // Members are members: the user's seat in `to` is the same seat as their own "you" mark, so it is one resolve, not two.
   const humanSeat = () => roster().find(row => !row.session)?.slug;
   // A seat is someone who can answer: a roster agent or the human. The store's own placeholder owner name (no session) never can, so it must not hold a thread open.
+  function pageOwner(comment) {
+    try {
+      const path = decodeURIComponent(new URL(comment.url).pathname).replace(/^\/+|\/+$/g, "");
+      for (const file of [`${path}.md`, join(path, "index.md")]) {
+        const full = resolve(root, file);
+        if (!full.startsWith(root + sep) || !existsSync(full)) continue;
+        const owner = readFileSync(full, "utf8").match(/^---\n([\s\S]*?)\n---/)?.[1].match(/^owner:\s*(.+)$/m)?.[1].trim().replace(/^["']|["']$/g, "");
+        return owner ? canon(owner) : null;
+      }
+    } catch {}
+    return null;
+  }
   const seatsIn = c => [...new Set((c.to ?? []).filter(name => !c.muted?.[name]).map(canon).filter(name => name === humanSeat() || !agents().length || agents().some(row => row.slug === name)).map(name => name === humanSeat() ? "you" : name))];
   const missingOn = id => { const c = comments.get(id); return c ? seatsIn(c).filter(name => !c.resolvedBy?.[name]).map(name => name === "you" ? humanSeat() ?? name : name) : []; };
   const isIdle = row => row.verified ? row.verified.state === "idle" : (row.activity ?? (row.statusLine?.state === "idle" ? "idle" : null)) === "idle";
@@ -611,14 +624,19 @@ export async function startCommentBridge({
       if (record.removeRefs) comment.refs = (comment.refs || []).filter(id => !record.removeRefs.includes(id));
       if (record.removeReply) comment.replies = comment.replies.filter(item => item.id !== record.removeReply);
       if (record.resolved !== undefined && record.at >= OWNER_CLOSE_FROM) {
-        // The human closes and reopens a thread; an agent's resolve is only a quiet "nothing more from me" mark and closes nothing.
+        // The human (or an unattributed update) closes and reopens a thread; a named agent's resolve is only a quiet "nothing more from me" mark and closes nothing.
         const who = record.author === "copilot" && record.from ? canon(record.from) : null;
-        if (record.author === "user") {
+        if (!who) {
           if (record.resolved && !comment.resolved) comment.resolvedAt = record.at;
           comment.resolved = record.resolved;
           if (!record.resolved) delete comment.resolvedBy;
         } else if (who) {
-          if (record.resolved) comment.resolvedBy = { ...comment.resolvedBy, [who]: record.at };
+          // The page's front-matter `owner:` and the agent that asked (started the thread) also close and reopen the page's threads.
+          if (record.at >= PAGE_OWNER_FROM && (who === pageOwner(comment) || (comment.from && who === canon(comment.from)))) {
+            if (record.resolved && !comment.resolved) comment.resolvedAt = record.at;
+            comment.resolved = record.resolved;
+            if (!record.resolved) delete comment.resolvedBy;
+          } else if (record.resolved) comment.resolvedBy = { ...comment.resolvedBy, [who]: record.at };
           else delete comment.resolvedBy?.[who];
         }
       } else if (record.resolved !== undefined) {

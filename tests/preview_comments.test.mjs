@@ -558,44 +558,25 @@ test("an update accepts a unique 8-character thread id prefix, and blocked needs
   }
 });
 
-test("the user's resolve is one mark among the addressees'; it closes when all have resolved, or for all on closeAll", async () => {
+test("the user closes and reopens a thread; a named agent's resolve is only a mark, unless it asked the thread", async () => {
   const directory = mkdtempSync(join(tmpdir(), "preview-comments-"));
-  writeFileSync(join(directory, "page.md"), "# Page\n\nText.");
+  writeFileSync(join(directory, "page.md"), "---\nowner: carol\n---\n# Page\n\nText.");
   const sessionId = randomUUID();
   const bridge = await startCommentBridge({ sessionId, documentRoot: directory, storageRoot: directory, previewOrigin: "http://127.0.0.1:8771", onError: error => assert.fail(error.message), notify: async () => {} });
   const id = bridge.add({ page: "/page", kind: "page", quote: "Page", comment: "a" }).id;
   const thread = () => bridge.list().find(c => c.id === id);
   bridge.update({ id: randomUUID(), commentId: id, sessionId, reply: "hi", to: ["bob", "carol"] }, "user");
-  bridge.update({ id: randomUUID(), commentId: id, sessionId, resolved: true, partial: true }, "user");
-  assert.deepEqual([thread().resolved, Boolean(thread().resolvedBy.you)], [false, true]);
   bridge.update({ id: randomUUID(), commentId: id, from: "bob", resolved: true });
-  assert.equal(thread().resolved, false);
-  bridge.update({ id: randomUUID(), commentId: id, from: "carol", resolved: true });
+  assert.deepEqual([thread().resolved, Boolean(thread().resolvedBy.bob)], [false, true], "an agent's resolve closes nothing");
+  bridge.update({ id: randomUUID(), commentId: id, sessionId, resolved: true }, "user");
   assert.equal(thread().resolved, true);
   bridge.update({ id: randomUUID(), commentId: id, sessionId, resolved: false }, "user");
   assert.deepEqual([thread().resolved, thread().resolvedBy], [false, undefined]);
-  bridge.update({ id: randomUUID(), commentId: id, sessionId, resolved: true, closeAll: true }, "user");
-  assert.equal(thread().resolved, true);
-  bridge.update({ id: randomUUID(), commentId: id, sessionId, resolved: false }, "user");
-  bridge.update({ id: randomUUID(), commentId: id, sessionId, resolved: true, partial: true }, "user");
-  bridge.update({ id: randomUUID(), commentId: id, sessionId, resolved: false, partial: true }, "user");
-  assert.deepEqual([thread().resolved, thread().resolvedBy.you], [false, undefined], "unresolving clears only your own mark");
-  bridge.update({ id: randomUUID(), commentId: id, from: "bob", resolved: true });
-  bridge.update({ id: randomUUID(), commentId: id, sessionId, reply: "bob, one more thing", to: ["bob", "carol"] }, "user");
-  assert.equal(thread().resolvedBy?.bob, undefined, "addressing someone who resolved clears their mark");
-  bridge.update({ id: randomUUID(), commentId: id, sessionId, resolved: false }, "user");
-  bridge.update({ id: randomUUID(), commentId: id, sessionId, resolved: true }, "user");
-  assert.equal(thread().resolved, true, "a record without partial (as in old logs) still closes for all");
-  bridge.update({ id: randomUUID(), commentId: id, sessionId, resolved: false }, "user");
-  bridge.update({ id: randomUUID(), commentId: id, from: "bob", resolved: true });
   bridge.update({ id: randomUUID(), commentId: id, from: "carol", resolved: true });
-  assert.equal(thread().resolved, false, "the thread stays open while you have not resolved, although every addressee has");
-  bridge.update({ id: randomUUID(), commentId: id, sessionId, resolved: true, partial: true }, "user");
-  assert.equal(thread().resolved, true);
+  assert.equal(thread().resolved, true, "the page's owner closes it");
   await bridge.close();
   rmSync(directory, { recursive: true, force: true });
 });
-
 test("threads.json keeps a thread whose addressee answered but has not resolved, so it stays in their queue", async () => {
   const directory = mkdtempSync(join(tmpdir(), "preview-comments-"));
   writeFileSync(join(directory, "page.md"), "# Page\n\nText.");
