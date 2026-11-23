@@ -329,6 +329,18 @@
       event.preventDefault();
     });
   }
+  // Alt+Shift+hjkl moves the open panel by the same step; the offset persists like a drag.
+  function moveKey(event) {
+    const dir = { KeyH: [-1, 0], KeyL: [1, 0], KeyJ: [0, 1], KeyK: [0, -1] }[event.code];
+    if (!dir || !event.shiftKey || !event.altKey || event.ctrlKey || event.metaKey) return false;
+    const found = [[panel, "comment"], [history, "history"], [find(".mesh-panel"), "team"]].find(([node]) => node && !node.hidden);
+    if (!found) return false;
+    const [el, key] = found, step = KM.resize.step;
+    offsets[key] = { x: (offsets[key]?.x ?? 0) + dir[0] * step, y: (offsets[key]?.y ?? 0) + dir[1] * step };
+    el.style.translate = `${offsets[key].x}px ${offsets[key].y}px`;
+    localStorage.setItem(OFFSETS, JSON.stringify(offsets));
+    return true;
+  }
   let visual = false;
   // Normal mode scrolls the page smoothly; `i` (or `v`) enters caret mode where motions move the caret.
   let caretMode = false;
@@ -3292,7 +3304,7 @@
   });
   docOn("keydown", event => {
     if (event.isComposing) return;
-    if (vimEnabled && event.altKey && resizeKey(event)) { event.preventDefault(); return; }
+    if (vimEnabled && event.altKey && (moveKey(event) || resizeKey(event))) { event.preventDefault(); return; }
     if (event.key === "Escape") {
       contextual.hidden = true;
       if (find("button[type=submit]").disabled || historySaving) return;
@@ -3722,7 +3734,8 @@
       bubble.textContent = count ? String(count) : "";
       bubble.style.left = `${x}px`;
       bubble.style.top = `${y}px`;
-      bubble.addEventListener("click", event => { event.stopPropagation(); showMark(mark, bubble.getBoundingClientRect()); });
+      // A comment thread opens in the full thread view (reactions, whisper completion, restore on reload); only a bare highlight keeps the small popover.
+      bubble.addEventListener("click", event => { event.stopPropagation(); if (mark.comment.comment && !isNote(mark.comment)) { pop.hidden = true; openThreadById(mark.comment.id); } else showMark(mark, bubble.getBoundingClientRect()); });
       rail.append(bubble);
     }
   }

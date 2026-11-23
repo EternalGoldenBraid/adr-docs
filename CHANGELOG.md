@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.184.0 - 2026-11-23
+
+- One thread UI: clicking a thread's bubble on the page now opens the full thread view (reactions, whisper completion, full screen, restore after reload) instead of the small popover. Bare highlights and private notes keep the popover.
+- Alt+Shift+h/j/k/l moves the open panel (comment, history or team) by the resize step; the position persists like a drag. Documented in `docs/preview-comments.md`.
+- Removed: the duplicate thread UI in the bubble popover for comment threads (still used for bare highlights and notes).
+
 ## 0.183.0 - 2026-11-23
 
 - DocGraph: clicking into a graph that is partly below the fold or under the page header scrolls the whole canvas into view, so a layer that fits the canvas is no longer cut off at the top or bottom of the window. (`0` refits; `f` goes full screen.)

@@ -104,7 +104,7 @@ The agent can show a status line (`set_doc_review_status`) and attach a before/a
 
 ## Resizing and key bindings
 
-In Vim mode, Alt+h/l narrow/widen and Alt+j/k shorten/heighten the open panel, history or bubble popover; sizes persist. All page-layer bindings (motions, `v`, `c`, `s`, the `-` leader, resize keys and step) are defined in `scripts/preview_comments/keymap.json`. To customise, create `~/.config/agent-doc-review/keymap.json` (or point `ADR_KEYMAP` at a file) containing only the entries to change, e.g. `{"resize": {"wider": "A-L", "step": 60}}`; `A-`/`C-` prefixes mean Alt/Ctrl. Reload the page to apply.
+In Vim mode, Alt+h/l narrow/widen and Alt+j/k shorten/heighten the open panel, history or bubble popover; sizes persist. Alt+Shift+h/j/k/l moves the open panel (comment, history or team) by the same step; the position persists. A page bubble on a comment thread opens the full thread view. All page-layer bindings (motions, `v`, `c`, `s`, the `-` leader, resize keys and step) are defined in `scripts/preview_comments/keymap.json`. To customise, create `~/.config/agent-doc-review/keymap.json` (or point `ADR_KEYMAP` at a file) containing only the entries to change, e.g. `{"resize": {"wider": "A-L", "step": 60}}`; `A-`/`C-` prefixes mean Alt/Ctrl. Reload the page to apply.
 
 ## Addressing comments to specific agents
 
