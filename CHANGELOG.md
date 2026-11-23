@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.169.0 - 2026-11-23
+
+- Autopilot per agent: `POST /settings { autopilotAgent: { agent, hours, brief } }` turns it on for one agent, `{ agent, off: true }` ends it. That agent gets no idle nudges and carries the autopilot note; others are unchanged. `GET /settings` lists `autopilotAgents`, so a team page can show a toggle.
+- Removed: nothing this time.
+
 ## 0.168.0 - 2026-11-23
 
 - Agents are no longer chased for resolve votes: `unanswered_threads` and idle nudges list only threads that ask the agent something. Resolve marks still show and still close a thread; `Shift+R` and the bell still ping by hand.

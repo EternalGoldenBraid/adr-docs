@@ -485,6 +485,12 @@ test("comments addressed to other agents stay out of the owner's unread and are 
   assert.match(bridge.unanswered({ as: "bob" }).autopilot, /keep working/);
   assert.equal((await call("/settings", { autopilot: null })).body.autopilot, undefined);
   assert.equal(bridge.unanswered({ as: "bob" }).autopilot, undefined);
+  assert.equal((await call("/settings", { autopilotAgent: { agent: "bob", hours: 0 } })).status, 400);
+  const one = (await call("/settings", { autopilotAgent: { agent: "bob", hours: 1 } })).body;
+  assert.ok(one.autopilotAgents.bob);
+  assert.match(bridge.unanswered({ as: "bob" }).autopilot, /keep working/);
+  assert.equal(bridge.unanswered({ as: "carol" }).autopilot, undefined);
+  assert.deepEqual((await call("/settings", { autopilotAgent: { agent: "bob", off: true } })).body.autopilotAgents, {});
   await bridge.close();
   rmSync(directory, { recursive: true, force: true });
 });

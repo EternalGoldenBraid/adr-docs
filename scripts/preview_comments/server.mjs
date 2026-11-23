@@ -162,9 +162,12 @@ export async function startCommentBridge({
   const rowForSession = session => agents().find(row => row.session === session);
   const nameFor = value => rowForSession(value)?.slug ?? value;
   // Autopilot: while it runs ADR sends no nudges and tells agents to keep working. Only the clock ends it.
-  const autopilot = () => settings.autopilot && Date.parse(settings.autopilot.until) > Date.now() ? settings.autopilot : null;
-  const autopilotNote = () => { const ap = autopilot(); return ap ? `Autopilot is on until ${ap.until}: keep working, post one finish report, ask only if blocked, and do not wait for votes or resolves.${ap.brief ? ` Brief: ${ap.brief}` : ""}` : ""; };
-  const effective = () => ({ ...settings, autopilot: autopilot() ?? undefined, owner: ownerName(), team: teamNames(), roster: roster(), fromRoster: agents().length > 0 });
+  const live = ap => ap && Date.parse(ap.until) > Date.now() ? ap : null;
+  // One agent's own autopilot wins over the store-wide one.
+  const autopilot = slug => (slug && live(settings.autopilotAgents?.[slug])) || live(settings.autopilot);
+  const liveAgents = () => Object.fromEntries(Object.entries(settings.autopilotAgents ?? {}).filter(([, ap]) => live(ap)));
+  const autopilotNote = slug => { const ap = autopilot(slug); return ap ? `Autopilot is on until ${ap.until}: keep working, post one finish report, ask only if blocked, and do not wait for votes or resolves.${ap.brief ? ` Brief: ${ap.brief}` : ""}` : ""; };
+  const effective = () => ({ ...settings, autopilot: autopilot() ?? undefined, autopilotAgents: liveAgents(), owner: ownerName(), team: teamNames(), roster: roster(), fromRoster: agents().length > 0 });
   const canon = name => agents().find(row => row.legacy === name && row.slug !== name)?.slug ?? name;
   const addressed = (comment, name) => comment.to?.length ? comment.to.map(canon).includes(name) : name === ownerName();
   const readBy = (comment, name) => name === ownerName() ? comment.seen : Boolean(comment.readBy?.[name]);
@@ -335,7 +338,7 @@ export async function startCommentBridge({
       const preview = flat.length > 400 ? `${flat.slice(0, 400)}… [truncated; read the thread for the rest]` : flat;
       const note = `ADR comment for you on ${page} (thread ${comment.id.slice(0, 8)}): "${preview}". ` +
         `Read: read_doc_review_comments(as="${target.slug}", store="${name ?? sessionId}"); reply: update_doc_review_comment(store="${name ?? sessionId}", comment_id="${comment.id}").` +
-        (autopilotNote() ? ` ${autopilotNote()}` : "");
+        (autopilotNote(target.slug) ? ` ${autopilotNote(target.slug)}` : "");
       // A recipient that is not on the mesh right now would otherwise never hear of it: retry until it is, or it has read the thread.
       const attempt = async tries => {
         // Queued: hold the note while the recipient is working, so it arrives when it is free.
@@ -406,10 +409,10 @@ export async function startCommentBridge({
   const missingOn = id => { const c = comments.get(id); return c ? seatsIn(c).filter(name => !c.resolvedBy?.[name]).map(name => name === "you" ? humanSeat() ?? name : name) : []; };
   const isIdle = row => row.verified ? row.verified.state === "idle" : (row.activity ?? (row.statusLine?.state === "idle" ? "idle" : null)) === "idle";
   async function nudgeIdle() {
-    if (autopilot()) return;
     const now = Date.now();
     for (const row of await meshStatus()) {
       if (!row.session || row.status === "offline" || row.session === sessionId) continue;
+      if (autopilot(row.slug)) continue;
       if (!isIdle(row)) { idleSince.delete(row.slug); continue; }
       const since = idleSince.get(row.slug) ?? now;
       idleSince.set(row.slug, since);
@@ -857,7 +860,7 @@ export async function startCommentBridge({
     }).sort((a, b) => b.ageMinutes - a.ageMinutes);
     // Resolve votes are no longer chased: an agent is told only of threads that ask it something. The list stays empty for older callers.
     const toResolve = [];
-    return { checked: `${rows.length} unanswered, ${toResolve.length} to resolve`, as, threads: rows, toResolve, ...(autopilot() ? { autopilot: autopilotNote() } : {}) };
+    return { checked: `${rows.length} unanswered, ${toResolve.length} to resolve`, as, threads: rows, toResolve, ...(autopilot(as) ? { autopilot: autopilotNote(as) } : {}) };
   }
   function readAs(as, includeSeen = false) {
     const rows = unread(as);
@@ -1214,6 +1217,18 @@ export async function startCommentBridge({
               if (ap.brief !== undefined && (typeof ap.brief !== "string" || ap.brief.length > 400)) throw new Error("Autopilot brief must be at most 400 characters.");
               next.autopilot = { until: new Date(Date.now() + hours * 3_600_000).toISOString(), ...(ap.brief ? { brief: ap.brief.trim() } : {}) };
             }
+          }
+          if (body.autopilotAgent !== undefined) {
+            const { agent, hours, brief, off } = body.autopilotAgent ?? {};
+            if (typeof agent !== "string" || !agent) throw new Error("autopilotAgent needs an agent slug.");
+            const map = { ...(next.autopilotAgents ?? {}) };
+            if (off) delete map[agent];
+            else {
+              if (!(Number(hours) > 0 && Number(hours) <= 48)) throw new Error("Autopilot hours must be between 0 and 48.");
+              if (brief !== undefined && (typeof brief !== "string" || brief.length > 400)) throw new Error("Autopilot brief must be at most 400 characters.");
+              map[agent] = { until: new Date(Date.now() + Number(hours) * 3_600_000).toISOString(), ...(brief ? { brief: brief.trim() } : {}) };
+            }
+            next.autopilotAgents = map;
           }
           settings = next;
           writeFileSync(settingsFile, JSON.stringify(settings), { mode: 0o600 });
