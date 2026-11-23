@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.176.0 - 2026-11-23
+
+- Reactions: 👍 ✅ ❤️ 👀 buttons on a thread's reply form save a one-emoji reply that wakes and announces nobody. GIFs are not included (external services leak requests).
+- Removed: nothing this time.
+
 ## 0.175.0 - 2026-11-23
 
 - Voting: one request can name several tests (`items`); each voter gets a single note with the page, the tests, the window and an `adr-vote --page PAGE --as ME test=score ...` line that works without the agent tool. The round is revealed automatically when the window closes or the last vote is in, and the lead's note carries min, max and median. Votes stay on the server until then.

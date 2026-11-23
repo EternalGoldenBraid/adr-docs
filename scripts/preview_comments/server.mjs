@@ -611,6 +611,7 @@ export async function startCommentBridge({
         comment.replies.push({
           id: record.id, at: record.at, author: record.author, comment: record.reply,
           ...(record.note ? { note: true } : {}),
+          ...(record.reaction ? { reaction: true } : {}),
           ...(record.inReplyTo ? { inReplyTo: record.inReplyTo } : {}),
           ...(record.from ? { from: record.from } : {}),
           ...(record.to?.length ? { to: record.to } : {}),
@@ -619,7 +620,7 @@ export async function startCommentBridge({
           ...(record.images?.length ? { images: record.images } : {}),
         });
       }
-      let wake = (record.reply !== undefined && !record.note) || record.resolved !== undefined;
+      let wake = (record.reply !== undefined && !record.note && !record.reaction) || record.resolved !== undefined;
       if (record.promote) { comment.note = false; wake = true; }
       if (record.editComment !== undefined) {
         comment.comment = record.editComment;
@@ -681,7 +682,7 @@ export async function startCommentBridge({
         }
       }
       // A new message that addresses someone who had resolved clears their mark and reopens the thread for them.
-      if (record.reply !== undefined && !record.note && record.resolved === undefined && record.to?.length && comment.resolvedBy) {
+      if (record.reply !== undefined && !record.note && !record.reaction && record.resolved === undefined && record.to?.length && comment.resolvedBy) {
         const cleared = record.to.map(canon).filter(name => comment.resolvedBy[name]);
         for (const name of cleared) delete comment.resolvedBy[name];
         if (cleared.length && comment.resolved) { comment.resolved = false; delete comment.resolvedAt; }
@@ -811,7 +812,7 @@ export async function startCommentBridge({
     }
     if (names(input.to, "to")?.length) value.to = names(input.to, "to");
     if (typeof input.mute === "boolean") value.mute = input.mute;
-    if (value.reply !== undefined && !input.note) {
+    if (value.reply !== undefined && !input.note && input.reaction !== true) {
       const members = comments.get(value.commentId).to ?? [];
       const extra = mentioned(value.reply).filter(name => !(value.to ?? members).map(canon).includes(name));
       if (extra.length) value.to = [...new Set([...(value.to ?? members.filter(name => !comments.get(value.commentId).muted?.[name])).map(canon), ...extra])].slice(0, 12);
@@ -826,6 +827,7 @@ export async function startCommentBridge({
     if (author === "user" && input.closeAll === true) value.closeAll = true;
     if (author === "user" && input.partial === true) value.partial = true;
     if (author === "user" && input.note === true && value.reply !== undefined) value.note = true;
+    if (author === "user" && input.reaction === true && value.reply !== undefined) value.reaction = true;
     if (author === "user" && input.promote === true) value.promote = true;
     if (author === "user" && input.queued === true) value.queued = true;
     if (author === "user" && Object.hasOwn(input, "editComment")) value.editComment = field(input.editComment, "Comment", 8192);
@@ -879,7 +881,7 @@ export async function startCommentBridge({
     const value = normalizeUpdate(body, "copilot");
     const fresh = !updates.has(value.id);
     const result = saveUpdate(value);
-    if (fresh && value.reply !== undefined && !value.note) announce(comments.get(value.commentId), value.reply, false, value.to, value.from);
+    if (fresh && value.reply !== undefined && !value.note && !value.reaction) announce(comments.get(value.commentId), value.reply, false, value.to, value.from);
     return result;
   }
 
@@ -1311,7 +1313,7 @@ export async function startCommentBridge({
       if (request.url === "/updates") {
         const result = saveUpdate(input);
         saved = true;
-        if (input.reply !== undefined && !input.note) announce(comments.get(input.commentId), input.reply, input.queued, input.whisper === true ? input.to : undefined);
+        if (input.reply !== undefined && !input.note && input.reaction !== true) announce(comments.get(input.commentId), input.reply, input.queued, input.whisper === true ? input.to : undefined);
         if (!input.queued) await notify();
         return reply(response, 200, { ...result, awaitingReview: !comments.get(input.commentId).seen });
       }

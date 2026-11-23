@@ -127,7 +127,7 @@
       .thread-links{margin:0 20px 4px}.thread-links select{font-size:11px;padding:0 6px}
       details.quote-box{margin-bottom:4px}details.quote-box summary{font-size:12px}
       .note{margin:4px 0;padding:6px 10px}
-      .reply-form{padding:6px 20px 8px}.reply-form textarea{min-height:38px;padding:6px 8px}.reply-form .actions{margin-top:4px}.reply-form .actions button{padding:3px 10px;font-size:12px}
+      .reply-form{padding:6px 20px 8px}.reply-form textarea{min-height:38px;padding:6px 8px}.reply-form .actions{margin-top:4px}.react{display:inline-flex;gap:2px;margin-right:6px}.react button{padding:2px 6px}.reply-form .actions button{padding:3px 10px;font-size:12px}
       .thread.newest .reply-form{position:sticky;top:34px;bottom:auto;border-top:0;border-bottom:1px solid #3a404a;z-index:2}
       .dtree{position:sticky;top:34px;float:left;width:204px;max-height:calc(100vh - 160px);overflow:auto;margin:6px 0 0 14px!important;font-size:12px;border-right:1px solid #3a404a;padding-right:8px}
       .dtree[hidden]{display:none}.dtree .dt-page{margin:8px 0 2px;font:11px ui-monospace,monospace;color:#8ab4f8;display:flex;justify-content:space-between}.dtree .dt-page.here{color:#ffd43b}
@@ -164,7 +164,7 @@
         <div class="thread-links"></div>
         <div class="thread-messages"></div>
         <form class="reply-form"><div class="reply-target" hidden><span></span><button type="button" title="Drop (Esc in the field, or click)">✕</button></div><div class="to to-reply" hidden></div><textarea id="thread-reply" aria-label="Your reply" placeholder="Reply (i to focus · /w name text whispers · Ctrl+Enter queues it for the agent's next idle moment · ⚠ or Ctrl+Shift+Enter interrupts now · Esc/jk normal mode, again leaves)" required maxlength="4000"></textarea>
-        <div class="actions"><button class="thread-region" type="button" title="Attach a screenshot of a region (s)">Region</button>
+        <div class="actions"><span class="react" title="Quiet reaction: saved as a one-emoji note, nobody is interrupted"><button type="button" data-react="👍">👍</button><button type="button" data-react="✅">✅</button><button type="button" data-react="❤️">❤️</button><button type="button" data-react="👀">👀</button></span><button class="thread-region" type="button" title="Attach a screenshot of a region (s)">Region</button>
         <button class="thread-branch" type="button" title="Start a linked child thread from the selected text or focused message (n)">↳ New thread</button>
         <label class="interrupt" title="Tick to interrupt the agent now; otherwise this waits in its queue until it is idle (Ctrl+Shift+Enter also interrupts)"><input type="checkbox" class="int-reply"> ⚠ interrupt</label><button class="primary reply-send" type="submit">Reply</button></div></form>
       </section>
@@ -2161,7 +2161,7 @@
         fitReply();
         setReplyTarget(null);
         host.dataset.replyDrafts = String([...replyDrafts.values()].filter(draft => draft.text.trim()).length);
-        message(values.queued ? "Reply queued · delivered when the agent is idle" : "Reply sent · interrupts the agent");
+        message(values.reaction ? "Reaction saved" : values.queued ? "Reply queued · delivered when the agent is idle" : "Reply sent · interrupts the agent");
       } else if (values.resolved !== undefined) message(result.resolved ? "Comment resolved" : "Comment reopened");
       else message("Saved");
       if (values.resolved === true && result.resolved) selectedThread = undefined;
@@ -2593,6 +2593,10 @@
     replyShots = [...replyShots, ...shots].slice(0, 4);
     renderReplyShots();
     replyInput.focus();
+  });
+  find(".react").addEventListener("click", event => {
+    const emoji = event.target.dataset?.react;
+    if (emoji && selectedThread) updateThread({ id: crypto.randomUUID(), reply: emoji, reaction: true });
   });
   find(".thread-region").addEventListener("click", () => regionThread(ids => updateThread({ id: crypto.randomUUID(), addImages: ids })));
   docOn("keydown", event => {
