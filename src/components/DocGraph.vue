@@ -249,6 +249,7 @@ function showLayer(id) {
   cy.resize()
   cy.fit(visible, 40)
   if (cy.zoom() > 1.2) { cy.zoom(1.2); cy.center(visible) }
+  if (cy.zoom() < 0.5) { cy.zoom(0.5); const b = visible.boundingBox(); cy.pan({ x: 40 - b.x1 * 0.5, y: 40 - b.y1 * 0.5 }) }
   moved = false
 }
 

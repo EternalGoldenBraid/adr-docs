@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.172.2 - 2026-11-23
+
+- Code map: the ROS level wraps into bands of four columns so it fits a normal screen, and DocGraph never fits a layer below 50% zoom (labels stay readable; pan with swipe, `h j k l`, zoom with `+`/`-` or pinch).
+- Removed: nothing this time.
+
 ## 0.172.1 - 2026-11-23
 
 - Code map: the ROS level now flows left to right (cycles no longer push every node into one column), one edge per node pair with up to two topic names, and `"links"` in the config add edges the code does not show (e.g. a UDP link to a bridge). DocGraph: `o` opens the source of the selected box in normal mode too.

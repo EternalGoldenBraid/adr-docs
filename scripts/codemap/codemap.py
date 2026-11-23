@@ -135,15 +135,20 @@ def columns(nodes, edges):
                     moved = True
         if not moved:
             break
-    rows = {}
+    per_band = 4
+    rows, band_rows = {}, {}
     for n in nodes:
         r = rank[n["id"]]
-        n["x"], n["y"] = r * 520, rows.get(r, 0) * 120
+        n["_r"], n["_row"] = r, rows.get(r, 0)
         rows[r] = rows.get(r, 0) + 1
-    for r, count in rows.items():
-        for n in nodes:
-            if rank[n["id"]] == r:
-                n["y"] -= (count - 1) * 60
+        band_rows[r // per_band] = max(band_rows.get(r // per_band, 0), rows[r])
+    top = {0: 0}
+    for b in range(1, len(band_rows)):
+        top[b] = top[b - 1] + band_rows[b - 1] * 120 + 140
+    for n in nodes:
+        r = n.pop("_r")
+        n["x"] = (r % per_band) * 520
+        n["y"] = top[r // per_band] + n.pop("_row") * 120
 
 
 def file_tree(g, repo, root, files, top):
