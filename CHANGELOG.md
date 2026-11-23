@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.173.1 - 2026-11-23
+
+- Code map: config `profiles` give one ROS level per setup (`all`, `field`, `numpy`, `ue5`), each a top-level box with its own excludes.
+- Removed: nothing this time.
+
 ## 0.173.0 - 2026-11-23
 
 - Code viewer: `c` comments on the selected lines (`v` to select, or the current line in normal mode), so code can be discussed with the agents. The review client now loads in the viewer; editing stays out.

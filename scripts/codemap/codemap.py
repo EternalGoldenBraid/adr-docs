@@ -9,6 +9,7 @@ Config:
      "repos": [{"name": "app", "path": "/abs/path/to/app"}],
      "compose": [{"repo": "app", "glob": "compose/*.yaml"}],
      "ros_exclude": ["^tools/offline_"],
+     "profiles": [{"name": "field", "title": "Field", "exclude": ["sim_"]}],
      "links": [{"from": "app:pkg/link.py", "to": "app:tools/bridge.py", "label": "UDP 5600"}]}
 
 Levels (each box opens the graph one level down with Enter or double click):
@@ -220,9 +221,9 @@ def compose_layer(g, cfg, repos, top):
                 grid(kids)
 
 
-def ros_layer(g, cfg, repos, trees, top):
+def ros_layer(g, cfg, repos, trees, top, tag="", extra=()):
     found = {}
-    skip = [re.compile(x) for x in cfg.get("ros_exclude", [])]
+    skip = [re.compile(x) for x in list(cfg.get("ros_exclude", [])) + list(extra)]
     for rname in repos:
         for f, tree in trees[rname].items():
             if any(x.search(f) for x in skip):
@@ -230,12 +231,12 @@ def ros_layer(g, cfg, repos, trees, top):
             pubs, subs = topics_of(tree)
             if pubs or subs:
                 line = min(list(pubs.values()) + list(subs.values()))
-                found[(rname, f)] = (pubs, subs, g.add(f"ros:{rname}:{f}", Path(f).stem, "ros", top, body=f"{f}\npublishes {len(pubs)}, subscribes {len(subs)}", code=f"{rname}:{f}#L{line}"))
+                found[(rname, f)] = (pubs, subs, g.add(f"ros{tag}:{rname}:{f}", Path(f).stem, "ros", top, body=f"{f}\npublishes {len(pubs)}, subscribes {len(subs)}", code=f"{rname}:{f}#L{line}"))
     for link in cfg.get("links", []):
         for end in ("from", "to"):
             repo, f = link[end].split(":", 1)
             if (repo, f) not in found:
-                found[(repo, f)] = ({}, {}, g.add(f"ros:{repo}:{f}", Path(f).stem, "ros", top, body=f"{f}\nnot a ROS node", code=f"{repo}:{f}"))
+                found[(repo, f)] = ({}, {}, g.add(f"ros{tag}:{repo}:{f}", Path(f).stem, "ros", top, body=f"{f}\nnot a ROS node", code=f"{repo}:{f}"))
     pair = {}
     for a, (pubs, _, ida) in found.items():
         for t in pubs:
@@ -264,13 +265,24 @@ def build(cfg):
         rid = g.add(f"L:repo:{name}", name, "repo", None, body=f"{len(repo['files'])} tracked files", code=name + ":")
         trees[name] = file_tree(g, name, repo["root"], repo["files"], rid)
     compose_layer(g, cfg, repos, mach)
-    ros_layer(g, cfg, repos, trees, ros)
-    for empty in (mach, ros):
+    profiles = cfg.get("profiles", [])
+    tops = [ros]
+    if profiles:
+        g.nodes = [n for n in g.nodes if n["id"] != ros]
+        g.by_inside[None] = [n for n in g.by_inside[None] if n["id"] != ros]
+        tops = []
+        for pr in profiles:
+            top = g.add(f"L:ros:{pr['name']}", pr["title"], "top", None, body=pr.get("body", "ROS nodes and topics for this setup"))
+            ros_layer(g, cfg, repos, trees, top, ":" + pr["name"], pr.get("exclude", []))
+            tops.append(top)
+    else:
+        ros_layer(g, cfg, repos, trees, ros)
+    for empty in [mach] + tops:
         if not g.by_inside.get(empty):
             g.nodes = [n for n in g.nodes if n["id"] != empty]
             g.by_inside[None] = [n for n in g.by_inside[None] if n["id"] != empty]
     for inside, kids in g.by_inside.items():
-        if inside == ros or not kids or any(k["x"] or k["y"] for k in kids[1:]):
+        if inside in tops or not kids or any(k["x"] or k["y"] for k in kids[1:]):
             continue
         grid(kids)
     return {"nodes": g.nodes, "edges": g.edges}, repos
