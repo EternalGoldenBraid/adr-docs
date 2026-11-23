@@ -8,6 +8,7 @@ Config:
     {"out": "public/graph/codemap.json",
      "repos": [{"name": "app", "path": "/abs/path/to/app"}],
      "compose": [{"repo": "app", "glob": "compose/*.yaml"}],
+     "ros_exclude": ["^tools/offline_"],
      "links": [{"from": "app:pkg/link.py", "to": "app:tools/bridge.py", "label": "UDP 5600"}]}
 
 Levels (each box opens the graph one level down with Enter or double click):
@@ -136,6 +137,19 @@ def columns(nodes, edges):
         if not moved:
             break
     per_band = 4
+    index = {n["id"]: n for n in nodes}
+    order = {}
+    for r in sorted(set(rank.values())):
+        col = [n for n in nodes if rank[n["id"]] == r]
+
+        def key(n):
+            ps = [order[u] for u in ids if n["id"] in out[u] and u in order]
+            return sum(ps) / len(ps) if ps else 1e9
+
+        col.sort(key=key)
+        for i, n in enumerate(col):
+            order[n["id"]] = i
+    nodes = sorted(nodes, key=lambda n: (rank[n["id"]], order[n["id"]]))
     rows, band_rows = {}, {}
     for n in nodes:
         r = rank[n["id"]]
@@ -144,11 +158,11 @@ def columns(nodes, edges):
         band_rows[r // per_band] = max(band_rows.get(r // per_band, 0), rows[r])
     top = {0: 0}
     for b in range(1, len(band_rows)):
-        top[b] = top[b - 1] + band_rows[b - 1] * 120 + 140
+        top[b] = top[b - 1] + band_rows[b - 1] * 150 + 160
     for n in nodes:
         r = n.pop("_r")
         n["x"] = (r % per_band) * 520
-        n["y"] = top[r // per_band] + n.pop("_row") * 120
+        n["y"] = top[r // per_band] + n.pop("_row") * 150
 
 
 def file_tree(g, repo, root, files, top):
@@ -208,8 +222,11 @@ def compose_layer(g, cfg, repos, top):
 
 def ros_layer(g, cfg, repos, trees, top):
     found = {}
+    skip = [re.compile(x) for x in cfg.get("ros_exclude", [])]
     for rname in repos:
         for f, tree in trees[rname].items():
+            if any(x.search(f) for x in skip):
+                continue
             pubs, subs = topics_of(tree)
             if pubs or subs:
                 line = min(list(pubs.values()) + list(subs.values()))

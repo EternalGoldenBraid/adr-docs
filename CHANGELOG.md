@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.172.3 - 2026-11-23
+
+- Code map: the config's `ros_exclude` (regexes on file paths) keeps offline tools out of the ROS level, columns are ordered to cut crossings and rows are spaced wider so topic labels no longer collide. Excluded files stay reachable through the repo tree.
+- Removed: nothing this time.
+
 ## 0.172.2 - 2026-11-23
 
 - Code map: the ROS level wraps into bands of four columns so it fits a normal screen, and DocGraph never fits a layer below 50% zoom (labels stay readable; pan with swipe, `h j k l`, zoom with `+`/`-` or pinch).
