@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { applyVote, refreshQueue, requestVotes, reveal, voteQueue, readVotes } from "../src/votes.mjs";
+import { applyVote, dueCloseNotices, refreshQueue, requestVotes, reveal, voteQueue, readVotes } from "../src/votes.mjs";
 
 test("a vote request queues one item per voter, then one reveal item for the requester, or a close item after the deadline", () => {
   const root = mkdtempSync(join(tmpdir(), "adr-votes-"));
@@ -22,5 +22,19 @@ test("a vote request queues one item per voter, then one reveal item for the req
     reveal(root, { page: "/p", item: "t" });
     assert.deepEqual(queue(), []);
     assert.throws(() => requestVotes(root, { page: "/p", item: "u", voters: [] }), /1 to 12/);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test("the lead is told once when the window closes, early when everyone has voted", () => {
+  const root = mkdtempSync(join(tmpdir(), "adr-votes-"));
+  try {
+    requestVotes(root, { page: "/p", item: "t", voters: ["a", "b"], requester: "owner1" });
+    assert.deepEqual(dueCloseNotices(root), []);
+    const late = dueCloseNotices(root, new Date(Date.now() + 6 * 60e3));
+    assert.deepEqual(late.map(d => [d.to, d.missing]), [["site-manager", ["a", "b"]]]);
+    assert.deepEqual(dueCloseNotices(root, new Date(Date.now() + 9 * 60e3)), []);
+    requestVotes(root, { page: "/p", item: "u", voters: ["a"], requester: "owner1", closeTo: "lead" });
+    applyVote(root, { page: "/p", item: "u", agent: "a", vote: 2 });
+    assert.deepEqual(dueCloseNotices(root).map(d => [d.item, d.to]), [["u", "lead"]]);
   } finally { rmSync(root, { recursive: true, force: true }); }
 });

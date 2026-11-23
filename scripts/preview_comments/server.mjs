@@ -24,7 +24,7 @@ import { readCell, writeCell } from "./table-edit.mjs";
 import { bareSession, readRoster, slugify } from "../../src/roster.mjs";
 import { answerRates, rank } from "../../src/nudge-plan.mjs";
 import { deriveState, disagrees, itemTurns } from "../../src/verified-state.mjs";
-import { addNote, applyVote, publicVotes, readVotes, refreshQueue, requestVotes, reveal } from "../../src/votes.mjs";
+import { addNote, applyVote, dueCloseNotices, publicVotes, readVotes, refreshQueue, requestVotes, reveal } from "../../src/votes.mjs";
 import { pageCards, readPageTree } from "../../src/page-tree.mjs";
 import { diffLines, hunks } from "./page-diff.mjs";
 
@@ -475,7 +475,7 @@ export async function startCommentBridge({
     const page = input.page, item = input.item;
     if (input.action === "request" || input.request) {
       const requester = as ?? input.requester ?? ownerName();
-      const row = requestVotes(root, { page, item, voters: input.voters, requester, deadlineMinutes: input.deadlineMinutes });
+      const row = requestVotes(root, { page, item, voters: input.voters, requester, closeTo: input.closeTo, deadlineMinutes: input.deadlineMinutes });
       const rows = mesh ? await meshStatus().catch(() => []) : [];
       const asked = [], unreachable = [];
       for (const name of row.rounds.at(-1).requested) {
@@ -487,9 +487,21 @@ export async function startCommentBridge({
       return { item: publicVotes([row])[0], asked, unreachable };
     }
     const row = input.action === "reveal" || input.reveal ? reveal(root, input) : input.action === "note" || input.note ? addNote(root, { ...input, text: input.note ?? input.text, agent: input.agent ?? as }) : applyVote(root, { ...input, agent: input.agent ?? as });
+    closeNotices().catch(error => onError?.(error));
     return { item: publicVotes([row])[0] };
   }
-  const voteTimer = setInterval(() => { try { refreshQueue(root); } catch (error) { onError?.(error); } }, 60_000);
+  // The window closed (all voted, or the deadline passed): tell the lead once, who hosts the min/max discussion before the next round.
+  async function closeNotices() {
+    for (const due of dueCloseNotices(root)) {
+      const rows = mesh ? await meshStatus().catch(() => []) : [];
+      const target = rows.find(r => r.slug === due.to);
+      if (!target?.session || target.status === "offline") continue;
+      const note = `ADR voting window closed for ${due.item} on ${due.page} (round ${due.round}): ${due.voted.length} voted${due.missing.length ? `, missing ${due.missing.join(", ")}` : ""}. ` +
+        `Reveal: reveal_doc_review_votes(page="${due.page}", item="${due.item}"); then ask the lowest and highest voter why on the page's vote thread. ${due.requestedBy} reopens the next round with request_doc_review_votes.`;
+      try { await mesh.send(meshAddress(target).session, note, meshAddress(target).machine); } catch (error) { onError?.(error); }
+    }
+  }
+  const voteTimer = setInterval(() => { try { refreshQueue(root); } catch (error) { onError?.(error); } closeNotices().catch(error => onError?.(error)); }, 15_000);
   const nudgeTimer = mesh && process.env.ADR_NUDGE !== "off" ? setInterval(() => nudgeIdle().catch(error => onError?.(error)), 5_000) : undefined;
   nudgeTimer?.unref();
   // .queue-events.jsonl at the site root (one line per test state change): a test turning done hands over to the doers it unblocks;

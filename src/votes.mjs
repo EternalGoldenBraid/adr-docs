@@ -45,14 +45,14 @@ export function applyVote(root, { page, item, agent, vote, owner }) {
 
 // A request names who must vote; the open round remembers it. A voter's item ends when they vote; the requester gets one item
 // when the last vote is in, or, after the deadline, one to close on the votes that came.
-export function requestVotes(root, { page, item, voters, requester, deadlineMinutes = 60, now = new Date() }) {
+export function requestVotes(root, { page, item, voters, requester, closeTo, deadlineMinutes = 5, now = new Date() }) {
   const names = [...new Set((voters ?? []).map(String))].filter(Boolean);
   if (!names.length || names.length > 12) throw new Error("Name 1 to 12 voters.");
   const items = readVotes(root);
   const row = find(items, page, item) ?? (items.push({ page, item, rounds: [] }), items.at(-1));
   if (row.decidedAt) throw new Error("This item is decided; start a new item name for another vote.");
   if (!open(row)) row.rounds.push({ round: row.rounds.length + 1, votes: {} });
-  Object.assign(open(row), { requested: names, requestedBy: requester ?? row.owner ?? "owner", requestedAt: now.toISOString(), deadlineMinutes: Math.max(1, Math.min(1440, Number(deadlineMinutes) || 60)) });
+  Object.assign(open(row), { requested: names, requestedBy: requester ?? row.owner ?? "owner", requestedAt: now.toISOString(), deadlineMinutes: Math.max(1, Math.min(1440, Number(deadlineMinutes) || 5)), closeTo: closeTo || "site-manager", closeNotified: false });
   save(root, items);
   return row;
 }
@@ -70,6 +70,21 @@ export function voteQueue(items, now = new Date()) {
     else if (late && Object.keys(round.votes).length) out.push({ ...base, to: round.requestedBy, rank: 0, text: `Close ${row.item} on the votes in (${Object.keys(round.votes).length} of ${round.requested.length})` });
   }
   return out;
+}
+
+// Rounds whose window has closed (everyone voted, or the deadline passed) and whose lead has not been told; marks them told.
+export function dueCloseNotices(root, now = new Date()) {
+  const items = readVotes(root), due = [];
+  for (const row of items) {
+    const round = row.decidedAt ? undefined : open(row);
+    if (!round?.requested || round.closeNotified) continue;
+    const missing = round.requested.filter(name => round.votes[name] === undefined);
+    if (missing.length && now - Date.parse(round.requestedAt) <= round.deadlineMinutes * 60000) continue;
+    round.closeNotified = true;
+    due.push({ page: row.page, item: row.item, round: round.round, to: round.closeTo ?? "site-manager", voted: Object.keys(round.votes), missing, requestedBy: round.requestedBy });
+  }
+  if (due.length) save(root, items);
+  return due;
 }
 
 // Rewrites votes-queue.json when only time has changed it (a deadline passed); returns whether it did.

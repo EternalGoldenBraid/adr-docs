@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.174.0 - 2026-11-23
+
+- Voting window: `request_doc_review_votes` defaults to a 5-minute window and takes `close_to` (default `site-manager`). When the window closes, or the last voter casts, that lead gets one mesh note with who voted and who is missing; they host the min/max discussion and the owner reopens the next round with another request.
+- Removed: nothing this time.
+
 ## 0.173.2 - 2026-11-23
 
 - Code viewer: stronger contrast for the active line, selection and block cursor.
