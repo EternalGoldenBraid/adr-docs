@@ -49,6 +49,7 @@
       .history-head h2{margin:0}.history-head .history-counts{margin-left:auto;margin-right:12px}
       .icon{padding:2px 9px;border-radius:6px;line-height:1.4}
       .whats-panel{width:min(780px,94vw)}.whats-body{max-height:62vh;overflow:auto;font:13px/1.5 ui-monospace,monospace}.whats-row{display:flex;gap:12px;padding:3px 8px;border-radius:4px;cursor:pointer}.whats-row.on,.whats-hunk.on{background:#3b4a63}.whats-preview{position:sticky;bottom:0;margin-top:8px;padding:6px 8px;background:#1f2430;border-top:1px solid #59616d;white-space:pre-wrap;color:#c9d1d9}.whats-row .slug{flex:1}.whats-row .add{color:#69db7c}.whats-row .del{color:#ff8787}.whats-row .when{color:#8b95a5}.whats-hunk{border-left:3px solid #59616d;margin:6px 0;padding:2px 8px;white-space:pre-wrap}.whats-hunk.on{border-color:#8ab4f8}.whats-hunk .ln{color:#8b95a5}.whats-hunk .op-plus{color:#69db7c}.whats-hunk .op-minus{color:#ff8787;text-decoration:line-through}.sb-new{color:#74c0fc;font-weight:700;white-space:nowrap}
+      .set-panel{width:min(520px,94vw)}.set-list{display:grid;gap:2px;margin:8px 0}.set-row{display:flex;justify-content:space-between;gap:12px;text-align:left;border:0;border-left:3px solid #3a404a;background:transparent;color:inherit;font:inherit;padding:5px 10px;cursor:pointer}.set-row.on{background:#1d2a40;border-color:#74c0fc}.set-row b{font-weight:600;color:#d5dbe3}.set-row small{display:block}
       .help-panel{width:min(640px,94vw)}.help-tabs,.help-tabs-look{display:flex;gap:6px;margin:8px 0;flex-wrap:wrap}.help-tabs button,.help-tabs-look button{background:#2a2e36;color:inherit;border:1px solid #59616d;border-radius:6px;padding:3px 10px;cursor:pointer}.help-tabs button[aria-selected=true],.help-tabs-look button[aria-selected=true]{background:#3b4a63;border-color:#8ab4f8}.help-body{white-space:pre-wrap;font:13px/1.5 ui-monospace,monospace;margin:0;max-height:50vh;overflow:auto}
       .mesh-machines{margin-top:10px}.mach{display:grid;grid-template-columns:100px 1fr 230px;gap:8px;align-items:center;font-size:12px;padding:2px 0}.mach svg{width:100%;height:22px}.mach .hot{color:#f38ba8}.mach-detail{display:grid;gap:4px;margin:2px 0 8px;font-size:11px}.mach-detail.stale{opacity:.5}.cores{display:flex;gap:2px;height:36px;align-items:flex-end;flex:1}.core{flex:1;max-width:16px;height:100%;display:flex;align-items:flex-end;background:#252a32;border-radius:2px;overflow:hidden}.core i{display:block;width:100%;min-height:1px}.gpu{display:grid;grid-template-columns:110px 1fr 54px 1fr 80px 90px;gap:6px;align-items:center}.gpu .bar{position:relative;height:14px;background:#252a32;border-radius:3px;overflow:hidden}.gpu .bar i{position:absolute;inset:0 auto 0 0;display:block}.core{position:relative}.core em{position:absolute;top:0;left:0;right:0;text-align:center;font-style:normal;font-size:8px;opacity:.65}.cores-wrap{display:flex;gap:6px;align-items:stretch}.cores-wrap .scale{display:flex;flex-direction:column;justify-content:space-between;font-size:9px;opacity:.6;text-align:right;min-width:28px}.cores-wrap .avg{align-self:center;white-space:nowrap}.mach.stale{opacity:.5}.mesh-panel{width:min(var(--pw,640px),94vw);max-height:min(var(--ph,100vh),calc(100vh - 120px));overflow:auto}.mesh-panel.peek{position:fixed;left:auto;top:auto;right:12px;bottom:52px;margin:0;max-height:70vh;overflow:auto;opacity:.97}.mesh-corner{position:fixed;right:0;bottom:130px;padding:10px 3px;z-index:2147483000;background:#1b1d22cc;color:#aab;border:1px solid #3a404a;border-right:0;border-radius:8px 0 0 8px;font:11px/1 ui-monospace,monospace;writing-mode:vertical-rl;cursor:pointer;opacity:.55}.mesh-corner:hover{opacity:1}.mesh-table td:nth-child(2){white-space:nowrap}.mesh-tabs{margin:0 8px}.mesh-graph[hidden],.mesh-room[hidden]{display:none}.mesh-room{margin:8px;font-size:13px}.room-list{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}.room-list button,.room-new button,.room-send button{padding:2px 10px;border:1px solid #59616d;border-radius:999px;background:transparent;color:inherit;font:inherit;cursor:pointer}.room-list button.on,.room-new button.on{border-color:#74c0fc;background:rgba(116,192,252,.18)}.room-log{max-height:46vh;overflow:auto;display:grid;gap:6px;padding:4px 0}.room-post{padding:5px 9px;border-left:3px solid #59616d;background:#20242b;border-radius:0 6px 6px 0;white-space:pre-wrap}.room-post.me{border-color:#74c0fc}.room-post b{display:block;font-size:11px;margin-bottom:2px}.room-send{display:flex;gap:6px;margin-top:6px}.room-send textarea{flex:1;min-height:44px;background:#14171c;color:inherit;border:1px solid #3a404a;border-radius:6px;padding:5px;font:inherit}.room-new{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px}.room-new input{background:#14171c;color:inherit;border:1px solid #3a404a;border-radius:6px;padding:2px 6px;font:inherit}.mesh-graph{width:100%;height:auto;display:block}.mesh-graph text{fill:#d7dde6;font:11px ui-monospace,monospace;text-anchor:middle}.mesh-edges{font-size:12px;color:#aab;margin-top:8px}.mesh-table{width:100%;border-collapse:collapse;font-size:13px}.mesh-table th,.mesh-table td{text-align:left;padding:4px 8px;border-bottom:1px solid #3a404a}
       .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:#59616d}.dot.active{background:#51cf66}.dot.idle{background:#fcc419}
@@ -172,6 +173,10 @@
     <section class="panel whats-panel" hidden aria-label="What's new">
       <div class="history-head"><h2>What's new</h2><small class="whats-hint"></small><button class="whats-close icon" type="button" aria-label="Close">✕</button></div>
       <div class="whats-body" tabindex="-1"></div>
+    </section>
+    <section class="panel set-panel" hidden aria-label="Settings">
+      <div class="history-head"><h2>Settings</h2><small>j/k move · h/l change · 0 reset · Esc closes</small><button class="set-close icon" type="button" aria-label="Close">✕</button></div>
+      <div class="set-list" role="listbox"></div>
     </section>
     <section class="panel help-panel" hidden aria-label="Help">
       <div class="history-head"><h2>Help</h2><small>[ ] or h/l switch tab · Esc closes</small><button class="help-close icon" type="button" aria-label="Close">✕</button></div>
@@ -400,7 +405,7 @@
     ]],
     ["Search & commands", [
       "/ or :grep [-d N] [-u N] [-s] [-p|-c] <regex> searches pages and threads (no flag: all pages; -d 0: this page; -d N: N levels below; -u N: N ancestors; -1 = all)",
-      "Commands: :help [section] :man :history :threads :chat :comment :tree :new :present :export [single|compress] :read [stop] :figure :restart :grep :vim off|on :order newest|oldest :calm [site|off] :autopilot HOURS [brief]|off :keys",
+      "Commands: :set :help [section] :man :history :threads :chat :comment :tree :new :present :export [single|compress] :read [stop] :figure :restart :grep :vim off|on :order newest|oldest :calm [site|off] :autopilot HOURS [brief]|off :keys",
       ":autopilot 8 finish the join runs: for that many hours ADR sends no nudges and every note to an agent says to keep working, post one finish report and not wait for votes or resolves. The brief goes to everyone. The Autopilot button in the history header does the same; :autopilot off ends it.",
       ":calm silences ADR on this page (:calm site: every page; :calm off restores): no shortcuts, comment popups, screenshots or marks, so a page with its own controls is left alone. Only : still works; the status bar shows CALM.",
       ":threads opens the threads about this page: those started on it and those whose text links to it. In the What's new list (n), 💬 N counts them and t opens the page with them.",
@@ -422,6 +427,60 @@
     helpPanel.hidden = false;
   }
   find(".help-close").addEventListener("click", () => { helpPanel.hidden = true; });
+  // ":set": a vim-navigable list of the preferences kept in this browser; changes apply at once.
+  const setPanel = find(".set-panel");
+  const pref = (key, fallback) => localStorage.getItem(key) ?? fallback;
+  const clamp = (value, lo, hi) => Math.min(hi, Math.max(lo, value));
+  const percent = (key, lo, hi, step, apply) => ({
+    value: () => `${pref(key, 100)}%`,
+    change: dir => { localStorage.setItem(key, clamp(Number(pref(key, 100)) + dir * step, lo, hi)); apply(); },
+    reset: () => { localStorage.removeItem(key); apply(); },
+  });
+  const flag = (get, set) => ({ value: () => get() ? "on" : "off", change: () => set(!get()), reset: () => set(false) });
+  const applySiteFont = () => {
+    let style = document.getElementById("adr-site-font");
+    const size = Number(pref("preview-comments-site-font", 100));
+    if (size === 100) return style?.remove(), placeBubbles();
+    if (!style) { style = document.createElement("style"); style.id = "adr-site-font"; document.head.append(style); }
+    style.textContent = `.vp-doc{font-size:${(16 * size / 100).toFixed(1)}px}.vp-doc :is(p,li,td,th,blockquote,dd,dt,summary){font-size:inherit}`;
+    placeBubbles();
+  };
+  const settingRows = [
+    { label: "Site font size", hint: "page text, 70–160%", ...percent("preview-comments-site-font", 70, 160, 5, applySiteFont) },
+    { label: "Review UI size", hint: "panels and bubbles, 80–150%", ...percent("preview-comments-ui-size", 80, 150, 10, () => applyScale()) },
+    { label: "Newest replies first", hint: "thread order", ...flag(newestFirst, on => { localStorage.setItem("preview-comments-order", on ? "newest" : "oldest"); if (selectedThread) renderHistory(); }) },
+    { label: "Vim keys", hint: "hjkl and friends on the page", ...flag(() => vimEnabled, on => { if (on !== vimEnabled) vimButton.click(); }) },
+    { label: "Threads full screen", hint: "open threads full screen", ...flag(() => localStorage.getItem("preview-comments-full") === "1", on => { localStorage.setItem("preview-comments-full", on ? "1" : "0"); history.classList.toggle("full", on); }) },
+    { label: "Read aloud", hint: "auto-start the speech server", value: () => settings.tts === false ? "off" : "on", change: () => api("settings", { tts: settings.tts === false }).then(v => { settings = v; showSettings(); }).catch(e => message(e.message, true)), reset: () => api("settings", { tts: true }).then(v => { settings = v; showSettings(); }).catch(e => message(e.message, true)) },
+  ];
+  let setIndex = 0;
+  function showSettings(index = setIndex) {
+    setIndex = (index + settingRows.length) % settingRows.length;
+    find(".set-list").replaceChildren(...settingRows.map((row, i) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.role = "option"; b.className = `set-row${i === setIndex ? " on" : ""}`; b.setAttribute("aria-selected", String(i === setIndex));
+      const name = document.createElement("span"), value = document.createElement("span");
+      name.innerHTML = "<b></b><small></small>"; name.firstChild.textContent = row.label; name.lastChild.textContent = row.hint;
+      value.textContent = row.value();
+      b.append(name, value);
+      b.addEventListener("click", () => { setIndex = i; row.change(1); showSettings(); });
+      return b;
+    }));
+    setPanel.hidden = false;
+  }
+  find(".set-close").addEventListener("click", () => { setPanel.hidden = true; });
+  docOn("keydown", event => {
+    if (setPanel.hidden || event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
+    const k = event.key, row = settingRows[setIndex];
+    if (k === "Escape" || k === "q") setPanel.hidden = true;
+    else if (k === "j" || k === "ArrowDown") showSettings(setIndex + 1);
+    else if (k === "k" || k === "ArrowUp") showSettings(setIndex - 1);
+    else if (k === "l" || k === "ArrowRight" || k === "Enter" || k === " ") { row.change(1); showSettings(); }
+    else if (k === "h" || k === "ArrowLeft") { row.change(-1); showSettings(); }
+    else if (k === "0") { row.reset(); showSettings(); }
+    else return;
+    event.preventDefault(); event.stopImmediatePropagation();
+  }, true);
   docOn("keydown", event => {
     if (helpPanel.hidden || event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
     const next = ["]", "l", "ArrowRight", "Tab"].includes(event.key), prev = ["[", "h", "ArrowLeft"].includes(event.key);
@@ -437,7 +496,7 @@
     comment: () => commentSelection(),
     present: () => document.dispatchEvent(new CustomEvent("adr-present")),
     tree: () => document.dispatchEvent(new KeyboardEvent("keydown", { key: "t", bubbles: true })),
-    settings: () => loadSettings().then(() => message(`owner: ${settings.owner}\nteam: ${settings.team.join(", ") || "(none)"}\ndefault recipients: ${settings.default}\nread aloud auto-start: ${settings.tts === false ? "off" : "on"}\ncalm: ${isCalm() ? "on" : "off"} (:calm · :calm site · :calm off)\n:owner NAME · :team A B C · :default owner|last · :tts on|off`)),
+    settings: () => loadSettings().then(() => showSettings(0)), set: () => loadSettings().then(() => showSettings(0)),
     mesh: () => openMesh(),
     labels: async () => {
       try {
@@ -3536,9 +3595,9 @@
     const dy = v ? v.offsetTop + v.height - root.clientHeight : 0;
     host.style.setProperty("--dx", `${dx}px`);
     host.style.setProperty("--dy", `${dy}px`);
-    host.style.setProperty("--ds", uiScale() / k);
+    host.style.setProperty("--ds", uiScale() * Number(pref("preview-comments-ui-size", 100)) / 100 / k);
   };
-  const applyScale = () => { host.style.setProperty("--s", uiScale()); applyDock(); placeBubbles(); };
+  const applyScale = () => { host.style.setProperty("--s", uiScale() * Number(pref("preview-comments-ui-size", 100)) / 100); applyDock(); placeBubbles(); };
   addEventListener("resize", applyScale);
   if (window.visualViewport) { visualViewport.addEventListener("resize", applyDock); visualViewport.addEventListener("scroll", applyDock); }
   const SEEN_KEY = "preview-comments-seen-replies";
@@ -4010,6 +4069,7 @@
   addEventListener("resize", applyMarks);
   [[panel, "comment"], [history, "history"], [find(".mesh-panel"), "team"], [whatsPanel, "whats"], [helpPanel, "help"]].forEach(([el, key]) => el && makeDraggable(el, key));
   applyScale();
+  applySiteFont();
   syncMarks();
   setInterval(syncMarks, 3000);
   // Landing on #anchor (also after SPA navigation): scroll the target clear of the nav bar and flash it.

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.189.0 - 2026-11-23
+
+- `:set` (also `:settings`) opens a vim-navigable settings list: j/k move, h/l change, 0 resets, Esc closes. It holds site font size (70–160%, page text), review UI size (80–150%, panels and bubbles), newest-first order, vim keys, full-screen threads and read aloud. Changes apply at once and stay in this browser.
+- Removed: nothing this time.
+
 ## 0.188.0 - 2026-11-23
 
 - The discussions rail beside a thread (`:rail`) is gone: the tabs and the thread list already show the same open and waiting threads, and it was off by default and unused.

@@ -548,3 +548,5 @@ Autopilot can also be set for one agent: `POST /settings` with `{"autopilotAgent
 From 0.170.0 only the human closes or reopens a thread (Resolve / Reopen). Agents' resolve calls leave a quiet mark and close nothing; the per-member chips and the bell are gone.
 
 A page's front-matter `owner:` and the agent that started a thread also close it with their resolve (0.171.0).
+
+`:set` opens a settings list you drive with the keyboard: `j`/`k` move, `h`/`l` (or Enter, Space) change a value, `0` resets it, Esc closes. Site font size scales the page text; review UI size scales the panels and bubbles; the rest are thread order, vim keys, full-screen threads and read aloud. Values are kept in this browser.
