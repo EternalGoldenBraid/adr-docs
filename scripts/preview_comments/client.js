@@ -72,6 +72,7 @@
       .thread-head{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 8px!important;padding:10px 20px;position:sticky;top:44px;background:#1b1d22;z-index:1;border-bottom:1px solid #3a404a}
       .thread-title{flex:1;min-width:0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
       .thread-head a{white-space:nowrap}.thread-head button{padding:4px 10px}
+      .working-line{margin:4px 20px 6px;font-size:12px;color:#9fc9ea}.working-line[hidden]{display:none}.working-line .wdot{display:inline-block;width:8px;height:8px;margin-right:6px;border-radius:50%;background:#6fb7e8;animation:wpulse 1.6s ease-in-out infinite}.working-line .wdot.asking{background:#ffd500}@keyframes wpulse{50%{opacity:.3}}
       .thread-state{display:block;width:max-content;margin:2px 20px 8px;padding:1px 10px;border-radius:999px;background:#2a2f38;color:#b7c1ce;font-size:12px}.thread-state.resolved{color:#a2d8b1}.resolve-line{display:flex;flex-wrap:wrap;gap:6px;flex-basis:100%}.resolve-line:empty{display:none}.resolve-chip{padding:1px 8px;border-radius:999px;font-size:12px}.resolve-chip.done{background:#1f3a2a;color:#6fcf97}.resolve-chip.wait{background:#3d3516;color:#f2c94c}.resolve-chip.gone{background:#4a1f1f;color:#ff8a80}.thread-state[data-marks]::before{content:"";display:inline-block;width:10px;height:10px;margin-right:6px;border-radius:50%;background:var(--pie,none)}
       .thread-links{display:flex;flex-wrap:wrap;gap:6px;margin:4px 20px 8px}
       .chip{padding:2px 10px;border-radius:999px;font-size:12px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -163,6 +164,7 @@
         <details class="quote-box"><summary class="quote-summary">Selected content</summary><div class="quote thread-quote"></div></details>
         <div class="thread-links"></div>
         <div class="thread-messages"></div>
+        <div class="working-line" hidden aria-live="polite"></div>
         <form class="reply-form"><div class="reply-target" hidden><span></span><button type="button" title="Drop (Esc in the field, or click)">✕</button></div><div class="to to-reply" hidden></div><textarea id="thread-reply" aria-label="Your reply" placeholder="Reply (i to focus · /w name text whispers · Ctrl+Enter queues it for the agent's next idle moment · ⚠ or Ctrl+Shift+Enter interrupts now · Esc/jk normal mode, again leaves)" required maxlength="4000"></textarea>
         <div class="actions"><span class="react" title="Quiet reaction: saved as a one-emoji note, nobody is interrupted"><button type="button" data-react="👍">👍</button><button type="button" data-react="✅">✅</button><button type="button" data-react="❤️">❤️</button><button type="button" data-react="👀">👀</button></span><button class="thread-region" type="button" title="Attach a screenshot of a region (s)">Region</button>
         <button class="thread-branch" type="button" title="Start a linked child thread from the selected text or focused message (n)">↳ New thread</button>
@@ -1946,11 +1948,36 @@
     markSeen(comment);
     renderLinks(comment);
     if (find(".to-reply").dataset.for !== comment.id) { setReplyTarget(null); find(".to-reply").dataset.for = comment.id; renderReplyTo(comment); }
+    refreshWorking();
     const nodes = threadNodes(comment, values => updateThread({ id: crypto.randomUUID(), ...values }));
     find(".thread-messages").replaceChildren(...(newestFirst() ? nodes.reverse() : nodes));
     syncOrder();
     for (const item of find(".thread-messages").children) item.tabIndex = -1;
   }
+  // Typing-indicator analogue: addressed members whose own session log says they are working, polled while a thread is open.
+  // Shows only the log-derived state (thinking or the tool's name), never tool arguments.
+  let workingAt = 0, workingBusy = false;
+  async function refreshWorking(force = false) {
+    const line = find(".working-line"), thread = currentThread();
+    if (!thread || find(".history").hidden || (!force && (workingBusy || Date.now() - workingAt < 4000))) return;
+    workingBusy = true; workingAt = Date.now();
+    try {
+      const { members = [] } = await api("mesh");
+      if (currentThread()?.id !== thread.id) return;
+      const short = thread.id.slice(0, 8), parts = [];
+      for (const m of members.filter(m => m.session && [m.slug, m.name].some(n => n && (thread.to ?? []).includes(n)))) {
+        const state = meshState(m);
+        if (state !== "working" && state !== "asking") continue;
+        const dot = document.createElement("span"); dot.className = "wdot " + state;
+        const here = (m.verified?.workingOn ?? []).some(w => String(w.id).includes(short));
+        const text = state === "asking" ? "is waiting on a permission prompt" : `is working${m.verified?.detail ? " · " + m.verified.detail : ""}${here ? " · on this thread" : ""}`;
+        const span = document.createElement("span"); span.append(dot, `${m.name} ${text}`); parts.push(span);
+      }
+      line.replaceChildren(...parts.flatMap((p, i) => i ? [document.createElement("br"), p] : [p]));
+      line.hidden = !parts.length;
+    } catch { line.hidden = true; } finally { workingBusy = false; }
+  }
+  setInterval(() => { if (currentThread() && !document.hidden) refreshWorking(); }, 6000);
   // ":rail on|off": open discussions grouped by page, linked threads marked ↔, beside the thread (hidden on narrow screens).
   const railOn = () => localStorage.getItem("preview-comments-rail") === "on";
   function renderRail(current) {
