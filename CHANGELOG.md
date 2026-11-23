@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.179.0 - 2026-11-23
+
+- Comments render math: `$…$` inline and `$$…$$` display LaTeX become MathML (Temml, bundled), which is real text you can select and copy; hover shows the TeX. `$5 and $6` stays plain. Fenced code blocks (```), also inside a `>` quote, now render as code instead of showing the fences.
+- `/w name text` works after a quoted reply: the autocomplete, the whisper banner and sending all skip the quoted lines, and the whisper's recipients replace the quote's.
+- Removed: nothing this time.
+
 ## 0.178.0 - 2026-11-23
 
 - Graph search: with the graph active, `/` (or `:grep RE`) searches only that graph, across every layer, over title, text, status, code, link and layer path. Enter jumps into the node's layer and selects it; Ctrl-n/p or arrows move; Esc closes. The page's own `/` search is unchanged and works when the graph is not active. Documented in the graph's `:help`.

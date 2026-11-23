@@ -84,7 +84,7 @@
       .note.whisper.mine,.note.whisper.copilot{border:1px dashed #b197fc;background:#2a2538}
       .note{margin:8px 0;padding:8px 12px;background:#252a32;border-radius:10px}.note.copilot{background:#1e2a3a;margin-right:36px}.note.mine{margin-left:36px}
       .note .tools{opacity:0;transition:opacity .1s}.note:hover .tools,.note:focus-within .tools{opacity:1}
-      .note p{margin:6px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}.note blockquote{margin:6px 0 0;padding:0 0 0 10px;border-left:3px solid #4a5260;color:#b7c1ce}.note .table-wrap{overflow-x:auto;margin:6px 0 0}.note table{border-collapse:collapse;font-size:12px}.note th,.note td{border:1px solid #3a404a;padding:3px 8px;text-align:left;white-space:nowrap}.note th{background:#1b1f27}.note .speak{background:none;border:0;padding:0 2px;cursor:pointer;opacity:.5;font-size:12px}.note .speak:hover{opacity:1}.reader{display:flex;align-items:center;gap:6px;max-width:390px;margin:8px 0;padding:6px 10px;border:1px solid #74c0fc;border-radius:8px;background:#1b1d22}.reader[hidden]{display:none}.reader button{background:#2a2f38;border:1px solid #3a404a;border-radius:6px;color:inherit;padding:2px 8px;cursor:pointer}.reader button:focus-visible{outline:2px solid #74c0fc}.reader .reader-pos{margin-left:auto;font-size:12px;opacity:.8}.reply-target{display:flex;gap:8px;align-items:baseline;margin:0 0 6px;padding:4px 8px;border-left:3px solid #74c0fc;background:#23272e;font-size:12px}.reply-target[hidden]{display:none}.reply-target span{flex:1;overflow-wrap:anywhere}.reply-target button,.note .quote-ref{background:none;border:0;color:inherit;cursor:pointer;padding:0}.note .quote-ref{display:block;text-align:left;margin-top:6px;padding:2px 8px;border-left:3px solid #74c0fc;opacity:.8;font-size:12px;overflow-wrap:anywhere}.note .quote-ref:hover{opacity:1}.note a{color:#74c0fc}.note p img{display:block;max-width:100%;border-radius:6px;margin:6px 0}.note code{background:#2a2f38;padding:0 4px;border-radius:3px;font:12px ui-monospace,monospace}
+      .note p{margin:6px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}.note blockquote{margin:6px 0 0;padding:0 0 0 10px;border-left:3px solid #4a5260;color:#b7c1ce}.note .table-wrap{overflow-x:auto;margin:6px 0 0}.note table{border-collapse:collapse;font-size:12px}.note th,.note td{border:1px solid #3a404a;padding:3px 8px;text-align:left;white-space:nowrap}.note th{background:#1b1f27}.note .speak{background:none;border:0;padding:0 2px;cursor:pointer;opacity:.5;font-size:12px}.note .speak:hover{opacity:1}.reader{display:flex;align-items:center;gap:6px;max-width:390px;margin:8px 0;padding:6px 10px;border:1px solid #74c0fc;border-radius:8px;background:#1b1d22}.reader[hidden]{display:none}.reader button{background:#2a2f38;border:1px solid #3a404a;border-radius:6px;color:inherit;padding:2px 8px;cursor:pointer}.reader button:focus-visible{outline:2px solid #74c0fc}.reader .reader-pos{margin-left:auto;font-size:12px;opacity:.8}.reply-target{display:flex;gap:8px;align-items:baseline;margin:0 0 6px;padding:4px 8px;border-left:3px solid #74c0fc;background:#23272e;font-size:12px}.reply-target[hidden]{display:none}.reply-target span{flex:1;overflow-wrap:anywhere}.reply-target button,.note .quote-ref{background:none;border:0;color:inherit;cursor:pointer;padding:0}.note .quote-ref{display:block;text-align:left;margin-top:6px;padding:2px 8px;border-left:3px solid #74c0fc;opacity:.8;font-size:12px;overflow-wrap:anywhere}.note .quote-ref:hover{opacity:1}.note a{color:#74c0fc}.note p img{display:block;max-width:100%;border-radius:6px;margin:6px 0}.note pre{margin:6px 0 0;padding:6px 10px;background:#161a20;border-radius:6px;overflow-x:auto;user-select:text}.note pre code{background:none;padding:0}.note .math{user-select:text}.note .math.display{margin:6px 0 0;overflow-x:auto;overflow-y:hidden}.note .math.bad{font:12px ui-monospace,monospace;color:#f0a8a8}.note math{font-size:1.1em}.note code{background:#2a2f38;padding:0 4px;border-radius:3px;font:12px ui-monospace,monospace}
       a{color:#74c0fc}
       .contextual{display:flex;gap:6px;align-items:center;padding:6px;background:#1b1d22;border:1px solid #59616d;border-radius:10px;box-shadow:0 8px 24px #0008}
       .contextual button{padding:5px 10px;border-radius:7px}
@@ -1305,6 +1305,8 @@
   const toValue = (selected, shown) => shown && selected.size && recipients().length > 1 ? { to: [...selected] } : {};
   // Under a textarea: a whisper banner while the text starts with "/w name…", and an @name picker.
   // Picking (or sending) an @name also adds that agent to the To: chips.
+  // "q" prefills the reply with the quoted message ("> …" lines); a /w line may follow it.
+  const splitQuote = value => { const quote = /^(?:>[^\n]*(?:\n|$))+\n*/.exec(value)?.[0] ?? ""; return { quote, rest: value.slice(quote.length) }; };
   const mentionedIn = text => [...text.matchAll(/(?:^|[\s(])@([\w.-]+)/g)].map(match => recipientFor(match[1])).filter(Boolean);
   function attachAssist(input, getSelected, holder, whispers = false) {
     const box = document.createElement("div");
@@ -1337,10 +1339,11 @@
     };
     const update = () => {
       whisperPick = false;
-      const typing = whispers && /^(\/w[ \t]+(?:[\w.-]+,)*)([\w.-]*)$/.exec(input.value.slice(0, input.selectionStart));
+      const skip = splitQuote(input.value).quote.length;
+      const typing = whispers && input.selectionStart >= skip && /^(\/w[ \t]+(?:[\w.-]+,)*)([\w.-]*)$/.exec(input.value.slice(skip, input.selectionStart));
       if (typing) {
         whisperPick = true;
-        start = typing[1].length;
+        start = skip + typing[1].length;
         const typed = typing[2].toLowerCase();
         items = recipients().filter(name => name.toLowerCase().includes(typed)).sort((a, b) => Number(b.toLowerCase().startsWith(typed)) - Number(a.toLowerCase().startsWith(typed))).slice(0, 8);
         index = Math.min(index, Math.max(items.length - 1, 0));
@@ -1348,7 +1351,7 @@
         draw();
         return;
       }
-      const whisper = /^\/w[ \t]+([\w.,-]+)[ \t]/.exec(input.value);
+      const whisper = /^\/w[ \t]+([\w.,-]+)[ \t]/.exec(input.value.slice(skip));
       input.classList.toggle("whispering", Boolean(whisper && whispers));
       if (whisper && whispers) {
         const names = whisper[1].split(",").filter(Boolean).map(recipientFor);
@@ -1490,11 +1493,24 @@
   // Inline Markdown for messages (bold, italic, code), built from DOM nodes so message text is never parsed as HTML.
   function inlineMarkdown(text) {
     const fragment = document.createDocumentFragment();
-    const pattern = /(!?)\[([^\]\n]*)\]\(((?:https?:\/\/|\.{1,2}\/|\/(?!\/)|#)[^\s)]+)\)|\*\*([^*\n]+?)\*\*|`([^`\n]+)`|(?<![\w*])\*([^*\s][^*\n]*?)\*(?![\w*])|\bthread ([0-9a-f]{8})\b/g;
+    const pattern = /(!?)\[([^\]\n]*)\]\(((?:https?:\/\/|\.{1,2}\/|\/(?!\/)|#)[^\s)]+)\)|\*\*([^*\n]+?)\*\*|`([^`\n]+)`|(?<![\w*])\*([^*\s][^*\n]*?)\*(?![\w*])|\bthread ([0-9a-f]{8})\b|\$\$([^$]+?)\$\$|(?<![\\$\w])\$(?![\s$])([^$\n]+?)(?<![\s\\])\$(?![\w$])/g;
     let last = 0, match;
     while ((match = pattern.exec(text))) {
       if (match.index > last) fragment.append(text.slice(last, match.index));
-      const [, bang, label, href, bold, code, italic, bare] = match;
+      const [, bang, label, href, bold, code, italic, bare, displayMath, inlineMath] = match;
+      if (displayMath || inlineMath) {
+        const tex = (displayMath || inlineMath).trim();
+        const holder = document.createElement(displayMath ? "div" : "span");
+        holder.className = displayMath ? "math display" : "math";
+        holder.title = tex;
+        try {
+          if (!window.__adrMath) throw new Error("math unavailable");
+          window.__adrMath(tex, Boolean(displayMath), holder);
+        } catch { holder.className = "math bad"; holder.textContent = match[0]; }
+        fragment.append(holder);
+        last = pattern.lastIndex;
+        continue;
+      }
       if (bare) {
         const link = Object.assign(document.createElement("a"), { href: "#", textContent: match[0], title: "Open this thread" });
         link.addEventListener("click", event => { event.preventDefault(); jumpToThreadId(bare); });
@@ -1551,7 +1567,16 @@
       paragraph = [];
     };
     for (let i = 0; i < lines.length;) {
-      if (/^>/.test(lines[i])) {
+      if (/^\s*```/.test(lines[i])) {
+        flush();
+        const code = [];
+        i += 1;
+        while (i < lines.length && !/^\s*```\s*$/.test(lines[i])) code.push(lines[i++]);
+        i += 1;
+        const pre = document.createElement("pre");
+        pre.append(Object.assign(document.createElement("code"), { textContent: code.join("\n") }));
+        root.append(pre);
+      } else if (/^>/.test(lines[i])) {
         flush();
         const quoted = [];
         while (i < lines.length && /^>/.test(lines[i])) quoted.push(lines[i++].replace(/^> ?/, ""));
@@ -2308,11 +2333,12 @@
     // "/w name[,name] text" whispers: only those agents get it.
     let text = replyInput.value, whisper;
     replyAssist.addMentions(text);
-    const w = /^\/w[ \t]+([\w.,-]+)[ \t]+([\s\S]+)$/.exec(text);
+    const { quote: quoted, rest } = splitQuote(text);
+    const w = /^\/w[ \t]+([\w.,-]+)[ \t]+([\s\S]+)$/.exec(rest);
     if (w) {
       const names = w[1].split(",").filter(Boolean).map(recipientFor);
       if (names.some(name => !name)) { message(`/w: unknown name in "${w[1]}". Use team names, e.g. /w sim-agent text`, true); return; }
-      whisper = new Set(names); text = w[2];
+      whisper = new Set(names); text = quoted + w[2];
     }
     // Picking fewer than the whole room is a whisper to the picked members; the default (everyone) is a normal room message.
     // Only names shown as chips count: a thread's `to` can also hold the owner or you, who have no chip.

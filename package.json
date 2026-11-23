@@ -1,6 +1,6 @@
 {
   "name": "adr-docs",
-  "version": "0.178.0",
+  "version": "0.179.0",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -25,6 +25,7 @@
     "./comment-bridge": "./scripts/preview_comments/server.mjs"
   },
   "scripts": {
+    "build:math": "esbuild scripts/preview_comments/math.entry.js --bundle --minify --format=iife --target=es2022 --outfile=scripts/preview_comments/math.bundle.js",
     "build:code-viewer": "esbuild scripts/code_viewer/viewer.js --bundle --minify --format=esm --target=es2022 --outfile=scripts/code_viewer/viewer.bundle.js",
     "test": "node --test tests/*.test.mjs",
     "example:paper": "python3 tools/fetch_arxiv.py 2211.08416v3 --root examples",
@@ -57,6 +58,7 @@
     "@replit/codemirror-vim": "^6.4.0",
     "codemirror": "^6.0.2",
     "esbuild": "^0.28.2",
-    "playwright-core": "^1.65.0"
+    "playwright-core": "^1.65.0",
+    "temml": "^0.14.0"
   }
 }

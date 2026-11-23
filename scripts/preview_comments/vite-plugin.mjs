@@ -29,6 +29,7 @@ export function previewComments({ connectionFile }) {
           });
           const keymap = loadKeymap(process.env, message => server.config.logger.warn(message));
           return response.end(`window.__adrKeymap=${JSON.stringify(keymap)};\n` +
+            readFileSync(new URL("./math.bundle.js", import.meta.url), "utf8") + "\n" +
             readFileSync(new URL("./client.js", import.meta.url), "utf8"));
         }
         let connection;
