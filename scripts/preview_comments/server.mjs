@@ -475,16 +475,21 @@ export async function startCommentBridge({
     const page = input.page, item = input.item;
     if (input.action === "request" || input.request) {
       const requester = as ?? input.requester ?? ownerName();
-      const row = requestVotes(root, { page, item, voters: input.voters, requester, closeTo: input.closeTo, deadlineMinutes: input.deadlineMinutes });
-      const rows = mesh ? await meshStatus().catch(() => []) : [];
+      const items = [...new Set([item, ...(input.items ?? [])].filter(Boolean))];
+      const rows = items.map(name => requestVotes(root, { page, item: name, voters: input.voters, requester, closeTo: input.closeTo, deadlineMinutes: input.deadlineMinutes }));
+      const status = mesh ? await meshStatus().catch(() => []) : [];
       const asked = [], unreachable = [];
-      for (const name of row.rounds.at(-1).requested) {
-        const target = rows.find(r => r.slug === name);
+      const minutes = rows[0].rounds.at(-1).deadlineMinutes;
+      for (const name of rows[0].rounds.at(-1).requested) {
+        const target = status.find(r => r.slug === name);
         if (!target?.session || target.status === "offline") { unreachable.push(name); continue; }
-        const note = `ADR vote request from ${requester}: price ${item} on ${page}. Cast: cast_doc_review_vote(page="${page}", item="${item}", vote=<1|2|3|5|8|13|21>). It is in your queue until you do.`;
+        const todo = rows.filter(r => r.rounds.at(-1).votes[name] === undefined).map(r => r.item);
+        if (!todo.length) continue;
+        const note = `ADR vote request from ${requester} on ${page}: price ${todo.join(", ")} within ${minutes} min. Votes stay hidden until the window closes or the last vote is in, then they are revealed. ` +
+          `Cast: cast_doc_review_vote(page="${page}", item=<test>, vote=<1|2|3|5|8|13|21>), or with the script: adr-vote --root ${root} --page ${page} --as ${name} ${todo.map(t => `${t}=<n>`).join(" ")}`;
         try { await mesh.send(meshAddress(target).session, note, meshAddress(target).machine); asked.push(name); } catch { unreachable.push(name); }
       }
-      return { item: publicVotes([row])[0], asked, unreachable };
+      return { item: publicVotes(rows)[0], items: publicVotes(rows), asked, unreachable };
     }
     const row = input.action === "reveal" || input.reveal ? reveal(root, input) : input.action === "note" || input.note ? addNote(root, { ...input, text: input.note ?? input.text, agent: input.agent ?? as }) : applyVote(root, { ...input, agent: input.agent ?? as });
     closeNotices().catch(error => onError?.(error));
@@ -493,11 +498,13 @@ export async function startCommentBridge({
   // The window closed (all voted, or the deadline passed): tell the lead once, who hosts the min/max discussion before the next round.
   async function closeNotices() {
     for (const due of dueCloseNotices(root)) {
+      let spread = "";
+      try { if (!due.voted.length) throw new Error("no votes"); const row = reveal(root, { page: due.page, item: due.item }), r = row.rounds.at(-1); spread = ` Revealed: ${r.min}–${r.max}, median ${r.median}${r.converged ? ", converged" : ", not converged"}.`; } catch { /* nothing to reveal */ }
       const rows = mesh ? await meshStatus().catch(() => []) : [];
       const target = rows.find(r => r.slug === due.to);
       if (!target?.session || target.status === "offline") continue;
-      const note = `ADR voting window closed for ${due.item} on ${due.page} (round ${due.round}): ${due.voted.length} voted${due.missing.length ? `, missing ${due.missing.join(", ")}` : ""}. ` +
-        `Reveal: reveal_doc_review_votes(page="${due.page}", item="${due.item}"); then ask the lowest and highest voter why on the page's vote thread. ${due.requestedBy} reopens the next round with request_doc_review_votes.`;
+      const note = `ADR voting window closed for ${due.item} on ${due.page} (round ${due.round}): ${due.voted.length} voted${due.missing.length ? `, missing ${due.missing.join(", ")}` : ""}.${spread} ` +
+        `Ask the lowest and highest voter why on the page's vote thread if it did not converge. ${due.requestedBy} reopens the next round with request_doc_review_votes.`;
       try { await mesh.send(meshAddress(target).session, note, meshAddress(target).machine); } catch (error) { onError?.(error); }
     }
   }

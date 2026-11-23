@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.175.0 - 2026-11-23
+
+- Voting: one request can name several tests (`items`); each voter gets a single note with the page, the tests, the window and an `adr-vote --page PAGE --as ME test=score ...` line that works without the agent tool. The round is revealed automatically when the window closes or the last vote is in, and the lead's note carries min, max and median. Votes stay on the server until then.
+- Removed: nothing this time.
+
 ## 0.174.1 - 2026-11-23
 
 - Code map profiles are a dropdown on the graph instead of extra top-level boxes: a map may list `profiles` and give nodes `profiles: {name: [x, y]}`; choosing one hides the other nodes and lays the rest out again. The generator builds them from the config's `profiles` (regex excludes on tracked file paths), so only files on disk count.
