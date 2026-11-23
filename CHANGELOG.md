@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.185.0 - 2026-11-23
+
+- A thread opened from its page bubble is a compact window again: no thread list, tabs, counts, Team/Autopilot buttons or rail, and Esc closes it. It is still the one thread UI (reactions, whisper completion, reload restore). `f` or ⛶ goes full screen with everything back, and leaving full screen returns to the compact window. `-` `h` still opens the full history.
+- Removed: nothing this time.
+
 ## 0.184.0 - 2026-11-23
 
 - One thread UI: clicking a thread's bubble on the page now opens the full thread view (reactions, whisper completion, full screen, restore after reload) instead of the small popover. Bare highlights and private notes keep the popover.

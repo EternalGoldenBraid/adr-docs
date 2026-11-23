@@ -38,6 +38,7 @@
       .vim-caret{position:fixed;width:2px;background:#74c0fc;pointer-events:none}
       .toolbar{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;max-width:calc(100vw - 48px)}
       .history{width:min(var(--pw,720px),calc(100vw - 48px));max-height:min(var(--ph,100vh),calc(100vh - 120px));overflow:auto}
+      .history.mini:not(.full) :is(.tabs,.history-counts,.history-team,.history-autopilot,.history-refresh,.dtree,.thread-back,.thread-list){display:none!important}
       .history.full{position:fixed;inset:0;width:auto;max-height:none;height:100vh;margin:0;border-radius:0;z-index:5}
       .history.full{padding:0 4vw}.history.full>*{margin-left:0;margin-right:0}.history.full .history-head{padding-left:0;padding-right:0}.history.full .note{margin-right:0}.history.full .note.mine{margin-left:12vw}.history.full .note.copilot{margin-right:12vw}
       .history-head{display:flex;justify-content:space-between;align-items:center;gap:8px}.drag-handle{cursor:grab;touch-action:none}.drag-handle:active{cursor:grabbing}
@@ -2036,6 +2037,7 @@
     find(`.tab[data-filter="${value}"]`)?.focus();
   }
   function leaveThread() {
+    if (history.classList.contains("mini") && !history.classList.contains("full")) { closeHistory(); return; }
     pendingFocus = selectedThread;
     selectedThread = undefined;
     renderHistory();
@@ -2137,6 +2139,12 @@
     sessionStorage.setItem("adr-beacon", next.id);
     message(`Awaiting ${(last + step + queue.length) % queue.length + 1}/${queue.length}`);
     goToThread(next);
+  }
+  // From a page bubble: a compact thread window (no list, tabs or rail); full screen (f) brings back the whole UI.
+  async function openThreadMini(id) {
+    await openThreadById(id);
+    history.classList.add("mini");
+    history.classList.remove("full");
   }
   async function openThreadById(id) {
     await openHistory();
@@ -2242,6 +2250,8 @@
     panel.hidden = true; placeBubbles();
     contextual.hidden = true;
     history.hidden = false;
+    history.classList.remove("mini");
+    history.classList.toggle("full", localStorage.getItem(FULL_KEY) === "1");
     showCaret();
     message("");
     renderHistory();
@@ -3735,7 +3745,7 @@
       bubble.style.left = `${x}px`;
       bubble.style.top = `${y}px`;
       // A comment thread opens in the full thread view (reactions, whisper completion, restore on reload); only a bare highlight keeps the small popover.
-      bubble.addEventListener("click", event => { event.stopPropagation(); if (mark.comment.comment && !isNote(mark.comment)) { pop.hidden = true; openThreadById(mark.comment.id); } else showMark(mark, bubble.getBoundingClientRect()); });
+      bubble.addEventListener("click", event => { event.stopPropagation(); if (mark.comment.comment && !isNote(mark.comment)) { pop.hidden = true; openThreadMini(mark.comment.id); } else showMark(mark, bubble.getBoundingClientRect()); });
       rail.append(bubble);
     }
   }
@@ -4002,7 +4012,7 @@
   // A reload (an agent edited a page, or a restart) keeps the thread panel, the open thread, the scroll position and the focused message, for the same page within ten minutes.
   addEventListener("pagehide", () => {
     try { sessionStorage.setItem("adr-ui", JSON.stringify({ path: pathNow(), at: Date.now(), open: !history.hidden, thread: selectedThread || null,
-      scroll: history.scrollTop, mid: shadow.activeElement?.dataset?.mid || null, card: shadow.activeElement?.dataset?.commentId || null, filter: historyFilter })); } catch { /* storage off */ }
+      scroll: history.scrollTop, mid: shadow.activeElement?.dataset?.mid || null, card: shadow.activeElement?.dataset?.commentId || null, filter: historyFilter, mini: history.classList.contains("mini") })); } catch { /* storage off */ }
   });
   async function syncMarks() {
     enhanceVideos();
@@ -4018,7 +4028,7 @@
     sessionStorage.removeItem("adr-ui");
     if (ui?.open && !pendingOpen && ui.path === pathNow() && Date.now() - ui.at < 600000 && history.hidden) {
       if (!ui.thread && FILTERS.some(([value]) => value === ui.filter)) historyFilter = ui.filter;
-      if (ui.thread) await openThreadById(ui.thread).catch(() => {}); else await openHistory();
+      if (ui.thread) await (ui.mini ? openThreadMini : openThreadById)(ui.thread).catch(() => {}); else await openHistory();
       // The panel re-renders as history loads, so the focus and scroll are put back again once it settles.
       let touched = false;
       const touch = () => { touched = true; };
