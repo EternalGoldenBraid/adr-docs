@@ -52,3 +52,23 @@ const hub = document.querySelector("#github");
 if (github) hub.href = `${github}#L${current()}`; else hub.hidden = true;
 view.dom.addEventListener("keyup", () => { if (github) hub.href = `${github.split("#")[0]}#L${current()}`; });
 Vim.defineEx("q", "q", () => (history.length > 1 ? history.back() : window.close()));
+
+// c comments on the selected lines (the current line in normal mode): the page's review client works on the browser's own selection, so hand it one.
+function commentOnSelection() {
+  const { from, to, empty } = view.state.selection.main;
+  const line = view.state.doc.lineAt(from);
+  const a = empty ? line.from : from;
+  const b = empty ? line.to : to;
+  const start = view.domAtPos(a), end = view.domAtPos(b);
+  const range = document.createRange();
+  range.setStart(start.node, start.offset);
+  range.setEnd(end.node, end.offset);
+  view.contentDOM.blur();
+  getSelection().removeAllRanges();
+  getSelection().addRange(range);
+  document.dispatchEvent(new KeyboardEvent("keydown", { key: "c", bubbles: true }));
+  requestAnimationFrame(() => { view.scrollDOM.scrollLeft = 0; });
+}
+Vim.defineAction("adrComment", commentOnSelection);
+Vim.mapCommand("c", "action", "adrComment", {}, { context: "normal" });
+Vim.mapCommand("c", "action", "adrComment", {}, { context: "visual" });

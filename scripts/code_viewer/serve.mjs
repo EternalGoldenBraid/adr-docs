@@ -31,11 +31,12 @@ const page = (repo, path, github) => `<!doctype html><meta charset="utf-8"><titl
 <style>body{margin:0;background:#282c34;color:#abb2bf;font:13px system-ui;display:flex;flex-direction:column;height:100vh}
 header{display:flex;gap:10px;align-items:center;padding:6px 12px;background:#21252b;border-bottom:1px solid #3a404a}
 header b{font:13px ui-monospace,monospace;color:#8ab4f8;flex:1}header a,header button{color:inherit;background:none;border:1px solid #59616d;border-radius:6px;padding:2px 9px;font:inherit;cursor:pointer;text-decoration:none}
-#editor{flex:1;min-height:0}.cm-editor{height:100%}.cm-scroller{font:13px ui-monospace,monospace}small{opacity:.6}</style>
+#doc{flex:1;min-height:0;overflow:hidden}#editor{height:100%}.cm-editor{height:100%}.cm-scroller{font:13px ui-monospace,monospace}small{opacity:.6}</style>
 <header><b>${esc(repo)}:${esc(path)}</b><small>Vim keys · read-only · :q goes back</small><button id="copy" type="button">copy vim +line</button><a id="github" target="_blank" rel="noopener">GitHub</a></header>
-<div id="editor"></div>
+<div class="vp-doc" id="doc"><div id="editor"></div></div>
 <script>window.__codeView=${JSON.stringify({ repo, path, github }).replace(/</g, "\\u003c")}</script>
-<script type="module" src="/__adr/code-viewer.js"></script>`;
+<script type="module" src="/__adr/code-viewer.js"></script>
+<script src="/__preview_comments/client.js" defer></script>`;
 
 // /__adr/code/<repo>/<path> is the page, /__adr/code-raw/... the text, /__adr/code-viewer.js the bundle.
 export function handleCode(request, response, dirs) {

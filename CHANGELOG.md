@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.173.0 - 2026-11-23
+
+- Code viewer: `c` comments on the selected lines (`v` to select, or the current line in normal mode), so code can be discussed with the agents. The review client now loads in the viewer; editing stays out.
+- Removed: nothing this time.
+
 ## 0.172.3 - 2026-11-23
 
 - Code map: the config's `ros_exclude` (regexes on file paths) keeps offline tools out of the ROS level, columns are ordered to cut crossings and rows are spaced wider so topic labels no longer collide. Excluded files stay reachable through the repo tree.
