@@ -409,7 +409,7 @@ export async function startCommentBridge({
   // A seat is someone who can answer: a roster agent or the human. The store's own placeholder owner name (no session) never can, so it must not hold a thread open.
   function pageOwner(comment) {
     try {
-      const path = decodeURIComponent(new URL(comment.url).pathname).replace(/^\/+|\/+$/g, "");
+      const path = decodeURIComponent(new URL(comment.url).pathname).replace(/^\/+|\/+$/g, "").replace(/\.html?$/, "");
       for (const file of [`${path}.md`, join(path, "index.md")]) {
         const full = resolve(root, file);
         if (!full.startsWith(root + sep) || !existsSync(full)) continue;

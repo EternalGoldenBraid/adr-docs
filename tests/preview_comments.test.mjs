@@ -574,6 +574,9 @@ test("the user closes and reopens a thread; a named agent's resolve is only a ma
   assert.deepEqual([thread().resolved, thread().resolvedBy], [false, undefined]);
   bridge.update({ id: randomUUID(), commentId: id, from: "carol", resolved: true });
   assert.equal(thread().resolved, true, "the page's owner closes it");
+  const html = bridge.add({ page: "/page.html", kind: "page", quote: "Page", comment: "b" }).id;
+  bridge.update({ id: randomUUID(), commentId: html, from: "carol", resolved: true });
+  assert.equal(bridge.list().find(c => c.id === html).resolved, true, "a .html page URL finds the same file");
   await bridge.close();
   rmSync(directory, { recursive: true, force: true });
 });
