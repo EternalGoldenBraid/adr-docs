@@ -29,10 +29,12 @@ const main = ref(null)
 const vimOn = ref(typeof localStorage === 'undefined' || localStorage.getItem('preview-comments-vim') !== 'off')
 const cmd = ref(null)
 const cmdInput = ref(null)
+const finder = ref(null)
+const finderInput = ref(null)
 const flash = ref('')
 const presenting = ref(null)
 const selTitle = computed(() => (selected.value && cy ? cy.getElementById(selected.value).data('title') || '' : ''))
-const HELP = "DOC-GRAPH(1)\n\nLAYERS\n  The page owns the keys. Click the graph to enter it\n  (mode line: GRAPH); Esc in NORMAL returns to the page.\nMODES\n  NORMAL  fly the view         VISUAL  walk node to node\n  INSERT  edit the graph       Esc     back to NORMAL\nNORMAL\n  h j k l   pan (H J K L: faster)\n  + - 0     zoom in / out / fit\n  v  visual     i  insert     u / Backspace  up one layer\n  o         open the selected box's </> source\n  Enter     open the selected \u25b8 layer or \u2197 page\n  (a path above the graph shows where you are; click to jump)\nVISUAL\n  h j k l   nearest node in that direction\n  Enter     open \u25b8 layer or \u2197 page, else zoom to node\n  o         open the node's </> code (local viewer, GitHub online)\n  c         comment on the node\n  s         attach a region screenshot\nINSERT\n  h j k l   select neighbour\n  arrows    nudge node (shift: x5)\n  Enter     edit text    o  new node    x  delete\nCOMMANDS\n  :help :man   this page     :w  export JSON\n  :fit         fit all       :q  close\n  :present     full-screen presentation (→ ← story, ↓ ↑ deeper, Esc exits)\nMOUSE / TRACKPAD\n  swipe pans \u00b7 pinch or shift+swipe zooms\n  dbl-click: \u2197 opens page, \u25b8 opens layer (else </> source),\n    node/lane zooms, empty fits\nLINKS\n  a node with a \"link\" (e.g. \"/autonomy\") shows \u2197;\n  external URLs open as normal links"
+const HELP = "DOC-GRAPH(1)\n\nLAYERS\n  The page owns the keys. Click the graph to enter it\n  (mode line: GRAPH); Esc in NORMAL returns to the page.\nMODES\n  NORMAL  fly the view         VISUAL  walk node to node\n  INSERT  edit the graph       Esc     back to NORMAL\nSEARCH\n  /         search this graph only (every layer, title/text/code/path);\n            Enter jumps to the node, Ctrl-n/p or arrows move, Esc closes.\n            The page's own / search works when the graph is not active.\nNORMAL\n  h j k l   pan (H J K L: faster)\n  + - 0     zoom in / out / fit\n  v  visual     i  insert     u / Backspace  up one layer\n  o         open the selected box's </> source\n  Enter     open the selected \u25b8 layer or \u2197 page\n  (a path above the graph shows where you are; click to jump)\nVISUAL\n  h j k l   nearest node in that direction\n  Enter     open \u25b8 layer or \u2197 page, else zoom to node\n  o         open the node's </> code (local viewer, GitHub online)\n  c         comment on the node\n  s         attach a region screenshot\nINSERT\n  h j k l   select neighbour\n  arrows    nudge node (shift: x5)\n  Enter     edit text    o  new node    x  delete\nCOMMANDS\n  :help :man   this page     :w  export JSON\n  :fit         fit all       :q  close\n  :grep RE     same as /\n  :present     full-screen presentation (→ ← story, ↓ ↑ deeper, Esc exits)\nMOUSE / TRACKPAD\n  swipe pans \u00b7 pinch or shift+swipe zooms\n  dbl-click: \u2197 opens page, \u25b8 opens layer (else </> source),\n    node/lane zooms, empty fits\nLINKS\n  a node with a \"link\" (e.g. \"/autonomy\") shows \u2197;\n  external URLs open as normal links"
 const topic = ref('')
 const activeTab = ref('')
 const TOPICS = ref([])
@@ -624,12 +626,48 @@ function present() {
   presenting.value = { nodes, edges }
 }
 
+const pathOf = n => {
+  const up = []
+  for (let c = n.data('inside'); c;) { const p = cy.getElementById(c); up.unshift(p.data('title')); c = p.data('inside') || null }
+  return up.join(' › ')
+}
+const matcher = q => { try { return new RegExp(q, 'i') } catch { return new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') } }
+const hits = computed(() => {
+  if (!finder.value || !finder.value.q.trim() || !cy) return []
+  const re = matcher(finder.value.q.trim())
+  return cy.nodes().filter(n => !n.isParent() && !['text', 'dot'].includes(n.data('kind')) && inProfile(n))
+    .map(n => ({ n, path: pathOf(n) }))
+    .filter(({ n, path }) => re.test([n.data('title'), n.data('body'), n.data('status'), n.data('code'), n.data('link'), path].filter(Boolean).join('\n')))
+    .slice(0, 50)
+})
+function openFinder() {
+  finder.value = { q: '', idx: 0 }
+  nextTick(() => finderInput.value && finderInput.value.focus())
+}
+function closeFinder() { finder.value = null; main.value && main.value.focus && main.value.focus() }
+function finderGo(i) {
+  const hit = hits.value[i ?? finder.value.idx]
+  if (!hit) return
+  closeFinder()
+  showLayer(hit.n.data('inside') || null)
+  setMode('visual')
+  selectNode(hit.n)
+  cy.animate({ center: { eles: hit.n }, duration: 200 })
+}
+function finderKey(e) {
+  const last = Math.max(hits.value.length - 1, 0)
+  if (e.key === 'ArrowDown' || (e.ctrlKey && e.key === 'n')) { e.preventDefault(); finder.value.idx = Math.min(finder.value.idx + 1, last) }
+  else if (e.key === 'ArrowUp' || (e.ctrlKey && e.key === 'p')) { e.preventDefault(); finder.value.idx = Math.max(finder.value.idx - 1, 0) }
+  else if (e.key === 'Escape') { e.stopPropagation(); closeFinder() }
+}
+
 function runCmd() {
   const c = (cmd.value || '').trim()
   cmd.value = null
   if (['help', 'h', 'man'].includes(c)) help.value = true
   else if (['q', 'close'].includes(c)) help.value = false
   else if (c === 'w') exportJson()
+  else if (c === 'grep' || c.startsWith('grep ')) { openFinder(); finder.value.q = c.slice(5) }
   else if (c === 'fit') fitAll()
   else if (['present', 'pres'].includes(c)) present()
   else if (c) say('E492: Not an editor command: ' + c)
@@ -649,6 +687,7 @@ function onKey(e) {
     else deactivate()
     return
   }
+  if (k === '/') { e.preventDefault(); e.stopImmediatePropagation(); openFinder(); return }
   if (k === ':') { e.preventDefault(); cmd.value = ''; nextTick(() => cmdInput.value && cmdInput.value.focus()); return }
   const dirs = { h: [-1, 0], j: [0, 1], k: [0, -1], l: [1, 0] }
   const arrows = { ArrowLeft: [-1, 0], ArrowDown: [0, 1], ArrowUp: [0, -1], ArrowRight: [1, 0] }
@@ -759,6 +798,15 @@ onUnmounted(() => { removeEventListener('hashchange', landOnNode); document.remo
     <div class="xp-status"><span class="xp-mode" :data-mode="mode">{{ !active ? 'PAGE  (click graph for graph keys)' : vimOn ? 'GRAPH -- ' + mode.toUpperCase() + ' --' : mode.toUpperCase() }}</span>
       <span v-if="selected" class="xp-sel">{{ selTitle }}</span><span class="xp-flash">{{ flash }}</span><span class="xp-hint">:help</span></div>
     <div v-if="cmd !== null" class="xp-cmd">:<input ref="cmdInput" v-model="cmd" spellcheck="false" @keydown.enter="runCmd" @keydown.esc="cmd = null" @keydown.backspace="!cmd && (cmd = null)" /></div>
+    <div v-if="finder" class="xp-find">
+      <div class="xp-find-in">/<input ref="finderInput" v-model="finder.q" spellcheck="false" placeholder="search this graph (regex)" @input="finder.idx = 0" @keydown.enter="finderGo()" @keydown="finderKey" /></div>
+      <div class="xp-find-list">
+        <button v-for="(h, i) in hits" :key="h.n.id()" type="button" :class="{ on: i === finder.idx }" @click="finderGo(i)">
+          <b>{{ h.n.data('title') }}</b> <i>{{ h.path }}</i>
+        </button>
+        <div v-if="finder.q.trim() && !hits.length" class="xp-find-none">no match in this graph</div>
+      </div>
+    </div>
     <div v-if="help" class="xp-help"><pre v-text="HELP"></pre></div>
     <div v-if="editor" class="xp-edit" :style="{ left: editorBox.left + 'px', top: editorBox.top + 'px', width: editorBox.width + 'px' }"
       @keydown.esc="editor = null">
@@ -793,6 +841,15 @@ onUnmounted(() => { removeEventListener('hashchange', landOnNode); document.remo
 .xp-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
 .xp-tabs .on { background: var(--vp-c-brand-soft); border-color: var(--vp-c-brand-1); }
 .xp-edit { position: absolute; z-index: 5; display: flex; flex-direction: column; gap: 6px; padding: 10px; background: var(--vp-c-bg); border: 1px solid var(--vp-c-divider); border-radius: 12px; box-shadow: 0 8px 28px #0009; font-size: 13px; }
+.xp-find { position: absolute; left: 12px; right: 12px; bottom: 30px; z-index: 8; max-height: 55%; display: flex; flex-direction: column; background: #0b1220; border: 1px solid #475569; border-radius: 6px; color: #e2e8f0; font: 13px/1.4 ui-monospace, Menlo, monospace; }
+.xp-find-in { display: flex; padding: 4px 10px; border-bottom: 1px solid #334155; }
+.xp-find-in input { flex: 1; background: none !important; border: 0 !important; outline: none; color: inherit; font: inherit; padding: 0 0 0 4px !important; }
+.xp-find-list { overflow: auto; padding: 4px; }
+.xp-find-list button { display: block; width: 100%; text-align: left; background: none; border: 0; border-radius: 4px; color: inherit; font: inherit; padding: 2px 8px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.xp-find-list button.on, .xp-find-list button:hover { background: #1e3a5f; }
+.xp-find-list b { color: #74c0fc; font-weight: 600; }
+.xp-find-list i { color: #8b949e; font-style: normal; }
+.xp-find-none { padding: 4px 8px; color: #8b949e; }
 .xp-help { position: absolute; right: 12px; bottom: 30px; z-index: 6; padding: 8px 14px; background: #0b1220; color: #cbd5e1; border: 1px solid #475569; border-radius: 4px; font: 12px/1.4 ui-monospace, 'JetBrains Mono', Menlo, monospace; pointer-events: none; }
 .xp-help pre { margin: 6px 0 0; font: inherit; background: none; padding: 0; }
 .xp-status { position: absolute; left: 0; right: 0; bottom: 0; z-index: 4; display: flex; gap: 14px; align-items: center; padding: 2px 170px 2px 10px; background: #111827; color: #cbd5e1; border-radius: 0 0 12px 12px; font: 12px/1.6 ui-monospace, Menlo, monospace; pointer-events: none; }

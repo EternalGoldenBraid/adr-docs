@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.178.0 - 2026-11-23
+
+- Graph search: with the graph active, `/` (or `:grep RE`) searches only that graph, across every layer, over title, text, status, code, link and layer path. Enter jumps into the node's layer and selects it; Ctrl-n/p or arrows move; Esc closes. The page's own `/` search is unchanged and works when the graph is not active. Documented in the graph's `:help`.
+- Removed: nothing this time.
+
 ## 0.177.0 - 2026-11-23
 
 - Reactions on a single message: every message in a thread has a 👍 ✅ ❤️ 👀 picker (shown on hover); reactions group into counted chips under the message, and clicking your own chip removes it. They are quiet and wake nobody. GIFs are skipped.
