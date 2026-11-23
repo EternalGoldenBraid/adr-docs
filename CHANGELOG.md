@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.183.0 - 2026-11-23
+
+- DocGraph: clicking into a graph that is partly below the fold or under the page header scrolls the whole canvas into view, so a layer that fits the canvas is no longer cut off at the top or bottom of the window. (`0` refits; `f` goes full screen.)
+- Removed: nothing this time.
+
 ## 0.182.0 - 2026-11-23
 
 - Graph full screen: with the graph active, `f` (or `:full`, or the ⛶ Full button) toggles browser full screen for the whole graph, toolbar and status line included; Esc leaves. The view refits on every change. Listed in the graph's `:help`.

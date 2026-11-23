@@ -382,6 +382,9 @@ function announce() {
 function activate() {
   if (active.value) return
   active.value = true
+  // The canvas is sized to the window, but sits below the page header: bring all of it into view so no edge is cut off.
+  const r = main.value?.getBoundingClientRect()
+  if (r && !document.fullscreenElement && (r.top < 72 || r.bottom > window.innerHeight)) main.value.scrollIntoView({ block: 'start', behavior: 'smooth' })
   document.dispatchEvent(new CustomEvent('adr-graph-active', { detail: { uid } }))
   announce()
 }
@@ -846,7 +849,7 @@ onUnmounted(() => { removeEventListener('hashchange', landOnNode); document.remo
 .xp-muted { color: var(--vp-c-text-2); font-size: 13px; flex: 1; }
 .xp-main { display: flex; gap: 12px; }
 .xp-canvas { position: relative; flex: 1; min-width: 0; overflow: hidden; height: calc(100vh - 150px); border: 1px solid var(--vp-c-divider); border-radius: 12px; background: #0b1220; }
-.xp-main { position: relative; }
+.xp-main { position: relative; scroll-margin-top: 72px; }
 .xp-host { position: absolute; inset: 0; }
 .xp-labels { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
 .xp-label { position: absolute; box-sizing: border-box; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; overflow: hidden; line-height: 1.25; }
