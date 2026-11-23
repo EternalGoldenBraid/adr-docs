@@ -22,12 +22,19 @@ const text = await (await fetch(`/__adr/code-raw/${repo}/${path}`)).text();
 const ext = path.split(".").pop().toLowerCase();
 const lineFromHash = () => Number(/^#L(\d+)/.exec(location.hash)?.[1]) || 1;
 
+const contrast = EditorView.theme({
+  ".cm-activeLine": { backgroundColor: "rgba(96,165,250,0.22)" },
+  ".cm-activeLineGutter": { backgroundColor: "rgba(96,165,250,0.35)", color: "#fff" },
+  "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, ::selection": { backgroundColor: "rgba(250,204,21,0.45) !important" },
+  ".cm-fat-cursor, &.cm-focused > .cm-scroller > .cm-cursorLayer .cm-fat-cursor": { backgroundColor: "#facc15 !important", color: "#000 !important" },
+}, { dark: true });
+
 const view = new EditorView({
   parent: document.querySelector("#editor"),
   state: EditorState.create({
     doc: text,
     extensions: [
-      vim(), lineNumbers(), highlightActiveLine(), highlightActiveLineGutter(), oneDark, syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+      vim(), lineNumbers(), highlightActiveLine(), highlightActiveLineGutter(), oneDark, contrast, syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
       search({ top: true }), keymap.of(searchKeymap), EditorState.readOnly.of(true), EditorView.contentAttributes.of({ "aria-readonly": "true" }),
       ...(LANGS[ext] ? [LANGS[ext]()] : []),
     ],

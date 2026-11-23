@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.173.2 - 2026-11-23
+
+- Code viewer: stronger contrast for the active line, selection and block cursor.
+- Removed: nothing this time.
+
 ## 0.173.1 - 2026-11-23
 
 - Code map: config `profiles` give one ROS level per setup (`all`, `field`, `numpy`, `ue5`), each a top-level box with its own excludes.
