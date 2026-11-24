@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.197.0 - 2026-11-24
+
+- Typing the start of a test id in the comment or reply box offers it from the site's `public/ids.json`; Tab writes a link to the ticket's test, Esc skips, Alt+N never offers that id again. New `GET /ids` on the comment bridge (thread 01af9117).
+- Removed: nothing this time.
+
 ## 0.196.0 - 2026-11-24
 
 - `Shift+E` (or `:tickets`) opens the site's `/ticket-graph` page; from a ticket page under `/experiments/` it adds `?ticket=<page name>` to zoom to that ticket, and on the graph it goes back (thread f64d3157).

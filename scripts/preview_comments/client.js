@@ -1379,6 +1379,11 @@
   // "q" prefills the reply with the quoted message ("> …" lines); a /w line may follow it.
   const splitQuote = value => { const quote = /^(?:>[^\n]*(?:\n|$))+\n*/.exec(value)?.[0] ?? ""; return { quote, rest: value.slice(quote.length) }; };
   const mentionedIn = text => [...text.matchAll(/(?:^|[\s(])@([\w.-]+)/g)].map(match => recipientFor(match[1])).filter(Boolean);
+  const MUTED_IDS = "adr-muted-ids";
+  const mutedIds = () => { try { return JSON.parse(localStorage.getItem(MUTED_IDS) || "[]"); } catch { return []; } };
+  const skippedIds = new Set();
+  let testIds = [];
+  api("ids").then(value => { testIds = value.ids; }).catch(() => {});
   function attachAssist(input, getSelected, holder, whispers = false) {
     const box = document.createElement("div");
     box.className = "assist";
@@ -1387,8 +1392,9 @@
     let items = [], index = 0, start = 0;
     const addTo = name => { const selected = getSelected(); if (!selected.has(name)) { selected.add(name); chipRow(holder, selected); } };
     const close = () => { box.hidden = true; items = []; };
-    let whisperPick = false;
+    let whisperPick = false, idPick = false;
     const choose = name => {
+      if (idPick) { chooseId(name); return; }
       const end = input.selectionStart;
       // "/w si" completes the name being typed; a comma keeps the list open for another, a space ends it.
       input.setRangeText(whisperPick ? `${name} ` : `@${name} `, start, end, "end");
@@ -1400,16 +1406,45 @@
       box.replaceChildren(...items.map((name, i) => {
         const row = document.createElement("button");
         row.type = "button";
-        row.textContent = (whisperPick ? "🤫 " : "@") + name;
+        row.textContent = idPick ? idLabel(name) : (whisperPick ? "🤫 " : "@") + name;
         row.className = i === index ? "on" : "";
         row.addEventListener("mousedown", event => { event.preventDefault(); choose(name); });
         return row;
       }));
+      if (idPick && items.length) {
+        const hint = document.createElement("span");
+        hint.textContent = "Tab links · Esc skips · Alt+N never";
+        hint.style.opacity = ".6";
+        box.append(hint);
+      }
       box.className = "assist list";
       box.hidden = !items.length;
     };
+    // Test ids the site publishes (test-ids.json): typing the start of one offers it; Tab writes it as a link.
+    const idLabel = id => { const row = testIds.find(item => item.id === id); return `${id}${row?.name ? ` · ${String(row.name).split(":")[0].trim()}` : ""}`; };
+    const chooseId = id => {
+      const row = testIds.find(item => item.id === id);
+      const link = row?.page ? `[\`${id}\`](${row.page.startsWith("/") ? row.page : `/experiments/${row.page}`}#test-${id})` : `\`${id}\``;
+      input.setRangeText(`${link} `, start, input.selectionStart, "end");
+      close();
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    };
+    const suggestIds = before => {
+      const word = /(?:^|[\s(])([A-Za-z][\w-]{1,})$/.exec(before);
+      if (!word || !testIds.length) return false;
+      const typed = word[1].toLowerCase(), muted = mutedIds();
+      const found = testIds.map(item => item.id).filter(id => id.toLowerCase().startsWith(typed) && !muted.includes(id) && !skippedIds.has(`${id}@${before.length - typed.length}`)).slice(0, 6);
+      if (!found.length) return false;
+      idPick = true;
+      start = before.length - typed.length;
+      items = found;
+      index = Math.min(index, items.length - 1);
+      draw();
+      return true;
+    };
     const update = () => {
       whisperPick = false;
+      idPick = false;
       const skip = splitQuote(input.value).quote.length;
       const typing = whispers && input.selectionStart >= skip && /^(\/w[ \t]+(?:[\w.-]+,)*)([\w.-]*)$/.exec(input.value.slice(skip, input.selectionStart));
       if (typing) {
@@ -1436,6 +1471,7 @@
       const at = /(?:^|[\s(])@([\w.-]*)$/.exec(before);
       if (!at) {
         close();
+        if (suggestIds(before)) return;
         // Leaving someone out of a thread's To: chips whispers; say so before it is sent.
         const chosen = whispers && !holder.hidden ? [...getSelected()].filter(name => recipients().includes(name)) : [];
         const room = whispers ? othersIn(currentThread() || {}).filter(name => recipients().includes(name)) : [];
@@ -1457,6 +1493,16 @@
     input.addEventListener("blur", () => setTimeout(close, 150));
     input.addEventListener("keydown", event => {
       if (box.hidden || !items.length || box.className !== "assist list") return;
+      if (idPick) {
+        if (event.key === "Tab" && !event.shiftKey) chooseId(items[index]);
+        else if (event.key === "Escape") { items.forEach(id => skippedIds.add(`${id}@${start}`)); close(); }
+        else if (event.key === "n" && event.altKey) { const muted = mutedIds(); if (!muted.includes(items[index])) localStorage.setItem(MUTED_IDS, JSON.stringify([...muted, items[index]])); close(); }
+        else if ((event.key === "ArrowDown" || event.key === "ArrowUp") && items.length > 1) { index = (index + (event.key === "ArrowDown" ? 1 : items.length - 1)) % items.length; draw(); }
+        else return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        return;
+      }
       if (event.key === "ArrowDown" || event.key === "ArrowUp") { index = (index + (event.key === "ArrowDown" ? 1 : items.length - 1)) % items.length; draw(); }
       else if (event.key === "Tab" || (event.key === "Enter" && !event.ctrlKey && !event.metaKey && !event.shiftKey)) choose(items[index]);
       else if (event.key === "Escape") close();

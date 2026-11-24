@@ -1152,6 +1152,12 @@ export async function startCommentBridge({
         });
         return reply(response, 200, { queues, members, edges: meshEdges, machines: await machines(), errors: Object.fromEntries(remoteErrors) });
       }
+      if (request.method === "GET" && request.url === "/ids") {
+        // The site's test ids for typing suggestions: [{id, kind, page, name}] in <site>/public/ids.json (page is the ticket's stem).
+        let ids = [];
+        try { ids = JSON.parse(readFileSync(join(documentRoot, "public", "ids.json"), "utf8")); } catch { /* the site does not publish ids */ }
+        return reply(response, 200, { ids: (Array.isArray(ids) ? ids : []).filter(row => row && typeof row.id === "string" && (row.kind ?? "test") === "test").slice(0, 5000) });
+      }
       const unansweredRoute = request.method === "GET" && /^\/unanswered\?(.*)$/.exec(request.url);
       if (unansweredRoute) {
         const as = nameFor(new URLSearchParams(unansweredRoute[1]).get("as") || ownerName());
