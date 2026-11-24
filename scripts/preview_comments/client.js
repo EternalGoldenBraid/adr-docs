@@ -74,7 +74,7 @@
       .thread-head{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 8px!important;padding:10px 20px;position:sticky;top:44px;background:#1b1d22;z-index:1;border-bottom:1px solid #3a404a}
       .thread-title{flex:1;min-width:0;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
       .thread-head a{white-space:nowrap}.thread-head button{padding:4px 10px}
-      .working-line{margin:4px 20px 6px;font-size:12px;color:#9fc9ea}.working-line[hidden]{display:none}.working-line .wdot{display:inline-block;width:8px;height:8px;margin-right:6px;border-radius:50%;background:#6fb7e8;animation:wpulse 1.6s ease-in-out infinite}.working-line .wdot.asking{background:#ffd500}@keyframes wpulse{50%{opacity:.3}}
+      .history.edge-form[data-edge-bottom=working] .reply-form{box-shadow:0 -14px 16px -10px #6fb7e8}.history.edge-form[data-edge-bottom=new] .reply-form{box-shadow:0 -14px 16px -8px #6fcf97}.history[data-edge-top=new] .thread.newest .reply-form{box-shadow:0 14px 16px -8px #6fcf97}.history:not(.edge-form)[data-edge-bottom=working]{box-shadow:0 12px 40px #0008,inset 0 -22px 18px -16px #6fb7e8}.history:not(.edge-form)[data-edge-bottom=new]{box-shadow:0 12px 40px #0008,inset 0 -22px 18px -14px #6fcf97}.working-line{margin:4px 20px 6px;font-size:12px;color:#9fc9ea}.working-line[hidden]{display:none}.working-line .wdot{display:inline-block;width:8px;height:8px;margin-right:6px;border-radius:50%;background:#6fb7e8;animation:wpulse 1.6s ease-in-out infinite}.working-line .wdot.asking{background:#ffd500}@keyframes wpulse{50%{opacity:.3}}
       .thread-state{display:block;width:max-content;margin:2px 20px 8px;padding:1px 10px;border-radius:999px;background:#2a2f38;color:#b7c1ce;font-size:12px}.thread-state.resolved{color:#a2d8b1}.resolve-line{display:flex;flex-wrap:wrap;gap:6px;flex-basis:100%}.resolve-line:empty{display:none}.resolve-chip{padding:1px 8px;border-radius:999px;font-size:12px}.resolve-chip.done{background:#1f3a2a;color:#6fcf97}.resolve-chip.wait{background:#3d3516;color:#f2c94c}.resolve-chip.gone{background:#4a1f1f;color:#ff8a80}.thread-state[data-marks]::before{content:"";display:inline-block;width:10px;height:10px;margin-right:6px;border-radius:50%;background:var(--pie,none)}
       .thread-links{display:flex;flex-wrap:wrap;gap:6px;margin:4px 20px 8px}
       .chip{padding:2px 10px;border-radius:999px;font-size:12px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -2196,7 +2196,26 @@
     find(".thread-messages").replaceChildren(...(newestFirst() ? nodes.reverse() : nodes));
     syncOrder();
     for (const item of find(".thread-messages").children) item.tabIndex = -1;
+    const count = find(".thread-messages").children.length;
+    if (edgeThread === comment.id && count > edgeCount) unseenNew = true; else if (edgeThread !== comment.id) unseenNew = false;
+    edgeThread = comment.id; edgeCount = count;
+    requestAnimationFrame(updateEdge);
   }
+  // Edge glow on the thread panel: blue at the bottom while an agent is working below the fold, green where a reply arrived out of view.
+  let edgeThread = null, edgeCount = 0, unseenNew = false;
+  function updateEdge() {
+    const panel = find(".history"), open = !panel.hidden && currentThread() && !find(".thread").hidden;
+    let bottom = "", top = "";
+    if (open) {
+      const below = panel.scrollHeight - panel.scrollTop - panel.clientHeight > 30, above = panel.scrollTop > 30;
+      if (newestFirst() ? !above : !below) unseenNew = false;
+      if (below && !find(".working-line").hidden) bottom = "working";
+      else if (unseenNew) { if (newestFirst() ? above : below) { if (newestFirst()) top = "new"; else bottom = "new"; } }
+    }
+    panel.dataset.edgeBottom = bottom; panel.dataset.edgeTop = top;
+    panel.classList.toggle("edge-form", !newestFirst());
+  }
+  find(".history").addEventListener("scroll", updateEdge, { passive: true });
   // Typing-indicator analogue: addressed members whose own session log says they are working, polled while a thread is open.
   // Shows only the log-derived state (thinking or the tool's name), never tool arguments.
   let workingAt = 0, workingBusy = false;
@@ -2218,7 +2237,7 @@
       }
       line.replaceChildren(...parts.flatMap((p, i) => i ? [document.createElement("br"), p] : [p]));
       line.hidden = !parts.length;
-    } catch { line.hidden = true; } finally { workingBusy = false; }
+    } catch { line.hidden = true; } finally { workingBusy = false; updateEdge(); }
   }
   setInterval(() => { if (currentThread() && !document.hidden) refreshWorking(); }, 6000);
   function selectThread(id) {

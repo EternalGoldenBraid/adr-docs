@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.206.0 - 2026-11-24
+
+- Code map `interfaces` (thread 03e987c7): an Interfaces level whose boxes open the first line matching a regex, e.g. where steer and speed are sent.
+- Thread panel edge glow: blue above the reply box while an agent works below the fold, green when a reply arrived out of view; cleared by scrolling there.
+- Removed: nothing this time.
+
 ## 0.205.0 - 2026-11-24
 
 - Page man pages (thread b98c08e7): a page's front matter `man:` (list, `|` block, or one line) shows as a "This page" tab first in `:man`/`:help`. Served by `GET /man?page=`.

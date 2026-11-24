@@ -10,11 +10,14 @@ Config:
      "compose": [{"repo": "app", "glob": "compose/*.yaml"}],
      "ros_exclude": ["^tools/offline_"],
      "profiles": [{"name": "field", "title": "Field", "exclude": ["sim_"]}],
-     "links": [{"from": "app:pkg/link.py", "to": "app:tools/bridge.py", "label": "UDP 5600"}]}
+     "links": [{"from": "app:pkg/link.py", "to": "app:tools/bridge.py", "label": "UDP 5600"}],
+     "interfaces": [{"title": "Commands out (UDP)", "file": "app:pkg/link.py", "match": "sendto", "note": "steer and speed leave here"}]}
 
 Levels (each box opens the graph one level down with Enter or double click):
-    top -> machines and containers (compose) | ROS nodes and topics | one folder tree per repo
+    top -> machines and containers (compose) | ROS nodes and topics | interfaces | one folder tree per repo
     folder -> files and folders -> Python file -> classes and functions -> methods
+An interface box points at the first line of `file` that matches the regex `match`: the spot where the
+stack meets the outside world (a packet format, a port, a topic name), so it opens in one click.
 Every box has a `code` link "<repo>:<path>#L<line>", so each repo needs an entry in
 public/code-repos.json for the source viewer.
 """
@@ -35,6 +38,7 @@ COL = {
     "machine": ("#431407", "#fb923c"),
     "service": ("#451a03", "#f59e0b"),
     "ros": ("#042f2e", "#2dd4bf"),
+    "interface": ("#4a044e", "#e879f9"),
     "top": ("#0f172a", "#e2e8f0"),
 }
 
@@ -221,6 +225,18 @@ def compose_layer(g, cfg, repos, top):
                 grid(kids)
 
 
+def interface_layer(g, cfg, repos, top):
+    for spec in cfg.get("interfaces", []):
+        repo, f = spec["file"].split(":", 1)
+        text = (repos[repo]["root"] / f).read_text(errors="replace").splitlines()
+        rx = re.compile(spec["match"])
+        line = next((i for i, t in enumerate(text, 1) if rx.search(t)), None)
+        if line is None:
+            sys.exit(f"interface {spec['title']!r}: no line of {spec['file']} matches {spec['match']!r}")
+        body = f"{f}:{line}" + (f"\n{spec['note']}" if spec.get("note") else "")
+        g.add(f"ifc:{len(g.by_inside.get(top, []))}", spec["title"], "interface", top, body=body, code=f"{repo}:{f}#L{line}")
+
+
 def ros_layer(g, cfg, repos, trees, top):
     found = {}
     skip = [re.compile(x) for x in cfg.get("ros_exclude", [])]
@@ -270,12 +286,14 @@ def build(cfg):
         repos[r["name"]] = {"root": root, "files": tracked(root)}
     mach = g.add("L:mach", "Machines and containers", "top", None, body="compose services; one box per compose file")
     ros = g.add("L:ros", "ROS nodes and topics", "top", None, body="modules that publish or subscribe; edges are topics")
+    ifc = g.add("L:ifc", "Interfaces", "top", None, body="where the stack meets the outside: packets, ports, topics")
     for name, repo in repos.items():
         rid = g.add(f"L:repo:{name}", name, "repo", None, body=f"{len(repo['files'])} tracked files", code=name + ":")
         trees[name] = file_tree(g, name, repo["root"], repo["files"], rid)
     compose_layer(g, cfg, repos, mach)
     ros_layer(g, cfg, repos, trees, ros)
-    for empty in (mach, ros):
+    interface_layer(g, cfg, repos, ifc)
+    for empty in (mach, ros, ifc):
         if not g.by_inside.get(empty):
             g.nodes = [n for n in g.nodes if n["id"] != empty]
             g.by_inside[None] = [n for n in g.by_inside[None] if n["id"] != empty]
