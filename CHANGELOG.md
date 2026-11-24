@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.198.0 - 2026-11-24
+
+- New `<VoteCard />`: the page's vote card drawn from `votes.json` with fixed columns (round, voter, price, σ, median, weighted mean, converged); `item=` limits it to one item, `page=` picks another page (ticket `vpfixed`, thread 8f15dd42).
+- Removed: nothing this time.
+
 ## 0.197.0 - 2026-11-24
 
 - Typing the start of a test id in the comment or reply box offers it from the site's `public/ids.json`; Tab writes a link to the ticket's test, Esc skips, Alt+N never offers that id again. New `GET /ids` on the comment bridge (thread 01af9117).

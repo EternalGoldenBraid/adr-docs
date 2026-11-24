@@ -513,6 +513,8 @@ A vote states its precision as a spread σ in scale steps (the scale 1 to 21 is 
 
 Effort votes: `adr-vote` writes `votes.json` (see the changelog, 0.115.0) and `<VoteHistory />` (with each voter's σ, the weighted mean, and dot size by precision) renders it with plots. Example: `adr-vote --root . /experiments/x A demo-agent 5`, then `adr-vote --root . --reveal /experiments/x A`.
 
+`<VoteCard />` draws the current page's vote card from `votes.json` with fixed columns (round, voter, price, σ, median, weighted mean, converged), so nobody writes the table by hand; `<VoteCard item="vpcast" />` shows one item, `page="/path"` another page. A missing σ is an empty cell, an open round lists who has voted. A new column means changing the component.
+
 ## Agents on another machine
 
 An agent on a peer machine (for example the GPU host) reaches a preview through the mesh, with no tunnel and no shared token. On that machine, install the plugin and write `~/.local/state/agent-doc-review/remote.json` as `{"machine": "my-laptop"}` (the peer that runs the previews). The usual tools (`read_doc_review_comments`, `update_doc_review_comment`, `unanswered_threads`, `add_doc_review_comment`, `set_doc_review_status`) then take `store: "demo"` for a store that machine does not run itself.
