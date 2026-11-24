@@ -531,7 +531,7 @@ Ceremony rows: `<CeremonyRows />` renders `ceremony.json` (site root, written by
 
 ### Ticket graph (Shift+E)
 
-`Shift+E` (or `:tickets`; also with the comment panel open, unless a text field has focus) opens an overlay above everything else, drawn from the site's `/graph/tickets.json` (lanes, nodes with `x`, `y`, `w`, `h`, colours, and edges; the site generates it). From a ticket page under `/experiments/` it shows that ticket and the tests it waits on or blocks, with an **All tickets** button; elsewhere it shows everything. Drag to pan, wheel to zoom; `Shift+E`, `Esc` or **Close** closes it. The Team panel (`Shift+T`) now also opens above the comment panel.
+`Shift+E` (or `:tickets`; also with the comment panel open, unless a text field has focus) opens an overlay above everything else, drawn from the site's `/graph/tickets.json` (lanes, nodes with `x`, `y`, `w`, `h`, colours, and edges; the site generates it). From a ticket page under `/experiments/` it shows that ticket and the tests it waits on or blocks, with an **All tickets** button; elsewhere it opens the **Now** view (`/graph/tickets-present.json`: running or in-review tickets and what they wait on or block, no tests), with a button to switch to **All tests**; without that file it shows all tests. Drag to pan, wheel to zoom; `Shift+E`, `Esc` or **Close** closes it. The Team panel (`Shift+T`) now also opens above the comment panel.
 
 ### Test id suggestions
 

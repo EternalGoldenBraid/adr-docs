@@ -209,11 +209,12 @@
   const ticketsOverlay = document.createElement("section");
   ticketsOverlay.hidden = true;
   ticketsOverlay.style.cssText = "position:fixed;inset:3vh 3vw;z-index:9;display:flex;flex-direction:column;background:#14171c;border:1px solid #59616d;border-radius:12px;box-shadow:0 12px 48px #000a;color:#eee;font:13px system-ui";
-  ticketsOverlay.innerHTML = '<div style="display:flex;gap:12px;align-items:center;padding:8px 14px;border-bottom:1px solid #3a404a"><b class="tk-title">Tickets</b><span class="tk-note" style="opacity:.6;flex:1"></span><button type="button" class="tk-all" style="background:transparent;color:inherit;border:1px solid #59616d;border-radius:6px;padding:2px 10px;cursor:pointer" hidden>All tickets</button><button type="button" class="tk-close" style="background:transparent;color:inherit;border:1px solid #59616d;border-radius:6px;padding:2px 10px;cursor:pointer">Close</button></div><div class="tk-body" style="flex:1;min-height:0;position:relative"></div>';
+  ticketsOverlay.innerHTML = '<div style="display:flex;gap:12px;align-items:center;padding:8px 14px;border-bottom:1px solid #3a404a"><b class="tk-title">Tickets</b><span class="tk-note" style="opacity:.6;flex:1"></span><button type="button" class="tk-mode" style="background:transparent;color:inherit;border:1px solid #59616d;border-radius:6px;padding:2px 10px;cursor:pointer"></button><button type="button" class="tk-all" style="background:transparent;color:inherit;border:1px solid #59616d;border-radius:6px;padding:2px 10px;cursor:pointer" hidden>All tickets</button><button type="button" class="tk-close" style="background:transparent;color:inherit;border:1px solid #59616d;border-radius:6px;padding:2px 10px;cursor:pointer">Close</button></div><div class="tk-body" style="flex:1;min-height:0;position:relative"></div>';
   const layerStyle = document.createElement("style");
   layerStyle.textContent = ".mesh-panel:not(.peek){z-index:4}";
   shadow.append(layerStyle, ticketsOverlay);
   const SVGNS = "http://www.w3.org/2000/svg";
+  let nowView = true, ticketData = null;
   const closeTickets = () => { ticketsOverlay.hidden = true; };
   const drawTickets = (graph, stem) => {
     const body = ticketsOverlay.querySelector(".tk-body");
@@ -233,9 +234,11 @@
       ticketsOverlay.querySelector(".tk-body").textContent = "No open tests for " + stem + ".";
       ticketsOverlay.querySelector(".tk-body").style.cssText += ";display:grid;place-items:center;font-size:15px;opacity:.8";
       return;
-    } else note = "red outline: blocked by a test that is not done; arrows run from the test that waits to the one it waits on";
+    } else note = nowView ? "now: running or in-review tickets and the tickets they wait on or block" + (edges.length ? "" : "; none depends on another yet") : "red outline: blocked by a test that is not done; arrows run from a test to the test that waits on it";
     ticketsOverlay.querySelector(".tk-note").textContent = note;
     ticketsOverlay.querySelector(".tk-all").hidden = !own.size;
+    const mode = ticketsOverlay.querySelector(".tk-mode");
+    mode.hidden = !!own.size; mode.textContent = nowView ? "All tests" : "Now";
     const by = new Map(shown.map(n => [n.id, n]));
     const svg = document.createElementNS(SVGNS, "svg");
     svg.style.cssText = "width:100%;height:100%;display:block;cursor:grab";
@@ -291,9 +294,14 @@
     const body = ticketsOverlay.querySelector(".tk-body");
     body.style.display = ""; body.style.placeItems = ""; body.style.fontSize = ""; body.style.opacity = "";
     body.textContent = "Loading...";
-    try { drawTickets(await (await fetch("/graph/tickets.json")).json(), stem); } catch { body.textContent = "The ticket graph (/graph/tickets.json) could not be loaded."; }
+    try {
+      let res = nowView && !stem ? await fetch("/graph/tickets-present.json") : null;
+      if (!res?.ok) { nowView = false; res = await fetch("/graph/tickets.json"); }
+      ticketData = await res.json(); drawTickets(ticketData, stem);
+    } catch { body.textContent = "The ticket graph (/graph/tickets.json) could not be loaded."; }
   };
   ticketsOverlay.querySelector(".tk-close").addEventListener("click", closeTickets);
+  ticketsOverlay.querySelector(".tk-mode").addEventListener("click", () => { nowView = !nowView; showTickets(""); });
   ticketsOverlay.querySelector(".tk-all").addEventListener("click", () => showTickets(""));
   const openTickets = () => {
     if (!ticketsOverlay.hidden) return closeTickets();

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.203.0 - 2026-11-24
+
+- The Shift+E overlay opens a **Now** view by default (thread 7b8791cd): the site's `/graph/tickets-present.json`, tickets only; a button switches to all tests, and without the file it shows all tests as before.
+- Removed: nothing this time.
+
 ## 0.202.1 - 2026-11-24
 
 - Fixed: the Shift+E overlay on a ticket page with no open tests says "No open tests for <ticket>" with an All tickets button, instead of showing every ticket (thread 044f6a3f).
