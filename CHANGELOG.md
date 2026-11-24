@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.200.0 - 2026-11-24
+
+- `<VoteCard />` plot: each vote is a normal curve (mean the price's scale step, spread σ in steps, equal areas), the precision-weighted product is drawn over them, and the median is a dashed bar; one plot per revealed round (thread 3a5a7c49). A vote without σ is drawn dashed as σ 3.
+- `Shift+T` (team) and `Shift+E` (tickets) now work while the comment panel or thread list is open, unless a text field has focus (ticket `tgkey`).
+- Removed: the dot plot in `<VoteCard />` (replaced by the curves).
+
 ## 0.199.0 - 2026-11-24
 
 - `<VoteCard />` draws a plot beside each table: price per voter per round on the Fibonacci scale, dot size by σ, the median as a bar, in the same style as `<VoteHistory />` (ticket `vpfixed`, thread 3a5a7c49).

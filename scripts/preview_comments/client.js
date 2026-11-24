@@ -3447,6 +3447,14 @@
         return;
       }
     }
+    // With the comment panel or thread list open, Shift+T (team) and Shift+E (tickets) still work unless a text field has focus.
+    if (vimEnabled && !externalMode && (event.key === "T" || event.key === "E") && !(panel.hidden && history.hidden) && !event.ctrlKey && !event.metaKey && !event.altKey &&
+        !event.composedPath().some(node => node.matches?.("input, textarea, select, [contenteditable]:not([contenteditable='false']), [role='textbox']"))) {
+      event.preventDefault();
+      if (event.key === "E") openTickets();
+      else if (find(".mesh-panel").hidden || !meshPinned) openMesh(); else closeMesh();
+      return;
+    }
     if (!vimEnabled || externalMode || !panel.hidden || !history.hidden || event.ctrlKey || event.metaKey || event.altKey ||
         event.composedPath().some(node => node.matches?.("input, textarea, select, button, [contenteditable]:not([contenteditable='false']), [role='textbox']"))) return;
     // Pages without a prose body (layout: page, e.g. graphs) still get threads, chat and commands.
