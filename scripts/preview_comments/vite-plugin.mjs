@@ -49,7 +49,7 @@ export function previewComments({ connectionFile }) {
         }
         const path = request.url.slice(base.length);
         const known = ["/status", "/comments", "/history", "/history-recent", "/viewed", "/whatsnew", "/pagelinks", "/touch", "/votes", "/vote", "/labels", "/updates", "/attachments", "/userseen", "/settings", "/bell", "/mesh", "/ids", "/faces", "/face-open", "/face-post", "/restart", "/tts", "/table-edit"].includes(path) ||
-          request.method === "GET" && (/^\/(attachments|tts)\/[\da-f]{64}$/.test(path) || /^\/faces\/[\w-]{1,64}$/.test(path));
+          request.method === "GET" && (/^\/man\?page=[^&\s]*$/.test(path) || /^\/(attachments|tts)\/[\da-f]{64}$/.test(path) || /^\/faces\/[\w-]{1,64}$/.test(path));
         if (!known) return fail(404, "Unknown comment endpoint.");
         const upstream = httpRequest({
           hostname: "127.0.0.1", port: connection.port, path, method: request.method,

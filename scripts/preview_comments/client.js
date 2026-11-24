@@ -498,7 +498,17 @@
     vimButton.setAttribute("aria-pressed", String(vimEnabled));
   }
   const cmdbar = find(".cmdbar"), cmdinput = find(".cmdinput");
+  // ":man" / ":help": a page's own man page (front matter `man:`, served by /man) comes first, above the global sections.
+  let pageManLines = [], pageManPath = null;
+  const loadPageMan = async () => {
+    const path = pagePath(location.href);
+    if (path === pageManPath && !helpPanel.hidden) return;
+    try { pageManLines = (await api("man?page=" + encodeURIComponent(path))).lines || []; } catch { pageManLines = []; }
+    if (pageManPath !== path || helpPanel.hidden) helpIndex = 0;
+    pageManPath = path;
+  };
   const helpTabs = () => [
+    ...(pageManLines.length ? [["This page", pageManLines]] : []),
     ["Page", [
       `j/k scroll smoothly · i caret mode (h/j/k/l/w/b/0/$ move, Esc leaves)`,
       `${KM.page.visual} select · V paragraph · ${KM.page.comment} comment (page if nothing selected)`,
@@ -538,7 +548,8 @@
   ];
   let helpIndex = 0;
   const helpPanel = find(".help-panel");
-  function showHelp(index = helpIndex) {
+  async function showHelp(index = helpIndex) {
+    await loadPageMan();
     const tabs = helpTabs();
     helpIndex = (index + tabs.length) % tabs.length;
     find(".help-panel .help-tabs").replaceChildren(...tabs.map(([name], i) => {

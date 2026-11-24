@@ -419,6 +419,30 @@ export async function startCommentBridge({
     } catch {}
     return null;
   }
+  // A page's own man page: front matter `man:` as a list of lines, a `|` block (blank lines separate paragraphs), or one inline line.
+  function pageMan(pathname) {
+    try {
+      const path = pathname.replace(/^\/+|\/+$/g, "").replace(/\.html?$/, "");
+      for (const file of [`${path}.md`, join(path, "index.md")]) {
+        const full = resolve(root, file);
+        if (!full.startsWith(root + sep) || !existsSync(full)) continue;
+        const front = readFileSync(full, "utf8").match(/^---\n([\s\S]*?)\n---/)?.[1];
+        const at = front?.search(/^man:/m) ?? -1;
+        if (at < 0) return [];
+        const [head, ...rest] = front.slice(at).split("\n");
+        const body = [];
+        for (const line of rest) { if (line && !/^\s/.test(line) && !line.startsWith("- ")) break; body.push(line); }
+        const unquote = text => text.trim().replace(/^(["'])([\s\S]*)\1$/, "$2");
+        const inline = head.slice(4).trim();
+        let lines;
+        if (/^[|>][+-]?$/.test(inline)) lines = body.map(line => line.replace(/^\s{1,4}/, "")).join("\n").split(/\n\s*\n/).map(text => text.trim());
+        else if (inline) lines = [unquote(inline)];
+        else lines = body.filter(line => /^\s*-\s/.test(line)).map(line => unquote(line.replace(/^\s*-\s+/, "")));
+        return lines.filter(Boolean).slice(0, 60).map(text => text.slice(0, 1000));
+      }
+    } catch {}
+    return [];
+  }
   const seatsIn = c => [...new Set((c.to ?? []).filter(name => !c.muted?.[name]).map(canon).filter(name => name === humanSeat() || !agents().length || agents().some(row => row.slug === name)).map(name => name === humanSeat() ? "you" : name))];
   const missingOn = id => { const c = comments.get(id); return c ? seatsIn(c).filter(name => !c.resolvedBy?.[name]).map(name => name === "you" ? humanSeat() ?? name : name) : []; };
   const isIdle = row => row.verified ? row.verified.state === "idle" : (row.activity ?? (row.statusLine?.state === "idle" ? "idle" : null)) === "idle";
@@ -1158,6 +1182,8 @@ export async function startCommentBridge({
         try { ids = JSON.parse(readFileSync(join(documentRoot, "public", "ids.json"), "utf8")); } catch { /* the site does not publish ids */ }
         return reply(response, 200, { ids: (Array.isArray(ids) ? ids : []).filter(row => row && typeof row.id === "string" && (row.kind ?? "test") === "test").slice(0, 5000) });
       }
+      const manRoute = request.method === "GET" && /^\/man\?page=([^&]*)$/.exec(request.url);
+      if (manRoute) return reply(response, 200, { lines: pageMan(decodeURIComponent(manRoute[1])) });
       const unansweredRoute = request.method === "GET" && /^\/unanswered\?(.*)$/.exec(request.url);
       if (unansweredRoute) {
         const as = nameFor(new URLSearchParams(unansweredRoute[1]).get("as") || ownerName());

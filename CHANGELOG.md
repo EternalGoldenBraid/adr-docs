@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.205.0 - 2026-11-24
+
+- Page man pages (thread b98c08e7): a page's front matter `man:` (list, `|` block, or one line) shows as a "This page" tab first in `:man`/`:help`. Served by `GET /man?page=`.
+- Removed: nothing this time.
+
 ## 0.204.0 - 2026-11-24
 
 - Ticket overlay (thread 7b8791cd): `Shift+E` on a ticket page shows that ticket and the tickets it waits on or blocks; `Shift+O` shows all open tickets (`/graph/tickets-open.json`). Buttons switch to the tests of the ticket or to all tests.
