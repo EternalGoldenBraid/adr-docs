@@ -1,4 +1,5 @@
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, extname, isAbsolute, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -28,6 +29,12 @@ export async function startDocumentPreview({
     throw new Error("The preview requires an existing Markdown (.md) file.");
   }
   const documentRoot = dirname(document);
+  // A site with tools/codemap.json gets its code map rebuilt at each start (the generated graph is not committed).
+  const codemapConfig = join(documentRoot, "tools", "codemap.json");
+  if (existsSync(codemapConfig)) {
+    const built = spawnSync("python3", [join(packageRoot, "scripts/codemap/codemap.py"), codemapConfig], { encoding: "utf8", timeout: 60000 });
+    if (built.status !== 0) onError(new Error(`Code map not rebuilt: ${(built.stderr || built.error?.message || "failed").trim().split("\n").pop()}`));
+  }
   mkdirSync(storageRoot, { recursive: true, mode: 0o700 });
   const workspace = mkdtempSync(join(storageRoot, "preview-"));
   const configDirectory = join(workspace, ".vitepress");

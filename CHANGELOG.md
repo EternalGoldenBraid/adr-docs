@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.206.1 - 2026-11-24
+
+- The preview rebuilds the code map at start when the site has `tools/codemap.json` (thread 03e987c7); a failure is reported, not fatal.
+- Removed: nothing this time.
+
 ## 0.206.0 - 2026-11-24
 
 - Code map `interfaces` (thread 03e987c7): an Interfaces level whose boxes open the first line matching a regex, e.g. where steer and speed are sent.

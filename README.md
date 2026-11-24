@@ -93,7 +93,7 @@ the viewer, run `npm run build:code-viewer`.
 graph from git repos (`{"out": "public/graph/codemap.json", "repos": [{"name": "app", "path": "/abs/app"}], "compose": [{"repo": "app", "glob": "compose/*.yaml"}]}`):
 repo, folders, files, classes and functions, with every box linked to its
 source. Embed it with `<DocGraph src="/graph/codemap.json" />`; Enter or
-double-click opens a box, Backspace goes up. `--check` lists files no box points to. `"interfaces": [{"title", "file": "app:path", "match": "regex", "note"}]` adds an Interfaces level whose boxes open the first line matching the regex (a packet format, a port), where the stack meets the outside.
+double-click opens a box, Backspace goes up. `--check` lists files no box points to. The preview rebuilds the map at start when the site has `tools/codemap.json`. `"interfaces": [{"title", "file": "app:path", "match": "regex", "note"}]` adds an Interfaces level whose boxes open the first line matching the regex (a packet format, a port), where the stack meets the outside.
 
 `tools/fetch_arxiv.py <id> --root <docs>` turns an arXiv paper into a
 commentable page.
