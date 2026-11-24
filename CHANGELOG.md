@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.202.1 - 2026-11-24
+
+- Fixed: the Shift+E overlay on a ticket page with no open tests says "No open tests for <ticket>" with an All tickets button, instead of showing every ticket (thread 044f6a3f).
+- Removed: nothing this time.
+
 ## 0.202.0 - 2026-11-24
 
 - Ticket graph overlay (thread 7b8791cd): `Shift+E` / `:tickets` draws the site's `/graph/tickets.json` in an overlay (zoomed to the current ticket on a ticket page) instead of navigating to a page.

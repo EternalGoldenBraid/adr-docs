@@ -227,6 +227,12 @@
       shown = nodes.filter(n => near.has(n.id) || lanes.has(n.id));
       shownEdges = edges.filter(e => near.has(e.source) && near.has(e.target));
       note = stem + " and the tests it waits on or blocks";
+    } else if (stem) {
+      ticketsOverlay.querySelector(".tk-note").textContent = "";
+      ticketsOverlay.querySelector(".tk-all").hidden = false;
+      ticketsOverlay.querySelector(".tk-body").textContent = "No open tests for " + stem + ".";
+      ticketsOverlay.querySelector(".tk-body").style.cssText += ";display:grid;place-items:center;font-size:15px;opacity:.8";
+      return;
     } else note = "red outline: blocked by a test that is not done; arrows run from the test that waits to the one it waits on";
     ticketsOverlay.querySelector(".tk-note").textContent = note;
     ticketsOverlay.querySelector(".tk-all").hidden = !own.size;
@@ -283,6 +289,7 @@
   const showTickets = async stem => {
     ticketsOverlay.hidden = false;
     const body = ticketsOverlay.querySelector(".tk-body");
+    body.style.display = ""; body.style.placeItems = ""; body.style.fontSize = ""; body.style.opacity = "";
     body.textContent = "Loading...";
     try { drawTickets(await (await fetch("/graph/tickets.json")).json(), stem); } catch { body.textContent = "The ticket graph (/graph/tickets.json) could not be loaded."; }
   };
