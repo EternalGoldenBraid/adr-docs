@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.202.0 - 2026-11-24
+
+- Ticket graph overlay (thread 7b8791cd): `Shift+E` / `:tickets` draws the site's `/graph/tickets.json` in an overlay (zoomed to the current ticket on a ticket page) instead of navigating to a page.
+- Fixed: the Team panel (`Shift+T`) opened behind the comment panel; it is now above it.
+- Removed: the navigation to the `/ticket-graph` page.
+
 ## 0.201.0 - 2026-11-24
 
 - `<VoteCard />` restyle (thread c5be7650): one small curve plot per test in a grid above the tables, drawn in the Plotly colours and the site font the other plots use; the latest revealed round is plotted, earlier rounds' combined curves are faint dashed lines. The vote tables no longer get the sort/group toolbar.

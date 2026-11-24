@@ -205,13 +205,94 @@
     if (newestFirst()) list.before(form); else thread.append(form);
   };
   const pagePath = url => new URL(url).pathname.replace(/\.html$/, "").replace(/\/index$/, "/");
-  // Shift+E / :tickets opens the site's ticket graph (/ticket-graph); from a ticket page it opens zoomed to that ticket, and again on the graph it goes back.
-  const openTickets = () => {
-    const path = pagePath(location.href);
-    if (path === "/ticket-graph") return history.back();
-    const ticket = path.match(/^\/experiments\/([^/]+)$/)?.[1];
-    location.assign("/ticket-graph" + (ticket ? "?ticket=" + encodeURIComponent(ticket) : ""));
+  // Shift+E / :tickets: an overlay with the site's ticket graph (/graph/tickets.json: lanes, nodes with x/y/w/h, edges). On a ticket page it shows that ticket and what it waits on or blocks; Shift+E, Esc or the close button closes it.
+  const ticketsOverlay = document.createElement("section");
+  ticketsOverlay.hidden = true;
+  ticketsOverlay.style.cssText = "position:fixed;inset:3vh 3vw;z-index:9;display:flex;flex-direction:column;background:#14171c;border:1px solid #59616d;border-radius:12px;box-shadow:0 12px 48px #000a;color:#eee;font:13px system-ui";
+  ticketsOverlay.innerHTML = '<div style="display:flex;gap:12px;align-items:center;padding:8px 14px;border-bottom:1px solid #3a404a"><b class="tk-title">Tickets</b><span class="tk-note" style="opacity:.6;flex:1"></span><button type="button" class="tk-all" style="background:transparent;color:inherit;border:1px solid #59616d;border-radius:6px;padding:2px 10px;cursor:pointer" hidden>All tickets</button><button type="button" class="tk-close" style="background:transparent;color:inherit;border:1px solid #59616d;border-radius:6px;padding:2px 10px;cursor:pointer">Close</button></div><div class="tk-body" style="flex:1;min-height:0;position:relative"></div>';
+  const layerStyle = document.createElement("style");
+  layerStyle.textContent = ".mesh-panel:not(.peek){z-index:4}";
+  shadow.append(layerStyle, ticketsOverlay);
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const closeTickets = () => { ticketsOverlay.hidden = true; };
+  const drawTickets = (graph, stem) => {
+    const body = ticketsOverlay.querySelector(".tk-body");
+    const nodes = graph.nodes, edges = graph.edges;
+    let shown = nodes, shownEdges = edges, note = "";
+    const own = new Set(nodes.filter(n => n.parent === stem).map(n => n.id));
+    if (own.size) {
+      const near = new Set(own);
+      edges.forEach(e => { if (own.has(e.target)) near.add(e.source); if (own.has(e.source)) near.add(e.target); });
+      const lanes = new Set(nodes.filter(n => near.has(n.id)).map(n => n.parent));
+      shown = nodes.filter(n => near.has(n.id) || lanes.has(n.id));
+      shownEdges = edges.filter(e => near.has(e.source) && near.has(e.target));
+      note = stem + " and the tests it waits on or blocks";
+    } else note = "red outline: blocked by a test that is not done; arrows run from the test that waits to the one it waits on";
+    ticketsOverlay.querySelector(".tk-note").textContent = note;
+    ticketsOverlay.querySelector(".tk-all").hidden = !own.size;
+    const by = new Map(shown.map(n => [n.id, n]));
+    const svg = document.createElementNS(SVGNS, "svg");
+    svg.style.cssText = "width:100%;height:100%;display:block;cursor:grab";
+    const add = (parent, tag, attrs, text) => { const el = document.createElementNS(SVGNS, tag); Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v)); if (text != null) el.textContent = text; parent.append(el); return el; };
+    const defs = add(svg, "defs", {});
+    const marker = add(defs, "marker", { id: "tk-arrow", viewBox: "0 0 10 10", refX: "9", refY: "5", markerWidth: "8", markerHeight: "8", orient: "auto-start-reverse" });
+    add(marker, "path", { d: "M0 0L10 5L0 10z", fill: "#94a3b8" });
+    const world = add(svg, "g", {});
+    shown.filter(n => n.kind === "lane").forEach(n => {
+      add(world, "rect", { x: n.x, y: n.y, width: n.w, height: n.h, rx: 14, fill: n.fill, stroke: n.stroke, "stroke-width": 2 });
+      add(world, "text", { x: n.x + 16, y: n.y + 28, fill: n.font, "font-size": 20, "font-weight": 700, "font-family": "system-ui" }, n.title);
+    });
+    shownEdges.forEach(e => {
+      const s = by.get(e.source), t = by.get(e.target);
+      if (!s || !t) return;
+      const sc = [s.x + s.w / 2, s.y + s.h / 2], tc = [t.x + t.w / 2, t.y + t.h / 2];
+      const edge = (n, from, to) => {
+        const dx = to[0] - from[0], dy = to[1] - from[1];
+        const k = Math.min(dx ? n.w / 2 / Math.abs(dx) : Infinity, dy ? n.h / 2 / Math.abs(dy) : Infinity);
+        return [from[0] + dx * k, from[1] + dy * k];
+      };
+      const [x1, y1] = edge(s, sc, tc), [x2, y2] = edge(t, tc, sc);
+      add(world, "line", { x1, y1, x2, y2, stroke: e.color || "#94a3b8", "stroke-width": 2.5, "marker-end": "url(#tk-arrow)", ...(e.dashed ? { "stroke-dasharray": "8 6" } : {}) });
+    });
+    shown.filter(n => n.kind !== "lane").forEach(n => {
+      add(world, "rect", { x: n.x, y: n.y, width: n.w, height: n.h, rx: 10, fill: n.fill, stroke: n.stroke, "stroke-width": 3 });
+      add(world, "text", { x: n.x + 14, y: n.y + 30, fill: n.font, "font-size": 20, "font-weight": 700, "font-family": "system-ui" }, n.title);
+      const lines = String(n.body || "").split("\n").flatMap(line => line.match(/.{1,30}(\s|$)/g) || [line]).slice(0, 4);
+      lines.forEach((line, i) => add(world, "text", { x: n.x + 14, y: n.y + 56 + i * 22, fill: n.font, "font-size": 16, opacity: i ? .8 : 1, "font-family": "system-ui" }, line.trim()));
+    });
+    body.replaceChildren(svg);
+    const box = world.getBBox(), pad = 40;
+    let view = [box.x - pad, box.y - pad, box.width + 2 * pad, box.height + 2 * pad];
+    const apply = () => svg.setAttribute("viewBox", view.join(" "));
+    apply();
+    svg.addEventListener("wheel", event => {
+      event.preventDefault();
+      const rect = svg.getBoundingClientRect(), f = event.deltaY > 0 ? 1.15 : 1 / 1.15;
+      const px = view[0] + view[2] * (event.clientX - rect.left) / rect.width, py = view[1] + view[3] * (event.clientY - rect.top) / rect.height;
+      view = [px - (px - view[0]) * f, py - (py - view[1]) * f, view[2] * f, view[3] * f];
+      apply();
+    }, { passive: false });
+    svg.addEventListener("pointerdown", event => {
+      const rect = svg.getBoundingClientRect(), start = [event.clientX, event.clientY], from = view.slice();
+      svg.setPointerCapture(event.pointerId);
+      const move = m => { view = [from[0] - (m.clientX - start[0]) * from[2] / rect.width, from[1] - (m.clientY - start[1]) * from[3] / rect.height, from[2], from[3]]; apply(); };
+      svg.addEventListener("pointermove", move);
+      svg.addEventListener("pointerup", () => svg.removeEventListener("pointermove", move), { once: true });
+    });
   };
+  const showTickets = async stem => {
+    ticketsOverlay.hidden = false;
+    const body = ticketsOverlay.querySelector(".tk-body");
+    body.textContent = "Loading...";
+    try { drawTickets(await (await fetch("/graph/tickets.json")).json(), stem); } catch { body.textContent = "The ticket graph (/graph/tickets.json) could not be loaded."; }
+  };
+  ticketsOverlay.querySelector(".tk-close").addEventListener("click", closeTickets);
+  ticketsOverlay.querySelector(".tk-all").addEventListener("click", () => showTickets(""));
+  const openTickets = () => {
+    if (!ticketsOverlay.hidden) return closeTickets();
+    showTickets(pagePath(location.href).match(/^\/experiments\/([^/]+)$/)?.[1] || "");
+  };
+  document.addEventListener("keydown", event => { if (event.key === "Escape" && !ticketsOverlay.hidden) { closeTickets(); event.stopPropagation(); } }, true);
   const find = selector => shadow.querySelector(selector);
   // Calm mode (":calm"): ADR ignores keys, clicks and selections and hides its marks, so a page with its own controls (a console) is left alone.
   // Per page, or for the whole site with ":calm site". Only ":" still works. Registered first, so the later document listeners never see the event.
