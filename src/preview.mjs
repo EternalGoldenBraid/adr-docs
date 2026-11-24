@@ -122,7 +122,7 @@ export async function startDocumentPreview({
       `export { default } from ${JSON.stringify(join(packageRoot, "src/theme/index.mjs"))};\n`);
     writeFileSync(join(configDirectory, "config.mjs"),
       `import { previewConfig } from ${JSON.stringify(configModule)};\n` +
-      `export default previewConfig(${JSON.stringify({ documentRoot, connectionFile, workspace, packageRoot })});\n`);
+      `export default await previewConfig(${JSON.stringify({ documentRoot, connectionFile, workspace, packageRoot })});\n`);
     let listenPort = port;
     // VitePress calls this when the config file changes (the page tree touches it); keep the port so the origin stays valid.
     const recreate = async () => {

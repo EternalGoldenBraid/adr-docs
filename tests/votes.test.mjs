@@ -75,3 +75,17 @@ test("a vote states its spread in scale steps; the round shows the precision-wei
     assert.equal(round.weightedMean, 3);
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
+
+test("a site's markdown plugins load into the preview config", async () => {
+  const { previewConfig } = await import("../src/vitepress-config.mjs");
+  const { mkdirSync, writeFileSync } = await import("node:fs");
+  const root = mkdtempSync(join(tmpdir(), "adr-mdplug-"));
+  try {
+    mkdirSync(join(root, ".vitepress"));
+    writeFileSync(join(root, ".vitepress", "markdown-plugins.mjs"), "export default () => [md => { md.siteMark = 1; }];\n");
+    const config = await previewConfig({ documentRoot: root, connectionFile: "", workspace: join(root, "w"), packageRoot: root });
+    const { createMarkdownRenderer } = await import("vitepress");
+    const md = await createMarkdownRenderer(root, config.markdown, "/");
+    assert.equal(md.siteMark, 1);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});

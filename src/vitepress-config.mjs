@@ -145,7 +145,16 @@ async function sitePlugins(documentRoot) {
   return typeof exported === "function" ? await exported(documentRoot) : exported ?? [];
 }
 
-export function previewConfig({ documentRoot, connectionFile, workspace, packageRoot, exportMode = false, served = false, onlyPages }) {
+// A site may add markdown-it plugins in <documentRoot>/.vitepress/markdown-plugins.mjs: the default export is an array of plugins, or a function of documentRoot returning one. Preview and exports, so a page reads as it does in the site's own build.
+async function siteMarkdownPlugins(documentRoot) {
+  const file = join(documentRoot, ".vitepress", "markdown-plugins.mjs");
+  if (!existsSync(file)) return [];
+  const exported = (await import(pathToFileURL(file).href)).default;
+  return (typeof exported === "function" ? await exported(documentRoot) : exported) ?? [];
+}
+
+export async function previewConfig({ documentRoot, connectionFile, workspace, packageRoot, exportMode = false, served = false, onlyPages }) {
+  const markdownPlugins = await siteMarkdownPlugins(documentRoot);
   return {
     // An export renders chosen pages only, so unrelated pages (even with broken front matter) cannot break it.
     ...(onlyPages ? { srcExclude: markdownFiles(documentRoot).filter(file => !onlyPages.includes(file)).map(file => file.replace(/[\\*?[\]{}()!]/g, "\\$&")) } : {}),
@@ -159,7 +168,7 @@ export function previewConfig({ documentRoot, connectionFile, workspace, package
       ["style", {}, '.vp-doc mjx-container[display="true"] { overflow-y: hidden; }'],
     ],
     appearance: "dark",
-    markdown: { config: md => md.use(mathjax, { tex: { tags: "ams" } }).use(taskLists).use(editableTables) },
+    markdown: { config: md => { md.use(mathjax, { tex: { tags: "ams" } }).use(taskLists).use(editableTables); for (const plugin of markdownPlugins) md.use(plugin); } },
     vue: { template: { compilerOptions: { isCustomElement: tag => tag.startsWith("mjx-") } } },
     themeConfig: { outline: "deep", ...treeThemeConfig(documentRoot) },
     vite: {

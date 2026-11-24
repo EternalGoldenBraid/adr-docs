@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.194.0 - 2026-11-24
+
+- A site can add markdown-it plugins in `.vitepress/markdown-plugins.mjs` (an array, or a function of the document root). They load in the preview and in exports after ADR's own, so a page renders as in the site's build (thread 66058201, `tidlink`).
+- Removed: nothing this time.
+
 ## 0.193.0 - 2026-11-24
 
 - Vote precision is a spread σ in scale steps (the scale 1 to 21 is steps 0 to 6): `high` 1, `medium` 2, `low` 3, or a number from 1 to 6. It is stored as `precision: {agent: σ}`, hidden until the reveal. A cast through the agent tool, the server or `adr-vote --page` must state it ("nobody abstains"; an unsure voter says low). The reveal adds `weightedMean`, the precision-weighted mean of the votes in steps rounded to a price, beside the median, which stays the weight (ticket `vpcast`, thread 8f15dd42).

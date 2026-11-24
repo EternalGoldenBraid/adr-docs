@@ -382,6 +382,10 @@ A page component can also start the region capture by dispatching a `preview-com
 
 `<site>/.vitepress/preview-plugins.mjs` may default-export an array of Vite plugins, or a function of the document root returning one. They load in the preview only (not in exports or the published site), so a page can use a site-defined endpoint, for example to start a local helper process. Restart the preview after adding the file.
 
+## Site markdown plugins
+
+`<site>/.vitepress/markdown-plugins.mjs` may default-export an array of markdown-it plugins, or a function of the document root returning one. They load after ADR's own (math, task lists, editable tables) in the preview and in exports, so a page renders as in the site's build, for example with links on test ids. Restart the preview after adding the file.
+
 ## Region outlines
 
 A thread started with a region screenshot (`s`) keeps the drawn area: the page shows an unfilled rectangle in the thread's colour with its bubble on the corner. The area is stored relative to the element it was drawn over, so it moves with the layout. Screenshots added to an existing thread, and threads from before 0.81.0, have no rectangle.
