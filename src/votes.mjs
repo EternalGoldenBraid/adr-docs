@@ -1,10 +1,24 @@
 import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-// Effort votes live in <site root>/votes.json: [{page, item, owner?, weight?, decidedAt?, rounds: [{round, votes, precision?: {agent: "low"|"high"}, notes, ownerReply, revealed, mean, variance, converged}]}].
+// Effort votes live in <site root>/votes.json: [{page, item, owner?, weight?, decidedAt?, rounds: [{round, votes, precision?: {agent: sigma in steps}, weightedMean?, notes, ownerReply, revealed, mean, variance, converged}]}].
 // Fibonacci scale; a round has converged when its highest and lowest vote are within one step; the weight is the median (the higher value on an even count).
 export const SCALE = [1, 2, 3, 5, 8, 13, 21];
-export const PRECISION = ["low", "high"];
+// A voter states a spread σ in scale steps (the scale 1..21 is steps 0..6); precision is 1/σ². Words stand for a σ.
+export const SIGMA_WORDS = { high: 1, medium: 2, low: 3 };
+export const sigmaOf = precision => {
+  const sigma = precision in SIGMA_WORDS ? SIGMA_WORDS[precision] : Number(precision);
+  if (!(sigma >= 1 && sigma <= 6)) throw new Error(`Precision must be ${Object.keys(SIGMA_WORDS).join(", ")} or a spread in scale steps (1 to 6).`);
+  return sigma;
+};
+
+// The precision-weighted mean of the votes in scale steps, rounded to the nearest price; only voters who stated a σ count.
+export const weightedMean = (votes, precision = {}) => {
+  const rows = Object.entries(votes).filter(([agent]) => precision[agent] > 0).map(([agent, vote]) => [SCALE.indexOf(Number(vote)), 1 / precision[agent] ** 2]);
+  const total = rows.reduce((a, [, w]) => a + w, 0);
+  if (!total) return undefined;
+  return SCALE[Math.round(rows.reduce((a, [step, w]) => a + step * w, 0) / total)];
+};
 
 export const stats = votes => {
   const values = Object.values(votes).map(Number).filter(Number.isFinite).sort((a, b) => a - b);
@@ -35,9 +49,10 @@ export const QUORUM = 3;
 const quorum = round => Math.min(QUORUM, round.requested?.length ?? QUORUM);
 
 // Operations; each returns the updated item. A vote goes into the open round (a new item or a revealed round starts a new one).
-export function applyVote(root, { page, item, agent, vote, owner, precision }) {
+export function applyVote(root, { page, item, agent, vote, owner, precision, requirePrecision }) {
   if (!SCALE.includes(Number(vote))) throw new Error(`Vote must be one of ${SCALE.join(", ")}.`);
-  if (precision !== undefined && !PRECISION.includes(precision)) throw new Error(`Precision must be one of ${PRECISION.join(", ")}.`);
+  if (requirePrecision && (precision === undefined || precision === "")) throw new Error(`State your precision: ${Object.keys(SIGMA_WORDS).join(", ")}, or a spread in scale steps (1 to 6). Nobody abstains; an unsure voter says low.`);
+  const sigma = precision === undefined || precision === "" ? undefined : sigmaOf(precision);
   const items = readVotes(root);
   const row = find(items, page, item) ?? (items.push({ page, item, ...(owner ? { owner } : {}), rounds: [] }), items.at(-1));
   if (owner) row.owner = owner;
@@ -45,7 +60,7 @@ export function applyVote(root, { page, item, agent, vote, owner, precision }) {
   if (!open(row)) row.rounds.push({ round: row.rounds.length + 1, votes: {} });
   const round = open(row);
   round.votes[agent] = Number(vote);
-  if (precision) (round.precision ??= {})[agent] = precision; else if (round.precision) delete round.precision[agent];
+  if (sigma !== undefined) (round.precision ??= {})[agent] = sigma; else if (round.precision) delete round.precision[agent];
   save(root, items);
   return row;
 }
@@ -112,6 +127,8 @@ export function reveal(root, { page, item, force }) {
   const votes = Object.keys(round.votes).length, short = votes < quorum(round);
   if (short && !force) throw new Error(`Only ${votes} of the ${quorum(round)} votes needed are in; the round stays open (force: true reveals without deciding).`);
   Object.assign(round, { revealed: true }, stats(round.votes));
+  const weighted = weightedMean(round.votes, round.precision);
+  if (weighted !== undefined) round.weightedMean = weighted;
   if (round.converged && !short) { row.weight = round.median; row.decidedAt = new Date().toISOString(); }
   save(root, items);
   return row;

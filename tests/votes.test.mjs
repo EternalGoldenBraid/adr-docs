@@ -59,16 +59,19 @@ test("a round needs 3 votes to close or decide; a decided item can be reopened",
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
 
-test("a vote can state its precision; it is hidden until the reveal", async () => {
+test("a vote states its spread in scale steps; the round shows the precision-weighted mean after the reveal", async () => {
   const { publicVotes } = await import("../src/votes.mjs");
   const root = mkdtempSync(join(tmpdir(), "adr-votes-"));
   try {
     applyVote(root, { page: "/p", item: "p", agent: "a", vote: 3, precision: "high" });
-    applyVote(root, { page: "/p", item: "p", agent: "b", vote: 5, precision: "low" });
-    applyVote(root, { page: "/p", item: "p", agent: "c", vote: 5 });
-    assert.throws(() => applyVote(root, { page: "/p", item: "p", agent: "d", vote: 5, precision: "medium" }), /Precision must be/);
-    assert.deepEqual(publicVotes(readVotes(root))[0].rounds[0].precision, undefined);
-    reveal(root, { page: "/p", item: "p" });
-    assert.deepEqual(publicVotes(readVotes(root))[0].rounds[0].precision, { a: "high", b: "low" });
+    applyVote(root, { page: "/p", item: "p", agent: "b", vote: 8, precision: "low" });
+    applyVote(root, { page: "/p", item: "p", agent: "c", vote: 5, precision: 1.5 });
+    assert.throws(() => applyVote(root, { page: "/p", item: "p", agent: "d", vote: 5, precision: 0.5 }), /Precision must be/);
+    assert.throws(() => applyVote(root, { page: "/p", item: "p", agent: "d", vote: 5, requirePrecision: true }), /State your precision/);
+    assert.equal(publicVotes(readVotes(root))[0].rounds[0].precision, undefined);
+    reveal(root, { page: "/p", item: "p", force: true });
+    const round = publicVotes(readVotes(root))[0].rounds[0];
+    assert.deepEqual(round.precision, { a: 1, b: 3, c: 1.5 });
+    assert.equal(round.weightedMean, 3);
   } finally { rmSync(root, { recursive: true, force: true }); }
 });

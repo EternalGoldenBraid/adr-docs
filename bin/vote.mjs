@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // adr-vote [--root DIR] <page> <item> <agent> <n>        cast a vote (Fibonacci 1 2 3 5 8 13 21)
 // adr-vote [--root DIR] --as AGENT --page PAGE item=score ...   cast several votes at once, e.g. maplevels=5 mapnav=3
-// adr-vote [--root DIR] --as AGENT [--precision low|high] --page PAGE ...   states how sure the vote is (shown on reveal)
+// adr-vote [--root DIR] --as AGENT [--precision high|medium|low|σ] --page PAGE ...   states how sure the vote is (shown on reveal)
 // adr-vote [--root DIR] --request <page> <item> --voters a,b [--as requester] [--deadline MIN]   put "Vote on" in each voter's queue (votes-queue.json)
 // adr-vote [--root DIR] --reveal <page> <item>            close the round: mean, variance, converged; sets the weight when converged
 // adr-vote [--root DIR] --reopen <page> <item>            take a decided item back to voting
@@ -19,7 +19,7 @@ try {
   if (pageOpt) {
     for (const pair of positional) {
       const [item, score] = pair.split("=");
-      const row = applyVote(root, { page: pageOpt, item, agent: requester, vote: score, precision });
+      const row = applyVote(root, { page: pageOpt, item, agent: requester, vote: score, precision, requirePrecision: true });
       console.log(`${item}: voted (${Object.keys(row.rounds.at(-1).votes).length} in)`);
     }
     process.exit(0);

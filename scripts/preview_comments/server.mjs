@@ -486,12 +486,12 @@ export async function startCommentBridge({
         const todo = rows.filter(r => r.rounds.at(-1).votes[name] === undefined).map(r => r.item);
         if (!todo.length) continue;
         const note = `ADR vote request from ${requester} on ${page}: price ${todo.join(", ")} within ${minutes} min. Votes stay hidden until the window closes or the last vote is in, then they are revealed. ` +
-          `Cast: cast_doc_review_vote(page="${page}", item=<test>, vote=<1|2|3|5|8|13|21>), or with the script: adr-vote --root ${root} --page ${page} --as ${name} ${todo.map(t => `${t}=<n>`).join(" ")}`;
+          `Cast: cast_doc_review_vote(page="${page}", item=<test>, vote=<1|2|3|5|8|13|21>, precision=<high|medium|low or a spread in steps>), or with the script: adr-vote --root ${root} --page ${page} --as ${name} --precision <high|medium|low> ${todo.map(t => `${t}=<n>`).join(" ")}`;
         try { await mesh.send(meshAddress(target).session, note, meshAddress(target).machine); asked.push(name); } catch { unreachable.push(name); }
       }
       return { item: publicVotes(rows)[0], items: publicVotes(rows), asked, unreachable };
     }
-    const row = input.action === "reopen" ? reopen(root, input) : input.action === "reveal" || input.reveal ? reveal(root, input) : input.action === "note" || input.note ? addNote(root, { ...input, text: input.note ?? input.text, agent: input.agent ?? as }) : applyVote(root, { ...input, agent: input.agent ?? as });
+    const row = input.action === "reopen" ? reopen(root, input) : input.action === "reveal" || input.reveal ? reveal(root, input) : input.action === "note" || input.note ? addNote(root, { ...input, text: input.note ?? input.text, agent: input.agent ?? as }) : applyVote(root, { ...input, agent: input.agent ?? as, requirePrecision: true });
     closeNotices().catch(error => onError?.(error));
     return { item: publicVotes([row])[0] };
   }
