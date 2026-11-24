@@ -513,7 +513,7 @@ A vote states its precision as a spread σ in scale steps (the scale 1 to 21 is 
 
 Effort votes: `adr-vote` writes `votes.json` (see the changelog, 0.115.0) and `<VoteHistory />` (with each voter's σ, the weighted mean, and dot size by precision) renders it with plots. Example: `adr-vote --root . /experiments/x A demo-agent 5`, then `adr-vote --root . --reveal /experiments/x A`.
 
-`<VoteCard />` draws the current page's vote card from `votes.json` with fixed columns (round, voter, price, σ, median, weighted mean, converged), so nobody writes the table by hand; `<VoteCard item="vpcast" />` shows one item, `page="/path"` another page. A missing σ is an empty cell, an open round lists who has voted. A new column means changing the component.
+`<VoteCard />` draws the current page's vote card from `votes.json` with fixed columns (round, voter, price, σ, median, weighted mean, converged), so nobody writes the table by hand; `<VoteCard item="vpcast" />` shows one item, `page="/path"` another page. A missing σ is an empty cell, an open round lists who has voted. A plot of the same votes sits beside each table (dots by voter and round, size by σ, median bar). A new column means changing the component.
 
 ## Agents on another machine
 

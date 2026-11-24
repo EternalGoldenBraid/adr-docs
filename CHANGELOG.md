@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.199.0 - 2026-11-24
+
+- `<VoteCard />` draws a plot beside each table: price per voter per round on the Fibonacci scale, dot size by σ, the median as a bar, in the same style as `<VoteHistory />` (ticket `vpfixed`, thread 3a5a7c49).
+- Removed: nothing this time.
+
 ## 0.198.0 - 2026-11-24
 
 - New `<VoteCard />`: the page's vote card drawn from `votes.json` with fixed columns (round, voter, price, σ, median, weighted mean, converged); `item=` limits it to one item, `page=` picks another page (ticket `vpfixed`, thread 8f15dd42).
