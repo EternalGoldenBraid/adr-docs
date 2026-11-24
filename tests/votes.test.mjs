@@ -58,3 +58,17 @@ test("a round needs 3 votes to close or decide; a decided item can be reopened",
     assert.equal(readVotes(root)[0].rounds.at(-1).votes.a, undefined);
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
+
+test("a vote can state its precision; it is hidden until the reveal", async () => {
+  const { publicVotes } = await import("../src/votes.mjs");
+  const root = mkdtempSync(join(tmpdir(), "adr-votes-"));
+  try {
+    applyVote(root, { page: "/p", item: "p", agent: "a", vote: 3, precision: "high" });
+    applyVote(root, { page: "/p", item: "p", agent: "b", vote: 5, precision: "low" });
+    applyVote(root, { page: "/p", item: "p", agent: "c", vote: 5 });
+    assert.throws(() => applyVote(root, { page: "/p", item: "p", agent: "d", vote: 5, precision: "medium" }), /Precision must be/);
+    assert.deepEqual(publicVotes(readVotes(root))[0].rounds[0].precision, undefined);
+    reveal(root, { page: "/p", item: "p" });
+    assert.deepEqual(publicVotes(readVotes(root))[0].rounds[0].precision, { a: "high", b: "low" });
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});

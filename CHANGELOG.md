@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.192.0 - 2026-11-24
+
+- A vote can state its precision: `cast_doc_review_vote(..., precision="low"|"high")` or `adr-vote --precision low`. It is stored with the vote, hidden until the round is revealed, then shown in the round as `precision: {agent: level}` (ticket `vpcast`, thread 8f15dd42).
+- Removed: nothing this time.
+
 ## 0.191.0 - 2026-11-24
 
 - Enter sends in every comment, reply, edit and room box; Shift+Enter is a new line. Ctrl/Cmd+Enter still sends, and Ctrl+Shift+Enter still interrupts. Enter still picks from an open `@` list, and does not send while an IME is composing.

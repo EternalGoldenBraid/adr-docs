@@ -1,9 +1,10 @@
 import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-// Effort votes live in <site root>/votes.json: [{page, item, owner?, weight?, decidedAt?, rounds: [{round, votes, notes, ownerReply, revealed, mean, variance, converged}]}].
+// Effort votes live in <site root>/votes.json: [{page, item, owner?, weight?, decidedAt?, rounds: [{round, votes, precision?: {agent: "low"|"high"}, notes, ownerReply, revealed, mean, variance, converged}]}].
 // Fibonacci scale; a round has converged when its highest and lowest vote are within one step; the weight is the median (the higher value on an even count).
 export const SCALE = [1, 2, 3, 5, 8, 13, 21];
+export const PRECISION = ["low", "high"];
 
 export const stats = votes => {
   const values = Object.values(votes).map(Number).filter(Number.isFinite).sort((a, b) => a - b);
@@ -34,14 +35,17 @@ export const QUORUM = 3;
 const quorum = round => Math.min(QUORUM, round.requested?.length ?? QUORUM);
 
 // Operations; each returns the updated item. A vote goes into the open round (a new item or a revealed round starts a new one).
-export function applyVote(root, { page, item, agent, vote, owner }) {
+export function applyVote(root, { page, item, agent, vote, owner, precision }) {
   if (!SCALE.includes(Number(vote))) throw new Error(`Vote must be one of ${SCALE.join(", ")}.`);
+  if (precision !== undefined && !PRECISION.includes(precision)) throw new Error(`Precision must be one of ${PRECISION.join(", ")}.`);
   const items = readVotes(root);
   const row = find(items, page, item) ?? (items.push({ page, item, ...(owner ? { owner } : {}), rounds: [] }), items.at(-1));
   if (owner) row.owner = owner;
   if (row.decidedAt) throw new Error("This item is decided; start a new item name for another vote.");
   if (!open(row)) row.rounds.push({ round: row.rounds.length + 1, votes: {} });
-  open(row).votes[agent] = Number(vote);
+  const round = open(row);
+  round.votes[agent] = Number(vote);
+  if (precision) (round.precision ??= {})[agent] = precision; else if (round.precision) delete round.precision[agent];
   save(root, items);
   return row;
 }

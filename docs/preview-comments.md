@@ -505,6 +505,8 @@ Queue events: ADR also reads `.queue-events.jsonl` at the site root (one JSON li
 
 Vote requests: `request_doc_review_votes(page, item, voters)` (or `adr-vote --request <page> <item> --voters a,b --as me [--deadline MIN]`) records who was asked, wakes each voter over the mesh, and writes `votes-queue.json` beside `votes.json`: `[{to, text, page, item, round, rank: 0}]`, a "Vote on <item>" per voter who has not voted. Agents vote with `cast_doc_review_vote` (no PATH needed); when the last vote is in the requester gets one "Reveal <item>", and after the deadline (default 60 min, checked every minute by a running server) one "Close <item> on the votes in (n of m)". `reveal_doc_review_votes` closes the round. A round decides an item only with 3 votes (fewer if fewer were asked): below that, the deadline notice says so and the round stays open; a `force` reveal never decides. `request_doc_review_votes` with `reopen: true` (or `adr-vote --reopen <page> <item>`) takes a decided item back to voting. A queue generator reads `votes-queue.json`.
 
+A vote can carry a precision, `low` or `high` (`cast_doc_review_vote(..., precision="low")`, `adr-vote --precision low`): high when the work is yours, low when it is outside your area. It is stored in the round as `precision: {agent: level}` and, like the votes, shown only after the reveal.
+
 Effort votes: `adr-vote` writes `votes.json` (see the changelog, 0.115.0) and `<VoteHistory />` renders it with plots. Example: `adr-vote --root . /experiments/x A demo-agent 5`, then `adr-vote --root . --reveal /experiments/x A`.
 
 ## Agents on another machine
