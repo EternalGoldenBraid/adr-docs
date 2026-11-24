@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.195.0 - 2026-11-24
+
+- `<VoteHistory />` shows each voter's σ beside the vote, the round's weighted mean, and draws more precise votes as larger dots (ticket `vpeffort`, thread 8f15dd42).
+- Removed: nothing this time.
+
 ## 0.194.0 - 2026-11-24
 
 - A site can add markdown-it plugins in `.vitepress/markdown-plugins.mjs` (an array, or a function of the document root). They load in the preview and in exports after ADR's own, so a page renders as in the site's build (thread 66058201, `tidlink`).

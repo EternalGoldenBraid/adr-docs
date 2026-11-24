@@ -511,7 +511,7 @@ Vote requests: `request_doc_review_votes(page, item, voters)` (or `adr-vote --re
 
 A vote states its precision as a spread σ in scale steps (the scale 1 to 21 is steps 0 to 6): `high` 1, `medium` 2, `low` 3, or a number from 1 to 6 (`cast_doc_review_vote(..., precision="low")`, `adr-vote --precision 1.5`); precision is 1/σ². The agent tool, the server and `adr-vote --page` refuse a vote without it. It is stored in the round as `precision: {agent: σ}` and, like the votes, shown only after the reveal, together with `weightedMean` (the precision-weighted mean in steps, rounded to a price). The weight stays the median.
 
-Effort votes: `adr-vote` writes `votes.json` (see the changelog, 0.115.0) and `<VoteHistory />` renders it with plots. Example: `adr-vote --root . /experiments/x A demo-agent 5`, then `adr-vote --root . --reveal /experiments/x A`.
+Effort votes: `adr-vote` writes `votes.json` (see the changelog, 0.115.0) and `<VoteHistory />` (with each voter's σ, the weighted mean, and dot size by precision) renders it with plots. Example: `adr-vote --root . /experiments/x A demo-agent 5`, then `adr-vote --root . --reveal /experiments/x A`.
 
 ## Agents on another machine
 

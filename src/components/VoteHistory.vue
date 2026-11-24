@@ -18,6 +18,8 @@ const pageNo = ref(0)
 const shown = computed(() => items.value.slice(pageNo.value * props.perPage, (pageNo.value + 1) * props.perPage))
 const pages = computed(() => Math.max(1, Math.ceil(items.value.length / props.perPage)))
 const SCALE = [1, 2, 3, 5, 8, 13, 21]
+// A dot is larger the more precise the vote (σ in scale steps); a vote without σ is drawn as σ 3.
+const dotR = (r, a) => 2 + 2 / (r.precision?.[a] || 3)
 const num = v => v === undefined ? '–' : v
 const revealed = i => i.rounds.filter(r => r.revealed)
 
@@ -44,14 +46,15 @@ const maxK = computed(() => Math.max(1, ...roundsNeeded.value.map(r => r.k)))
           <line v-for="s in SCALE" :key="s" :x1="P" :x2="W - P" :y1="y(s)" :y2="y(s)" class="vh-grid" /><text v-for="s in SCALE" :key="'t' + s" :x="2" :y="y(s) + 3" class="vh-tick">{{ s }}</text>
           <g v-for="r in revealed(i)" :key="r.round">
             <line :x1="x(r.round, revealed(i).length) - 8" :x2="x(r.round, revealed(i).length) + 8" :y1="y(r.median)" :y2="y(r.median)" class="vh-median" />
-            <circle v-for="(v, a, k) in r.votes" :key="a" :cx="x(r.round, revealed(i).length) + jitter(r.votes, a, k)" :cy="y(v)" r="3" class="vh-dot"><title>{{ a }}: {{ v }}</title></circle>
+            <circle v-for="(v, a, k) in r.votes" :key="a" :cx="x(r.round, revealed(i).length) + jitter(r.votes, a, k)" :cy="y(v)" 
+ :r="dotR(r, a)" class="vh-dot"><title>{{ a }}: {{ v }}{{ r.precision?.[a] ? ' (σ ' + r.precision[a] + ')' : '' }}</title></circle>
           </g>
         </svg>
         <div v-for="r in i.rounds" :key="r.round" class="vh-round">
           <b class="vh-rn">Round {{ r.round }}</b>
           <template v-if="r.revealed">
-            <span>mean {{ r.mean }} · variance {{ r.variance }} · <em :class="r.converged ? 'ok' : 'no'">{{ r.converged ? 'converged' : 'not converged' }}</em></span>
-            <ul><li v-for="(v, a) in r.votes" :key="a"><b>{{ a }}</b> {{ v }}<span v-if="r.notes?.[a]"> — {{ r.notes[a] }}</span></li></ul>
+            <span>mean {{ r.mean }} · variance {{ r.variance }}<template v-if="r.weightedMean"> · weighted mean {{ r.weightedMean }}</template> · <em :class="r.converged ? 'ok' : 'no'">{{ r.converged ? 'converged' : 'not converged' }}</em></span>
+            <ul><li v-for="(v, a) in r.votes" :key="a"><b>{{ a }}</b> {{ v }}<span v-if="r.precision?.[a]" class="vh-sigma"> σ {{ r.precision[a] }}</span><span v-if="r.notes?.[a]"> — {{ r.notes[a] }}</span></li></ul>
             <p v-if="r.ownerReply" class="vh-reply">Owner: {{ r.ownerReply }}</p>
           </template>
           <span v-else>open · voted: {{ (r.voted || []).join(', ') || 'nobody yet' }}</span>
@@ -77,6 +80,7 @@ const maxK = computed(() => Math.max(1, ...roundsNeeded.value.map(r => r.k)))
 .vh-round { margin: 6px 0 6px 18px; font-size: 13px }
 .vh-rn { margin-right: 8px }
 .vh-round ul { margin: 2px 0 2px 16px; padding: 0 } .vh-round li { margin: 0; line-height: 1.5 } .vh-reply { margin: 2px 0 2px 16px; font-style: italic }
+.vh-sigma { color: var(--vp-c-text-3); font-size: 12px }
 .ok { color: #2b8a3e } .no { color: #c92a2a }
 .vh-plot { width: 260px; max-width: 100%; display: block; margin: 4px 0 }
 .vh-grid { stroke: var(--vp-c-divider); stroke-width: .5 } .vh-tick { font-size: 7px; fill: var(--vp-c-text-3) } .vh-tick.mid { text-anchor: middle }
