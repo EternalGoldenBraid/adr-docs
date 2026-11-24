@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.201.0 - 2026-11-24
+
+- `<VoteCard />` restyle (thread c5be7650): one small curve plot per test in a grid above the tables, drawn in the Plotly colours and the site font the other plots use; the latest revealed round is plotted, earlier rounds' combined curves are faint dashed lines. The vote tables no longer get the sort/group toolbar.
+- Removed: the side-by-side plot-and-table layout and the amber median bar colour.
+
 ## 0.200.0 - 2026-11-24
 
 - `<VoteCard />` plot: each vote is a normal curve (mean the price's scale step, spread σ in steps, equal areas), the precision-weighted product is drawn over them, and the median is a dashed bar; one plot per revealed round (thread 3a5a7c49). A vote without σ is drawn dashed as σ 3.

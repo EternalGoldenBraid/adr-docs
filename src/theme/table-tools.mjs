@@ -19,7 +19,7 @@ function compare(a, b) {
 export function enhanceTables(root = document, path = location.pathname) {
   path = path.replace(/(\.html|\/)$/, "");
   const seen = new Map();
-  const tables = [...root.querySelectorAll(".vp-doc table")].filter(table => !table.dataset.adrTable && table.tBodies[0]?.rows.length > 2 && table.tHead?.rows[0]);
+  const tables = [...root.querySelectorAll(".vp-doc table")].filter(table => !table.dataset.adrTable && !table.classList.contains("vc-table") && table.tBodies[0]?.rows.length > 2 && table.tHead?.rows[0]);
   tables.forEach(table => {
     table.dataset.adrTable = "1";
     const heads = [...table.tHead.rows[0].cells];
