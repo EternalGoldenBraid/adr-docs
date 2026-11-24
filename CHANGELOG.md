@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.196.0 - 2026-11-24
+
+- `Shift+E` (or `:tickets`) opens the site's `/ticket-graph` page; from a ticket page under `/experiments/` it adds `?ticket=<page name>` to zoom to that ticket, and on the graph it goes back (thread f64d3157).
+- Removed: nothing this time.
+
 ## 0.195.0 - 2026-11-24
 
 - `<VoteHistory />` shows each voter's σ beside the vote, the round's weighted mean, and draws more precise votes as larger dots (ticket `vpeffort`, thread 8f15dd42).

@@ -205,6 +205,13 @@
     if (newestFirst()) list.before(form); else thread.append(form);
   };
   const pagePath = url => new URL(url).pathname.replace(/\.html$/, "").replace(/\/index$/, "/");
+  // Shift+E / :tickets opens the site's ticket graph (/ticket-graph); from a ticket page it opens zoomed to that ticket, and again on the graph it goes back.
+  const openTickets = () => {
+    const path = pagePath(location.href);
+    if (path === "/ticket-graph") return history.back();
+    const ticket = path.match(/^\/experiments\/([^/]+)$/)?.[1];
+    location.assign("/ticket-graph" + (ticket ? "?ticket=" + encodeURIComponent(ticket) : ""));
+  };
   const find = selector => shadow.querySelector(selector);
   // Calm mode (":calm"): ADR ignores keys, clicks and selections and hides its marks, so a page with its own controls (a console) is left alone.
   // Per page, or for the whole site with ":calm site". Only ":" still works. Registered first, so the later document listeners never see the event.
@@ -500,6 +507,7 @@
     tree: () => document.dispatchEvent(new KeyboardEvent("keydown", { key: "t", bubbles: true })),
     settings: () => loadSettings().then(() => showSettings(0)), set: () => loadSettings().then(() => showSettings(0)),
     mesh: () => openMesh(),
+    tickets: () => openTickets(),
     labels: async () => {
       try {
         const text = await (await fetch("/__preview_comments/labels", { headers: { "X-Preview-Comment": "1" } })).text();
@@ -3402,6 +3410,11 @@
     if (event.key === KM.leaderKeys.history && previous === KM.leader) {
       event.preventDefault();
       openHistory();
+      return;
+    }
+    if (event.key === "E") {
+      event.preventDefault();
+      openTickets();
       return;
     }
     if (event.key === "T") {
