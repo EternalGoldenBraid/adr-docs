@@ -214,31 +214,42 @@
   layerStyle.textContent = ".mesh-panel:not(.peek){z-index:4}";
   shadow.append(layerStyle, ticketsOverlay);
   const SVGNS = "http://www.w3.org/2000/svg";
-  let nowView = true, ticketData = null;
+  let view = "open", viewStem = "", ticketData = null;
   const closeTickets = () => { ticketsOverlay.hidden = true; };
   const drawTickets = (graph, stem) => {
+    const openView = view === "open";
     const body = ticketsOverlay.querySelector(".tk-body");
     const nodes = graph.nodes, edges = graph.edges;
     let shown = nodes, shownEdges = edges, note = "";
-    const own = new Set(nodes.filter(n => n.parent === stem).map(n => n.id));
-    if (own.size) {
+    const own = new Set(view === "tests" ? nodes.filter(n => n.parent === stem).map(n => n.id) : []);
+    let ticketView = false;
+    if (view === "ticket") {
+      const near = new Set([stem]);
+      edges.forEach(e => { if (e.target === stem) near.add(e.source); if (e.source === stem) near.add(e.target); });
+      shown = nodes.filter(n => near.has(n.id));
+      shownEdges = edges.filter(e => near.has(e.source) && near.has(e.target));
+      note = stem + " and the tickets it waits on or blocks" + (shownEdges.length ? "" : "; it has no ticket dependencies");
+      ticketView = true;
+    } else if (own.size) {
       const near = new Set(own);
       edges.forEach(e => { if (own.has(e.target)) near.add(e.source); if (own.has(e.source)) near.add(e.target); });
       const lanes = new Set(nodes.filter(n => near.has(n.id)).map(n => n.parent));
       shown = nodes.filter(n => near.has(n.id) || lanes.has(n.id));
       shownEdges = edges.filter(e => near.has(e.source) && near.has(e.target));
       note = stem + " and the tests it waits on or blocks";
-    } else if (stem) {
+    } else if (stem && view === "tests") {
       ticketsOverlay.querySelector(".tk-note").textContent = "";
       ticketsOverlay.querySelector(".tk-all").hidden = false;
       ticketsOverlay.querySelector(".tk-body").textContent = "No open tests for " + stem + ".";
       ticketsOverlay.querySelector(".tk-body").style.cssText += ";display:grid;place-items:center;font-size:15px;opacity:.8";
       return;
-    } else note = nowView ? "now: running or in-review tickets and the tickets they wait on or block" + (edges.length ? "" : "; none depends on another yet") : "red outline: blocked by a test that is not done; arrows run from a test to the test that waits on it";
+    } else note = openView ? "open tickets (todo, planned, running, review)" + (edges.length ? "" : "; none depends on another yet") : "red outline: blocked by a test that is not done; arrows run from a test to the test that waits on it";
     ticketsOverlay.querySelector(".tk-note").textContent = note;
-    ticketsOverlay.querySelector(".tk-all").hidden = !own.size;
+    ticketsOverlay.querySelector(".tk-all").hidden = view === "open" || (view === "tests" && !stem);
+    ticketsOverlay.querySelector(".tk-all").textContent = "All open tickets";
     const mode = ticketsOverlay.querySelector(".tk-mode");
-    mode.hidden = !!own.size; mode.textContent = nowView ? "All tests" : "Now";
+    mode.hidden = !(ticketView || own.size || view === "open" || (view === "tests" && !stem));
+    mode.textContent = ticketView ? "Tests of this ticket" : view === "open" ? "All tests" : "Open tickets";
     const by = new Map(shown.map(n => [n.id, n]));
     const svg = document.createElementNS(SVGNS, "svg");
     svg.style.cssText = "width:100%;height:100%;display:block;cursor:grab";
@@ -271,41 +282,51 @@
     });
     body.replaceChildren(svg);
     const box = world.getBBox(), pad = 40;
-    let view = [box.x - pad, box.y - pad, box.width + 2 * pad, box.height + 2 * pad];
-    const apply = () => svg.setAttribute("viewBox", view.join(" "));
+    let vb = [box.x - pad, box.y - pad, box.width + 2 * pad, box.height + 2 * pad];
+    const apply = () => svg.setAttribute("viewBox", vb.join(" "));
     apply();
     svg.addEventListener("wheel", event => {
       event.preventDefault();
       const rect = svg.getBoundingClientRect(), f = event.deltaY > 0 ? 1.15 : 1 / 1.15;
-      const px = view[0] + view[2] * (event.clientX - rect.left) / rect.width, py = view[1] + view[3] * (event.clientY - rect.top) / rect.height;
-      view = [px - (px - view[0]) * f, py - (py - view[1]) * f, view[2] * f, view[3] * f];
+      const px = vb[0] + vb[2] * (event.clientX - rect.left) / rect.width, py = vb[1] + vb[3] * (event.clientY - rect.top) / rect.height;
+      vb = [px - (px - vb[0]) * f, py - (py - vb[1]) * f, vb[2] * f, vb[3] * f];
       apply();
     }, { passive: false });
     svg.addEventListener("pointerdown", event => {
-      const rect = svg.getBoundingClientRect(), start = [event.clientX, event.clientY], from = view.slice();
+      const rect = svg.getBoundingClientRect(), start = [event.clientX, event.clientY], from = vb.slice();
       svg.setPointerCapture(event.pointerId);
-      const move = m => { view = [from[0] - (m.clientX - start[0]) * from[2] / rect.width, from[1] - (m.clientY - start[1]) * from[3] / rect.height, from[2], from[3]]; apply(); };
+      const move = m => { vb = [from[0] - (m.clientX - start[0]) * from[2] / rect.width, from[1] - (m.clientY - start[1]) * from[3] / rect.height, from[2], from[3]]; apply(); };
       svg.addEventListener("pointermove", move);
       svg.addEventListener("pointerup", () => svg.removeEventListener("pointermove", move), { once: true });
     });
   };
-  const showTickets = async stem => {
+  const showTickets = async (nextView, stem) => {
+    view = nextView; viewStem = stem;
     ticketsOverlay.hidden = false;
     const body = ticketsOverlay.querySelector(".tk-body");
     body.style.display = ""; body.style.placeItems = ""; body.style.fontSize = ""; body.style.opacity = "";
     body.textContent = "Loading...";
     try {
-      let res = nowView && !stem ? await fetch("/graph/tickets-present.json") : null;
-      if (!res?.ok) { nowView = false; res = await fetch("/graph/tickets.json"); }
-      ticketData = await res.json(); drawTickets(ticketData, stem);
-    } catch { body.textContent = "The ticket graph (/graph/tickets.json) could not be loaded."; }
+      let res = view !== "tests" ? await fetch("/graph/tickets-open.json") : null;
+      if (!res?.ok) { view = "tests"; res = await fetch("/graph/tickets.json"); }
+      ticketData = await res.json();
+      if (view === "ticket" && !ticketData.nodes.some(n => n.id === stem)) { view = "tests"; ticketData = await (await fetch("/graph/tickets.json")).json(); }
+      drawTickets(ticketData, stem);
+    } catch (error) { console.error("ticket graph", error); body.textContent = "The ticket graph (/graph/tickets-open.json, /graph/tickets.json) could not be loaded."; }
   };
+  ticketsOverlay.querySelector(".tk-mode").addEventListener("click", () => {
+    if (view === "ticket") showTickets("tests", viewStem);
+    else if (view === "open") showTickets("tests", "");
+    else showTickets("open", "");
+  });
+  ticketsOverlay.querySelector(".tk-all").addEventListener("click", () => showTickets("open", ""));
   ticketsOverlay.querySelector(".tk-close").addEventListener("click", closeTickets);
-  ticketsOverlay.querySelector(".tk-mode").addEventListener("click", () => { nowView = !nowView; showTickets(""); });
-  ticketsOverlay.querySelector(".tk-all").addEventListener("click", () => showTickets(""));
-  const openTickets = () => {
+  // Shift+E: this ticket's dependencies on other tickets (open tickets elsewhere); Shift+O: all open tickets.
+  const currentTicket = () => pagePath(location.href).match(/^\/experiments\/([^/]+)$/)?.[1] || "";
+  const openTickets = all => {
     if (!ticketsOverlay.hidden) return closeTickets();
-    showTickets(pagePath(location.href).match(/^\/experiments\/([^/]+)$/)?.[1] || "");
+    const stem = all ? "" : currentTicket();
+    showTickets(stem ? "ticket" : "open", stem);
   };
   document.addEventListener("keydown", event => { if (event.key === "Escape" && !ticketsOverlay.hidden) { closeTickets(); event.stopPropagation(); } }, true);
   const find = selector => shadow.querySelector(selector);
@@ -603,7 +624,8 @@
     tree: () => document.dispatchEvent(new KeyboardEvent("keydown", { key: "t", bubbles: true })),
     settings: () => loadSettings().then(() => showSettings(0)), set: () => loadSettings().then(() => showSettings(0)),
     mesh: () => openMesh(),
-    tickets: () => openTickets(),
+    tickets: () => openTickets(false),
+    "tickets-all": () => openTickets(true),
     labels: async () => {
       try {
         const text = await (await fetch("/__preview_comments/labels", { headers: { "X-Preview-Comment": "1" } })).text();
@@ -1123,7 +1145,7 @@
     status.classList.toggle("error", error);
   }
   let meshTimer, meshPinned = false;
-  const ago = at => { const m = Math.max(0, Math.round((Date.now() - Date.parse(at)) / 60000)); return m < 1 ? "now" : m < 60 ? `${m}m` : `${Math.round(m / 60)}h`; };
+  const ago = at => { const m = Math.max(0, Math.round((Date.now() - Date.parse(at)) / 60000)); return m < 1 ? "open" : m < 60 ? `${m}m` : `${Math.round(m / 60)}h`; };
   let meshTab = localStorage.getItem("preview-comments-mesh-tab") || "table";
   // Same indicators as the desktop mesh panel: blue working, pink waiting, yellow asking, green idle, hollow grey ring = active, state unknown.
   const MESH_COLOURS = { working: "#6fb7e8", waiting: "#f38ba8", asking: "#ffd500", idle: "#9ccc65", stalled: "#fab387", active: "#9399b2", offline: "#9399b2", human: "#e6edf7" };
@@ -3544,10 +3566,10 @@
       }
     }
     // With the comment panel or thread list open, Shift+T (team) and Shift+E (tickets) still work unless a text field has focus.
-    if (vimEnabled && !externalMode && (event.key === "T" || event.key === "E") && !(panel.hidden && history.hidden) && !event.ctrlKey && !event.metaKey && !event.altKey &&
+    if (vimEnabled && !externalMode && (event.key === "T" || event.key === "E" || event.key === "O") && !(panel.hidden && history.hidden) && !event.ctrlKey && !event.metaKey && !event.altKey &&
         !event.composedPath().some(node => node.matches?.("input, textarea, select, [contenteditable]:not([contenteditable='false']), [role='textbox']"))) {
       event.preventDefault();
-      if (event.key === "E") openTickets();
+      if (event.key === "E" || event.key === "O") openTickets(event.key === "O");
       else if (find(".mesh-panel").hidden || !meshPinned) openMesh(); else closeMesh();
       return;
     }
@@ -3562,9 +3584,9 @@
       openHistory();
       return;
     }
-    if (event.key === "E") {
+    if (event.key === "E" || event.key === "O") {
       event.preventDefault();
-      openTickets();
+      openTickets(event.key === "O");
       return;
     }
     if (event.key === "T") {

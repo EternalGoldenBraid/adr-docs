@@ -531,7 +531,11 @@ Ceremony rows: `<CeremonyRows />` renders `ceremony.json` (site root, written by
 
 ### Ticket graph (Shift+E)
 
-`Shift+E` (or `:tickets`; also with the comment panel open, unless a text field has focus) opens an overlay above everything else, drawn from the site's `/graph/tickets.json` (lanes, nodes with `x`, `y`, `w`, `h`, colours, and edges; the site generates it). From a ticket page under `/experiments/` it shows that ticket and the tests it waits on or blocks, with an **All tickets** button; elsewhere it opens the **Now** view (`/graph/tickets-present.json`: running or in-review tickets and what they wait on or block, no tests), with a button to switch to **All tests**; without that file it shows all tests. Drag to pan, wheel to zoom; `Shift+E`, `Esc` or **Close** closes it. The Team panel (`Shift+T`) now also opens above the comment panel.
+`Shift+E` (or `:tickets`) and `Shift+O` (`:tickets-all`) open an overlay above everything else (also with the comment panel open, unless a text field has focus). Both draw files the site generates in `public/graph/` (nodes with `x`, `y`, `w`, `h`, colours, and edges):
+
+- **`Shift+E` on a ticket page** (`/experiments/<name>`): that ticket and the tickets it waits on or blocks, from `tickets-open.json`. The **Tests of this ticket** button zooms to its tests in `tickets.json` (or says "No open tests for <ticket>").
+- **`Shift+O`**, or `Shift+E` elsewhere: every open ticket (`tickets-open.json`). **All tests** switches to the full test-level graph (`tickets.json`).
+- Without `tickets-open.json` the overlay falls back to the test-level graph. Drag pans, wheel zooms; the same key, `Esc` or **Close** closes it. The Team panel (`Shift+T`) also opens above the comment panel.
 
 ### Test id suggestions
 

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.204.0 - 2026-11-24
+
+- Ticket overlay (thread 7b8791cd): `Shift+E` on a ticket page shows that ticket and the tickets it waits on or blocks; `Shift+O` shows all open tickets (`/graph/tickets-open.json`). Buttons switch to the tests of the ticket or to all tests.
+- Removed: the "Now" view (`tickets-present.json`, 0.203.0) in favour of `tickets-open.json`.
+
 ## 0.203.0 - 2026-11-24
 
 - The Shift+E overlay opens a **Now** view by default (thread 7b8791cd): the site's `/graph/tickets-present.json`, tickets only; a button switches to all tests, and without the file it shows all tests as before.
