@@ -80,7 +80,7 @@ test("page front-matter owner becomes the card owner", async () => {
 
 test("slugs drop accents instead of the letter, and keep the old form as an alias", async () => {
   const { slugify, legacySlug } = await import("../src/roster.mjs");
-  assert.deepEqual([slugify("Demo agent"), legacySlug("Demo agent")], ["demo-agent", "m-kki-agent"]);
+  assert.deepEqual([slugify("Töy agent"), legacySlug("Töy agent")], ["toy-agent", "t-y-agent"]);
 });
 
 test("effort votes: reveal gives mean, variance, convergence and the median weight; unrevealed votes stay private", async () => {

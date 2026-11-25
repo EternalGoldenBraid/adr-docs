@@ -5,7 +5,7 @@ const UUID = /[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}/i;
 // The bare session id inside a mesh address such as "remote:[gpu]<id>"; anything else comes back unchanged.
 export const bareSession = id => String(id).match(UUID)?.[0] ?? id;
 const cells = line => line.trim().replace(/^\||\|$/g, "").split("|").map(cell => cell.trim());
-// "Demo agent" is "demo-agent"; `legacySlug` is the older form that dropped the accent ("m-kki-agent") and is still accepted.
+// "Töy agent" is "toy-agent"; `legacySlug` is the older form that dropped the accent ("t-y-agent") and is still accepted.
 export const legacySlug = text => text.toLowerCase().replace(/[^a-z\d]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
 export const slugify = text => text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().replace(/[^a-z\d]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
 
