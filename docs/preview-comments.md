@@ -143,8 +143,8 @@ A thin fixed strip on every page, in the live preview, `npm run build:site` and 
 
 ```yaml
 ---
-classification: "RESTRICTED · restricted-demo org only"
-classification-level: restricted   # restricted (red) | internal (amber) | public (green)
+classification: "INTERNAL · team only"
+classification-level: internal   # restricted (red) | internal (amber) | public (green)
 ---
 ```
 
