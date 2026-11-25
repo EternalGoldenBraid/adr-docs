@@ -13,20 +13,20 @@ A page lists entries between markers:
     <!-- experiments {"topic": "my-topic"} -->  entries of that topic
     <!-- /experiments -->
 
-python3 tools/exp_index.py           rewrite the tables
-python3 tools/exp_index.py --agenda    done tests with an estimate that the morning review has not closed
-python3 tools/exp_index.py --close page/id ...   close reviewed tests (they move to the past list)
-python3 tools/exp_index.py --split page id,id new-slug   move planned tests that do not fit the day to a new todo page
-python3 tools/exp_index.py --mode [free|gated]      write work-mode.json; in free mode the gates warn and block nothing; no argument shows it
-python3 tools/exp_index.py --freeze [on reason|off]   write freeze.json (agents finish, commit, take no new item); no argument shows it
-python3 tools/exp_index.py --collect   derive experiments/<stem>/tests.json from runs.jsonl; list failed or lost tests
-python3 tools/exp_index.py --check   fail on a bad entry or a stale table (commit hook)
+python3 scripts/gates/exp_index.py           rewrite the tables
+python3 scripts/gates/exp_index.py --agenda    done tests with an estimate that the morning review has not closed
+python3 scripts/gates/exp_index.py --close page/id ...   close reviewed tests (they move to the past list)
+python3 scripts/gates/exp_index.py --split page id,id new-slug   move planned tests that do not fit the day to a new todo page
+python3 scripts/gates/exp_index.py --mode [free|gated]      write work-mode.json; in free mode the gates warn and block nothing; no argument shows it
+python3 scripts/gates/exp_index.py --freeze [on reason|off]   write freeze.json (agents finish, commit, take no new item); no argument shows it
+python3 scripts/gates/exp_index.py --collect   derive experiments/<stem>/tests.json from runs.jsonl; list failed or lost tests
+python3 scripts/gates/exp_index.py --check   fail on a bad entry or a stale table (commit hook)
 """
 import datetime, json, os, re, subprocess, sys
 from pathlib import Path
 import jsonlines
 
-root = Path(__file__).resolve().parent.parent
+root = Path(os.environ.get("SITE_ROOT", ".")).resolve()
 STATUSES = ("todo", "planned", "running", "review", "done", "abandoned")
 TMARK = re.compile(r"<!-- test: ([\w-]+)#([\w-]+) -->.*?<!-- /test -->")
 MARK = re.compile(r"<!-- experiments (\{.*?\}) -->\n.*?<!-- /experiments -->", re.S)
@@ -941,7 +941,7 @@ def main():
         close_tests(sys.argv[sys.argv.index("--close") + 1:])
         return
     entries, errors = load()
-    errors += [f"experiments/{n}: verdict block is stale; run python3 tools/exp_index.py" for n in sync_verdicts(check)]
+    errors += [f"experiments/{n}: verdict block is stale; run python3 scripts/gates/exp_index.py" for n in sync_verdicts(check)]
     for page in sorted(root.glob("*.md")):
         s = page.read_text()
         new = MARK.sub(lambda m: f"<!-- experiments {m.group(1)} -->\n{table(entries, json.loads(m.group(1)))}\n<!-- /experiments -->", s)
@@ -950,7 +950,7 @@ def main():
         BAD_MARKS.clear()
         if new != s:
             if check:
-                errors.append(f"{page.name}: experiment table is stale; run python3 tools/exp_index.py")
+                errors.append(f"{page.name}: experiment table is stale; run python3 scripts/gates/exp_index.py")
             else:
                 page.write_text(new)
                 print(f"updated {page.name}")
@@ -962,13 +962,13 @@ def main():
     qtext = jsonlines.dumps(qdata)
     if not qj.exists() or qj.read_text() != qtext:
         if check:
-            errors.append("queues.json is stale; run python3 tools/exp_index.py")
+            errors.append("queues.json is stale; run python3 scripts/gates/exp_index.py")
         else:
             qj.write_text(qtext)
             print("updated queues.json")
     if tn != ts:
         if check:
-            errors.append("team.md: queue table is stale; run python3 tools/exp_index.py")
+            errors.append("team.md: queue table is stale; run python3 scripts/gates/exp_index.py")
         else:
             team.write_text(tn)
             print("updated team.md")
@@ -977,7 +977,7 @@ def main():
         ftext = json.dumps(fig, indent=1) + "\n"
         if not fp.exists() or fp.read_text() != ftext:
             if check:
-                errors.append(f"public/plots/{name} is stale; run python3 tools/exp_index.py")
+                errors.append(f"public/plots/{name} is stale; run python3 scripts/gates/exp_index.py")
             else:
                 fp.write_text(ftext)
                 print(f"updated public/plots/{name}")

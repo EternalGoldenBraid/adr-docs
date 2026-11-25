@@ -5,6 +5,7 @@ A lane per ticket, a node per test (doer and state in the body), an edge per `af
 A test is blocked when a test it waits on is not done. Only tickets with a running or
 review test, or with an `after` link, are shown. Use --check to fail when the file is out of date.
 """
+import os
 import json
 import re
 import sys
@@ -12,7 +13,7 @@ from pathlib import Path
 
 import yaml
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(os.environ.get("SITE_ROOT", ".")).resolve()
 OUT = ROOT / "public" / "graph" / "tickets.json"
 PRESENT = ROOT / "public" / "graph" / "tickets-present.json"
 OPEN = ROOT / "public" / "graph" / "tickets-open.json"
@@ -110,7 +111,7 @@ def main():
     otext, on, oe = present(True)
     if "--check" in sys.argv:
         if not OUT.exists() or OUT.read_text() != text or not PRESENT.exists() or PRESENT.read_text() != ptext or not OPEN.exists() or OPEN.read_text() != otext:
-            print("public/graph/tickets.json is stale: run tools/ticket_graph.py")
+            print("public/graph/tickets.json is stale: run scripts/gates/ticket_graph.py")
             return 1
         return 0
     OUT.write_text(text)

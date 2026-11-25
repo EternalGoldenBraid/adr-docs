@@ -5,6 +5,7 @@ Each entry: {id, kind: test|agent, page (ticket stem), name}. Tests come from th
 `card.tests` of every experiments page; agents from `doer` and `participants`.
 Use --check to fail when the file is out of date.
 """
+import os
 import json
 import re
 import sys
@@ -12,7 +13,7 @@ from pathlib import Path
 
 import yaml
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(os.environ.get("SITE_ROOT", ".")).resolve()
 OUT = ROOT / "public" / "ids.json"
 
 
@@ -43,7 +44,7 @@ def main():
     text = "[\n" + ",\n".join(json.dumps(i) for i in build()) + "\n]\n"
     if "--check" in sys.argv:
         if not OUT.exists() or OUT.read_text() != text:
-            print("public/ids.json is stale: run tools/ids_list.py")
+            print("public/ids.json is stale: run scripts/gates/ids_list.py")
             return 1
         return 0
     OUT.write_text(text)

@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """Check the plan: page tree (front matter `parent:`), node links, and cycles.
 
-Cycles inside a graph are normal (the review loop). Cycles in the page tree or
+Cycles inside a graph are normal (a feedback loop). Cycles in the page tree or
 in the node-link structure between pages are errors.
 """
+import os
 import json, re, subprocess, sys
 from pathlib import Path
 
-root = Path(__file__).resolve().parent.parent
+root = Path(os.environ.get("SITE_ROOT", ".")).resolve()
 pages = {p.stem: p for p in root.glob("*.md")}
 errors = []
 

@@ -1,14 +1,15 @@
 """Vote precision: the plot of precision per voter and the check that a voted ticket shows it on its vote card.
-  python3 tools/vote_precision.py          write public/plots/vote-precision.json from votes.json
-  python3 tools/vote_precision.py --check  warn for every ticket with precision votes whose card has no precision column
+  python3 scripts/gates/vote_precision.py          write public/plots/vote-precision.json from votes.json
+  python3 scripts/gates/vote_precision.py --check  warn for every ticket with precision votes whose card has no precision column
 votes.json is the ADR vote store; a round carries precision: {agent: level} once a voter gave one.
 A vote counts as lacking precision only in rounds requested after ADR 0.192.0 added the field."""
+import os
 import json
 import re
 import sys
 from pathlib import Path
 
-root = Path(__file__).resolve().parent.parent
+root = Path(os.environ.get("SITE_ROOT", ".")).resolve()
 FIELD_FROM = "2026-11-24T04:47:49Z"
 LEVELS = ("high", "medium", "low", "none")
 

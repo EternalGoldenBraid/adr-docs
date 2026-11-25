@@ -9,7 +9,7 @@ The test becomes state done with `measured` and `result: pass|fail` (a fail mean
 measured, not met). The latest finished run counts; one run is one seed, so a pass
 is a reading to review, not a verdict.
 
-  python3 tools/verify_checks.py [--host HOST] [--port 8766] [--dry] [--watch 5]
+  python3 scripts/gates/verify_checks.py [--host HOST] [--port 8766] [--dry] [--watch 5]
 
 A test of kind video with `video: {run, file?}` ticks when that run's manifest lists a video item.
 

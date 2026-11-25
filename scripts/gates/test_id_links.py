@@ -1,11 +1,12 @@
 """Warn where a page's prose names one of its own test ids or run names without backticks (the site links only backticked ones).
-  python3 tools/test_id_links.py          list the pages and counts
-  python3 tools/test_id_links.py --check  one warning per page"""
+  python3 scripts/gates/test_id_links.py          list the pages and counts
+  python3 scripts/gates/test_id_links.py --check  one warning per page"""
+import os
 import re
 import sys
 from pathlib import Path
 
-root = Path(__file__).resolve().parent.parent
+root = Path(os.environ.get("SITE_ROOT", ".")).resolve()
 TEST = re.compile(r"\{id: ([\w-]+),.*?check: \{run: ([\w-]+)")
 
 

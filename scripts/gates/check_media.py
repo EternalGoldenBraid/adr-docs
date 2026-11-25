@@ -4,12 +4,13 @@
 Images: any EXIF GPS latitude or longitude. Videos: a container `location` tag.
 Checks the given files, or else every tracked image and every file under public/data.
 """
+import os
 import json, shutil, subprocess, sys
 from pathlib import Path
 
 from PIL import Image
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(os.environ.get("SITE_ROOT", ".")).resolve()
 IMAGES = {".jpg", ".jpeg", ".png", ".tif", ".tiff", ".webp", ".heic"}
 VIDEOS = {".mp4", ".mov", ".m4v"}
 GPS_IFD, LAT, LON = 34853, 2, 4

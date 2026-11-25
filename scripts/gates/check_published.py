@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """Fail when a page points at /data/... that CI cannot get.
 
-public/data is gitignored, so CI only has what media.json lists (tools/media.py pull).
+public/data is gitignored, so CI only has what media.json lists (scripts/gates/media.py pull).
 Every /data/... path used in a page or graph must be in media.json, and the local copy,
-if present, must match the uploaded checksum (otherwise run tools/media.py push).
+if present, must match the uploaded checksum (otherwise run scripts/gates/media.py push).
 """
+import os
 import hashlib, json, re, sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(os.environ.get("SITE_ROOT", ".")).resolve()
 SKIP = {"node_modules", ".adr", ".git", ".vitepress", ".adr-data", "cache", "attic"}  # .adr-data: ADR's gitignored snapshots, never published
 REF = re.compile(r"""["'(=\s](/data/[\w./@+-]+\.\w+)""")
 LOCAL_ONLY = (".rrd", ".db")  # never uploaded; the catalog is not published yet
@@ -35,5 +36,5 @@ for rel, page in sorted(refs.items()):
     if local.exists() and hashlib.sha256(local.read_bytes()).hexdigest() != manifest[rel]["sha256"]:
         errors.append(f"{rel} changed locally since upload")
 if errors:
-    print("error: the published site would miss or mismatch media; run python3 tools/media.py push:\n  " + "\n  ".join(errors))
+    print("error: the published site would miss or mismatch media; run python3 scripts/gates/media.py push:\n  " + "\n  ".join(errors))
     sys.exit(1)
