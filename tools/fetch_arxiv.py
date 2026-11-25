@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fetch an arXiv HTML paper (e.g. 2211.08416v3) as a commentable page.
+"""Fetch an arXiv HTML paper (e.g. 2212.12794) as a commentable page.
 
 Usage: fetch_arxiv.py <arxiv-id> [--root DOCS_DIR]
 

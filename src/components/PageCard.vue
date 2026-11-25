@@ -22,8 +22,8 @@ const summary = computed(() => {
   return { count: ['done', 'running', 'planned', 'obsolete', 'failed'].filter(st => st !== 'failed' || n(st)).map(st => MARK[st] + n(st)).join(' '), age: ageDays(last), running }
 })
 const staleDays = computed(() => theme.value.staleDays ?? 2)
-const clip = t => t.length > props.budget ? t.slice(0, props.budget - 1) + '…' : t
-const over = t => t.length > props.budget
+const clip = (t = '') => t.length > props.budget ? t.slice(0, props.budget - 1) + '…' : t
+const over = (t = '') => t.length > props.budget
 const ORDER = ['building', 'review', 'planned', 'todo', 'idea', 'shipped', 'superseded']
 const rows = computed(() => Object.entries(cards.value).filter(([, c]) => c.line || c.needsVerdict || c.missing).map(([link, c]) => ({ link, ...c }))
   .sort((a, b) => Boolean(b.needsVerdict) - Boolean(a.needsVerdict) || ORDER.indexOf(a.status) - ORDER.indexOf(b.status) || a.title.localeCompare(b.title)))
@@ -32,7 +32,7 @@ const rows = computed(() => Object.entries(cards.value).filter(([, c]) => c.line
 <template>
   <div v-if="board" class="pc-board">
     <a v-for="r in rows" :key="r.link" :href="withBase(r.link)" class="pc-row">
-      <b :class="['pc-tag', r.status]">{{ r.status || '—' }}</b> <b v-if="r.missing" class="pc-tag bad">missing: {{ r.missing.join(', ') }}</b> <b v-if="r.needsVerdict" class="pc-tag needs">needs verdict</b> <span>{{ r.title }}</span><small><code v-if="t.check" class="pc-check" :title="'auto-checked when the run ends (one seed)'">{{ t.check.stat }}({{ t.check.field }}) {{ t.check.op }} {{ t.check.value }}</code> {{ clip(r.line) }}</small>
+      <b :class="['pc-tag', r.status]">{{ r.status || '—' }}</b> <b v-if="r.missing" class="pc-tag bad">missing: {{ r.missing.join(', ') }}</b> <b v-if="r.needsVerdict" class="pc-tag needs">needs verdict</b> <span>{{ r.title }}</span><small>{{ clip(r.line) }}</small>
     </a>
     <p v-if="!rows.length" class="pc-empty">No page has a <code>card-line</code> yet.</p>
   </div>
@@ -42,7 +42,7 @@ const rows = computed(() => Object.entries(cards.value).filter(([, c]) => c.line
     <div v-if="here.waitingOn" class="pc-slot"><i>waiting</i><span>{{ here.waitingOn.join(', ') }} have not resolved the open threads</span></div>
     <div v-if="tests.length" class="pc-slot"><i>tests</i><div>
       <div class="pc-count"><b>{{ summary.count }}</b><span v-if="summary.age !== null" :class="{ 'pc-old': summary.running && summary.age > staleDays }"> · last result {{ summary.age ? summary.age + ' d ago' : 'today' }}<template v-if="summary.running && summary.age > staleDays"> ⚠ stale</template></span></div>
-      <ul class="pc-tests"><li v-for="t in tests" :key="t.name" :class="['pc-test', t.status]"><span class="pc-mark">{{ MARK[t.status] || '?' }}</span><a v-if="t.link" :href="t.link.startsWith('#') ? t.link : withBase(t.link)" class="pc-link">{{ t.name }}</a><span v-else>{{ t.name }}</span><small><em v-if="t.measured !== undefined" :class="['pc-v', t.verdict]">{{ t.measured }} {{ t.verdict === 'pass' ? 'pass (hypothesis)' : t.verdict === 'fail' ? 'measured, not met' : '' }} </em><em v-if="t.status === 'planned' || t.status === 'running'" :class="['pc-q', { no: !t.doer }]">{{ t.doer ? `queued #${t.rank}, ${t.doer}${t.after?.length ? ', after ' + t.after.join(', ') : ''}` : 'not queued: no doer' }} </em>{{ t.at || '' }}{{ t.verified ? ' ·run' : '' }}</small></li></ul>
+      <ul class="pc-tests"><li v-for="t in tests" :key="t.name" :class="['pc-test', t.status]"><span class="pc-mark">{{ MARK[t.status] || '?' }}</span><a v-if="t.link" :href="t.link.startsWith('#') ? t.link : withBase(t.link)" class="pc-link">{{ t.name }}</a><span v-else>{{ t.name }}</span><small><code v-if="t.check" class="pc-check" :title="'auto-checked when the run ends (one seed)'">{{ t.check.stat }}({{ t.check.field }}) {{ t.check.op }} {{ t.check.value }}</code> <em v-if="t.measured !== undefined" :class="['pc-v', t.verdict]">{{ t.measured }} {{ t.verdict === 'pass' ? 'pass (hypothesis)' : t.verdict === 'fail' ? 'measured, not met' : '' }} </em><em v-if="t.status === 'planned' || t.status === 'running'" :class="['pc-q', { no: !t.doer }]">{{ t.doer ? `queued #${t.rank}, ${t.doer}${t.after?.length ? ', after ' + t.after.join(', ') : ''}` : 'not queued: no doer' }} </em>{{ t.at || '' }}{{ t.verified ? ' ·run' : '' }}</small></li></ul>
     </div></div>
     <template v-for="k in SLOTS" :key="k"><div v-if="here[k]" class="pc-slot"><i>{{ k }}</i><span :title="over(here[k]) ? here[k] : undefined">{{ clip(here[k]) }}</span></div></template>
   </div>

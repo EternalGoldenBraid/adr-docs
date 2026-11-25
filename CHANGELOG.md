@@ -5,7 +5,9 @@
 - Moved the project-agnostic gates, vote and ticket-graph scripts, run catalog and media tools into `scripts/gates/`, and the Check, Data, Plot, Video, SyncedRun, RunningNow and catalog components into `src/components/` (thread 8a56d0d2).
 - Synthetic climate-science demo (station bias, regional downscaling) in `examples/experiments/` with a static run catalog, a vote card and a ticket graph.
 - Example names are now neutral (`demo`); Pages build ignores placeholder links in the lean-UI demo.
-- Removed: project, machine and hardware names from code, docs and examples.
+- Station map example, and the example paper is now a weather-forecasting one (`npm run example:paper`).
+- Fixed: the page-card board threw on rows without a line, and the check chip sat in the board row instead of the test list.
+- Removed: project, machine and hardware names from code, docs and examples; the robot-learning example paper and road names.
 
 ## 0.206.1 - 2026-11-24
 
