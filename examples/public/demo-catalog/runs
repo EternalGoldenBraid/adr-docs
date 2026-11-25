@@ -1,0 +1,1 @@
+[{"experiment": "2026-01-10-sensor-calibration", "run": "cal-s0", "progress": {"phase": "done", "step": 12, "total": 12}, "items": [{"kind": "scalars", "url": "/cal-s0.jsonl"}]}, {"experiment": "2026-01-12-lane-following", "run": "lane-s0", "progress": {"phase": "running", "step": 18, "total": 30}, "items": [{"kind": "scalars", "url": "/lane-s0.jsonl"}]}]

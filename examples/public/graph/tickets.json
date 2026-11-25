@@ -1,0 +1,10 @@
+{
+"nodes":[
+{"id": "2026-01-12-lane-following", "kind": "lane", "title": "Lane following", "body": "", "status": "", "parent": null, "x": 0, "y": 0, "w": 640, "h": 250, "fill": "#0f172a", "stroke": "#475569", "font": "#f8fafc"},
+{"id": "2026-01-12-lane-following/lanesmoke", "kind": "node", "title": "lanesmoke", "body": "beta-agent, running\nCross-track error stays under 0.5", "status": "", "parent": "2026-01-12-lane-following", "x": 40, "y": 60, "w": 260, "h": 150, "fill": "#1e293b", "stroke": "#fb923c", "font": "#f8fafc"},
+{"id": "2026-01-12-lane-following/lanefull", "kind": "node", "title": "lanefull", "body": "beta-agent, blocked\nFull lap with error under 0.3", "status": "", "parent": "2026-01-12-lane-following", "x": 340, "y": 60, "w": 260, "h": 150, "fill": "#1e293b", "stroke": "#f87171", "font": "#f8fafc"}
+],
+"edges":[
+{"id": "2026-01-12-lane-following/lanefull<2026-01-12-lane-following/lanesmoke", "source": "2026-01-12-lane-following/lanesmoke", "target": "2026-01-12-lane-following/lanefull", "color": "#94a3b8", "dashed": false, "label": ""}
+]
+}

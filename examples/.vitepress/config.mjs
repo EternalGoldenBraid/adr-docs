@@ -9,6 +9,7 @@ export default defineConfig({
   title: "Agent Doc Review",
   base: process.env.SITE_BASE || "/",
   appearance: "force-dark",
+  ignoreDeadLinks: [/^\/(planning|ops)\//],
   srcExclude: ["papers/**", ...unpublished(root)],
   themeConfig: treeThemeConfig(root, { publishedOnly: true }),
   vite: { optimizeDeps: { include: ["cytoscape"] }, plugins: [treeJsonPlugin(root)] },

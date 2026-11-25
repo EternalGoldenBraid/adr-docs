@@ -98,6 +98,12 @@ double-click opens a box, Backspace goes up. `--check` lists files no box points
 `tools/fetch_arxiv.py <id> --root <docs>` turns an arXiv paper into a
 commentable page.
 
+## Experiment gates
+
+`scripts/gates/` holds project-agnostic scripts for a ticket workflow: experiment index, test checks against run data, plan and size checks, vote precision, a ticket graph and a small run catalog. Run them from the site root or set `SITE_ROOT`. Other settings: `EXP_EXTERNAL_DOCS` (optional second docs tree), `EXP_HUMAN` (default `maintainer`), `EXP_SENDER` (default `coordinator`).
+
+The `Check`, `Data`, `Plot`, `Video`, `SyncedRun`, `RunningNow`, `CatalogRuns` and `CatalogServer` components read a catalog from `base` (default `http://127.0.0.1:8766`). `examples/experiments/` shows a static catalog under `public/demo-catalog/`, a vote card and the ticket graph, all synthetic.
+
 ## Notes
 
 - The server binds to `127.0.0.1` only. Nothing is sent to an external service;

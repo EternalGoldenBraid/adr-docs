@@ -1,0 +1,102 @@
+[
+ {
+  "page": "/experiments/2026-01-10-sensor-calibration",
+  "item": "caloffset",
+  "rounds": [
+   {
+    "round": 1,
+    "votes": {
+     "alpha-agent": 3,
+     "beta-agent": 5
+    },
+    "precision": {
+     "alpha-agent": 1,
+     "beta-agent": 2
+    },
+    "revealed": true,
+    "mean": 4,
+    "variance": 1,
+    "median": 5,
+    "converged": true,
+    "min": 3,
+    "max": 5,
+    "weightedMean": 3
+   }
+  ],
+  "weight": 3,
+  "decidedAt": "2026-01-10T10:00:00.000Z"
+ },
+ {
+  "page": "/experiments/2026-01-12-lane-following",
+  "item": "lanesmoke",
+  "rounds": [
+   {
+    "round": 1,
+    "votes": {
+     "alpha-agent": 2,
+     "beta-agent": 8
+    },
+    "precision": {
+     "alpha-agent": 1,
+     "beta-agent": 2
+    },
+    "revealed": true,
+    "mean": 5,
+    "variance": 9,
+    "median": 8,
+    "converged": false,
+    "min": 2,
+    "max": 8,
+    "weightedMean": 3
+   },
+   {
+    "round": 2,
+    "votes": {
+     "alpha-agent": 3,
+     "beta-agent": 5
+    },
+    "precision": {
+     "alpha-agent": 1,
+     "beta-agent": 1
+    },
+    "revealed": true,
+    "mean": 4,
+    "variance": 1,
+    "median": 5,
+    "converged": true,
+    "min": 3,
+    "max": 5,
+    "weightedMean": 5
+   }
+  ],
+  "weight": 5,
+  "decidedAt": "2026-01-10T10:00:00.000Z"
+ },
+ {
+  "page": "/experiments/2026-01-12-lane-following",
+  "item": "lanefull",
+  "rounds": [
+   {
+    "round": 1,
+    "votes": {
+     "alpha-agent": 5,
+     "beta-agent": 8
+    },
+    "precision": {
+     "alpha-agent": 2,
+     "beta-agent": 2
+    },
+    "revealed": true,
+    "mean": 6.5,
+    "variance": 2.25,
+    "median": 8,
+    "converged": true,
+    "min": 5,
+    "max": 8,
+    "weightedMean": 8
+   }
+  ],
+  "weight": 8,
+  "decidedAt": "2026-01-10T10:00:00.000Z"
+ }
+]
