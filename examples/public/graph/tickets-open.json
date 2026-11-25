@@ -1,6 +1,6 @@
 {
 "nodes":[
-{"id": "2026-01-12-lane-following", "kind": "node", "title": "Lane following", "body": "running", "status": "", "parent": null, "x": 0, "y": 0, "w": 260, "h": 150, "fill": "#1e293b", "stroke": "#fb923c", "font": "#f8fafc"}
+{"id": "2026-01-12-regional-downscaling", "kind": "node", "title": "Regional downscaling", "body": "running", "status": "", "parent": null, "x": 0, "y": 0, "w": 260, "h": 150, "fill": "#1e293b", "stroke": "#fb923c", "font": "#f8fafc"}
 ],
 "edges":[
 

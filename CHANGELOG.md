@@ -3,7 +3,7 @@
 ## 0.207.0 - 2026-11-25
 
 - Moved the project-agnostic gates, vote and ticket-graph scripts, run catalog and media tools into `scripts/gates/`, and the Check, Data, Plot, Video, SyncedRun, RunningNow and catalog components into `src/components/` (thread 8a56d0d2).
-- Synthetic demo project in `examples/experiments/` with a static run catalog, a vote card and a ticket graph.
+- Synthetic climate-science demo (station bias, regional downscaling) in `examples/experiments/` with a static run catalog, a vote card and a ticket graph.
 - Example names are now neutral (`demo`); Pages build ignores placeholder links in the lean-UI demo.
 - Removed: project, machine and hardware names from code, docs and examples.
 

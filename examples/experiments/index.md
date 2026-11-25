@@ -7,5 +7,5 @@ parent: index
 
 A synthetic project: two tickets, a vote, and tests checked against run data. Nothing here is real data.
 
-- [Sensor calibration](/experiments/2026-01-10-sensor-calibration): done.
-- [Lane following](/experiments/2026-01-12-lane-following): waits on calibration; one test is running.
+- [Station bias correction](/experiments/2026-01-10-station-bias): done.
+- [Regional downscaling](/experiments/2026-01-12-regional-downscaling): waits on the bias correction; one test is running.
