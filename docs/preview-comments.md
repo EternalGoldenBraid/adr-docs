@@ -143,7 +143,7 @@ A thin fixed strip on every page, in the live preview, `npm run build:site` and 
 
 ```yaml
 ---
-classification: "INTERNAL · team only"
+classification: "DEMO · example banner"
 classification-level: internal   # restricted (red) | internal (amber) | public (green)
 ---
 ```
@@ -527,7 +527,7 @@ Effort votes: `adr-vote` writes `votes.json` (see the changelog, 0.115.0) and `<
 
 ## Agents on another machine
 
-An agent on a peer machine (for example the GPU host) reaches a preview through the mesh, with no tunnel and no shared token. On that machine, install the plugin and write `~/.local/state/agent-doc-review/remote.json` as `{"machine": "my-laptop"}` (the peer that runs the previews). The usual tools (`read_doc_review_comments`, `update_doc_review_comment`, `unanswered_threads`, `add_doc_review_comment`, `set_doc_review_status`) then take `store: "demo"` for a store that machine does not run itself.
+An agent on a peer machine (for example a second host) reaches a preview through the mesh, with no tunnel and no shared token. On that machine, install the plugin and write `~/.local/state/agent-doc-review/remote.json` as `{"machine": "my-laptop"}` (the peer that runs the previews). The usual tools (`read_doc_review_comments`, `update_doc_review_comment`, `unanswered_threads`, `add_doc_review_comment`, `set_doc_review_status`) then take `store: "demo"` for a store that machine does not run itself.
 
 A named preview (`adr --name demo`) listens for `ADR-REQ` mesh messages (every 2 s; `ADR_MESH_SERVE=off` disables it). The caller finds the preview among the peer's agents by its directory name, sends the request, and the preview answers with `ADR-RES` messages, chunked to stay under the mesh's 10 KB limit. Only the agent endpoints are served (`/read`, `/unanswered`, `/agent-update`, `/agent-add`, `/agent-status`). Text only: images in replies are not carried yet.
 

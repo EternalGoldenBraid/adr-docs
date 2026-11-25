@@ -270,7 +270,7 @@ export function pageCards(documentRoot, options) {
 }
 
 // One site-wide banner from the root index.md front matter:
-//   classification: "INTERNAL · team only"
+//   classification: "DEMO · example banner"
 //   classification-level: restricted | internal | public   (colour; inferred from the label's first word if omitted)
 export function classificationConfig(documentRoot) {
   const file = join(documentRoot, "index.md");
