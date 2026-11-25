@@ -832,7 +832,7 @@ onUnmounted(() => { removeEventListener('hashchange', landOnNode); document.remo
       <input ref="titleInput" v-model="editor.title" placeholder="Title" @keydown.enter="commitEdit" />
       <input v-model="editor.status" placeholder="Status, e.g. ● MVP" @keydown.enter="commitEdit" />
       <input v-model="editor.link" placeholder="Link, e.g. /autonomy" @keydown.enter="commitEdit" />
-      <input v-model="editor.code" placeholder="Code, e.g. demo-ros:tools/rerun_sink.py#L9" @keydown.enter="commitEdit" />
+      <input v-model="editor.code" placeholder="Code, e.g. repo:tools/rerun_sink.py#L9" @keydown.enter="commitEdit" />
       <textarea v-model="editor.body" rows="4" placeholder="Description" @keydown.ctrl.enter="commitEdit"></textarea>
       <div class="xp-actions"><button @click="commitEdit">Save</button><button @click="editor = null">Cancel</button></div>
     </div>

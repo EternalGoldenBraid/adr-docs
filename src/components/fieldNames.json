@@ -1,0 +1,5 @@
+{
+  "loss": "Training loss",
+  "accuracy": "Accuracy",
+  "time_s": "Time (s)"
+}

@@ -16,6 +16,14 @@ import RoomFeed from "../components/RoomFeed.vue";
 import CeremonyRows from "../components/CeremonyRows.vue";
 import PageTree from "../components/PageTree.vue";
 import AutoPageCard from "../components/AutoPageCard.vue";
+import Check from "../components/Check.vue";
+import Data from "../components/Data.vue";
+import Video from "../components/Video.vue";
+import CatalogRuns from "../components/CatalogRuns.vue";
+import CatalogServer from "../components/CatalogServer.vue";
+import RunningNow from "../components/RunningNow.vue";
+import SyncedRun from "../components/SyncedRun.vue";
+import Plot from "../components/Plot.vue";
 import { installSidebarToggle } from "./sidebar-toggle.mjs";
 import { enhanceTables } from "./table-tools.mjs";
 import { installPublishing } from "./publish.mjs";
@@ -36,5 +44,5 @@ export default {
       installSidebarToggle();
       installPublishing();
     }
-    app.component("DocGraph", DocGraph); app.component("TeamGraph", TeamGraph); app.component("RerunViewer", RerunViewer); app.component("RouteMap", RouteMap); app.component("SplatViewer", SplatViewer); app.component("PageCard", PageCard); app.component("VoteHistory", VoteHistory); app.component("VoteCard", VoteCard); app.component("RoomFeed", RoomFeed); app.component("CeremonyRows", CeremonyRows); app.component("WorkstreamBoard", WorkstreamBoard); app.component("WorkstreamNow", WorkstreamNow); },
+    app.component("DocGraph", DocGraph); app.component("TeamGraph", TeamGraph); app.component("RerunViewer", RerunViewer); app.component("RouteMap", RouteMap); app.component("SplatViewer", SplatViewer); app.component("PageCard", PageCard); app.component("VoteHistory", VoteHistory); app.component("VoteCard", VoteCard); app.component("RoomFeed", RoomFeed); app.component("CeremonyRows", CeremonyRows); app.component("WorkstreamBoard", WorkstreamBoard); app.component("WorkstreamNow", WorkstreamNow); app.component("Check", Check); app.component("Data", Data); app.component("Video", Video); app.component("CatalogRuns", CatalogRuns); app.component("CatalogServer", CatalogServer); app.component("RunningNow", RunningNow); app.component("SyncedRun", SyncedRun); app.component("Plot", Plot); },
 };
