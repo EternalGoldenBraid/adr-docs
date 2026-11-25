@@ -7,3 +7,6 @@ examples/public/papers/
 examples/papers/
 examples/.vitepress/cache/
 examples/.vitepress/dist/
+/.tmux-workspace/
+/workstreams/
+/AGENT_README.md

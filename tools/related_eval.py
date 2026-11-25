@@ -4,7 +4,7 @@ Ground truth: pages that an agent linked in its replies in the thread (markdown 
 Query: the thread's first comment. Candidates: the site's pages. Scorers: TF-IDF (baseline) and bge-small embeddings (fastembed, CPU).
 Reports precision@3, recall@3 and hit@3, and how precision changes with a similarity threshold.
 
-  uv run --with scikit-learn --with fastembed python tools/related_eval.py ~/Projects/demo [--no-embed]
+  uv run --with scikit-learn --with fastembed python tools/related_eval.py <site-root> [--no-embed]
 """
 import json
 import re
