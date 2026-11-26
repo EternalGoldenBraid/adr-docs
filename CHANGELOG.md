@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.210.0 - 2026-11-26
+
+- Page editing in the live preview: `e` opens the page's markdown around the caret (the block under it plus 8 lines each way) in an editor; Ctrl+Enter writes the page file, Esc cancels. A save is refused if the file changed since you opened it. Blocks carry `data-adr-src` line ranges from a new markdown-it plugin (`src/source-lines.mjs`). Local preview only for now; published sites keep the table-cell editing (thread c5679a4e).
+- Removed: nothing.
+
 ## 0.209.0 - 2026-11-26
 
 - The leak guard's term list is now "ignore terms": `~/.config/adr/ignore-terms` (or `$ADR_IGNORE_TERMS`) instead of `denylist`; messages say so. Move the old file by hand (thread 8a56d0d2).

@@ -5,6 +5,7 @@
     "visual": "v",
     "comment": "c",
     "region": "s",
+    "edit": "e",
     "details": " ",
     "documentStart": "g",
     "documentEnd": "G",

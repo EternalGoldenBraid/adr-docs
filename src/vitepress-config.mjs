@@ -6,6 +6,7 @@ import { pathToFileURL } from "node:url";
 import mathjax from "markdown-it-mathjax3";
 import taskLists from "./task-lists.mjs";
 import editableTables from "./editable-tables.mjs";
+import sourceLines from "./source-lines.mjs";
 import { markdownFiles, treeThemeConfig, treeJsonPlugin } from "./page-tree.mjs";
 import { previewComments } from "../scripts/preview_comments/vite-plugin.mjs";
 
@@ -168,7 +169,7 @@ export async function previewConfig({ documentRoot, connectionFile, workspace, p
       ["style", {}, '.vp-doc mjx-container[display="true"] { overflow-y: hidden; }'],
     ],
     appearance: "dark",
-    markdown: { config: md => { md.use(mathjax, { tex: { tags: "ams" } }).use(taskLists).use(editableTables); for (const plugin of markdownPlugins) md.use(plugin); } },
+    markdown: { config: md => { md.use(mathjax, { tex: { tags: "ams" } }).use(taskLists).use(editableTables).use(sourceLines); for (const plugin of markdownPlugins) md.use(plugin); } },
     vue: { template: { compilerOptions: { isCustomElement: tag => tag.startsWith("mjx-") } } },
     themeConfig: { outline: "deep", ...treeThemeConfig(documentRoot) },
     vite: {

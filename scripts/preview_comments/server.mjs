@@ -20,7 +20,7 @@ function meshDataDirectory() {
   const moved = join(homedir(), ".agent-mesh");
   return existsSync(join(moved, "agent-mesh.db")) ? moved : meshCodeDirectory;
 }
-import { readCell, writeCell } from "./table-edit.mjs";
+import { readCell, writeCell, readWindow, writeWindow } from "./table-edit.mjs";
 import { bareSession, readRoster, slugify } from "../../src/roster.mjs";
 import { answerRates, rank } from "../../src/nudge-plan.mjs";
 import { deriveState, disagrees, itemTurns } from "../../src/verified-state.mjs";
@@ -1212,7 +1212,7 @@ export async function startCommentBridge({
         response.writeHead(200, { "Content-Type": "image/png", "Cache-Control": "private, max-age=31536000, immutable" });
         return response.end(readFileSync(imageFile(download[1])));
       }
-      if (request.method !== "POST" || !["/comments", "/updates", "/attachments", "/userseen", "/settings", "/agent-update", "/agent-add", "/agent-status", "/agent-vote", "/agent-waiting", "/face-open", "/face-post", "/restart", "/tts", "/table-edit"].includes(request.url)) {
+      if (request.method !== "POST" || !["/comments", "/updates", "/attachments", "/userseen", "/settings", "/agent-update", "/agent-add", "/agent-status", "/agent-vote", "/agent-waiting", "/face-open", "/face-post", "/restart", "/tts", "/table-edit", "/source-edit"].includes(request.url)) {
         return reply(response, 404, { error: "Unknown comment endpoint." });
       }
       if (request.url === "/restart") {
@@ -1237,7 +1237,7 @@ export async function startCommentBridge({
           return reply(response, 503, { error: error.message });
         }
       }
-      if (request.url === "/table-edit") {
+      if (request.url === "/table-edit" || request.url === "/source-edit") {
         try {
           const body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
           const url = new URL(field(body.url, "Page URL", 2048));
@@ -1247,6 +1247,14 @@ export async function startCommentBridge({
           const within = relative(root, source);
           if (isAbsolute(within) || within === ".." || within.startsWith(".." + sep)) throw new Error("The document is outside the preview root.");
           const text = readFileSync(source, "utf8");
+          if (request.url === "/source-edit") {
+            if (body.value === undefined) {
+              if (![body.start, body.end].every(Number.isInteger)) throw new Error("Invalid block.");
+              return reply(response, 200, readWindow(text, body.start, body.end, 8));
+            }
+            writeFileSync(source, writeWindow(text, body.from, body.to, body.value, body.hash));
+            return reply(response, 200, { saved: true });
+          }
           const where = [body.table, body.row, body.col];
           if (!where.every(Number.isInteger)) throw new Error("Invalid cell.");
           if (body.value === undefined) return reply(response, 200, readCell(text, ...where));

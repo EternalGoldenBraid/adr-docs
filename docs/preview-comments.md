@@ -396,6 +396,10 @@ A page component can also start the region capture by dispatching a `preview-com
 
 `<site>/.vitepress/markdown-plugins.mjs` may default-export an array of markdown-it plugins, or a function of the document root returning one. They load after ADR's own (math, task lists, editable tables) in the preview and in exports, so a page renders as in the site's build, for example with links on test ids. Restart the preview after adding the file.
 
+## Editing the page source
+
+With the caret in a block (or none: the block near the top of the view) and no text box focused, `e` opens the page's markdown in an editor: the block under the caret plus 8 lines before and after, with the cursor on the block. Ctrl+Enter writes those lines into the page's `.md` file and the preview reloads; Esc cancels. ADR refuses a save if the file changed since you opened the editor. The key is `page.edit` in the keymap. Local preview only; exports and published sites are read-only here (use `{editable}` tables for edits there).
+
 ## Region outlines
 
 A thread started with a region screenshot (`s`) keeps the drawn area: the page shows an unfilled rectangle in the thread's colour with its bubble on the corner. The area is stored relative to the element it was drawn over, so it moves with the layout. Screenshots added to an existing thread, and threads from before 0.81.0, have no rectangle.

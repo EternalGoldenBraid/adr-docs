@@ -513,7 +513,7 @@
       `j/k scroll smoothly · i caret mode (h/j/k/l/w/b/0/$ move, Esc leaves)`,
       `${KM.page.visual} select · V paragraph · ${KM.page.comment} comment (page if nothing selected)`,
       `] / [ next / previous thread awaiting you (across pages)`,
-      `${KM.page.region} region screenshot · ${KM.leader}${KM.leaderKeys.history} history · ${KM.leader}${KM.leaderKeys.chat} session chat`,
+      `${KM.page.edit} edit the markdown around the caret (8 lines each way; Ctrl+Enter saves) · ${KM.page.region} region screenshot · ${KM.leader}${KM.leaderKeys.history} history · ${KM.leader}${KM.leaderKeys.chat} session chat`,
       `${KM.resize.narrower}/${KM.resize.wider}/${KM.resize.shorter}/${KM.resize.taller} resize panel · t page tree`,
     ]],
     ["History", [
@@ -2854,6 +2854,53 @@
       }
     });
     input.addEventListener("blur", () => { if (!done) close(); });
+  });
+  // Source view: `e` opens the markdown around the caret (the block plus 8 lines each way); Ctrl+Enter or Save writes the page file.
+  let sourceOpen = false;
+  async function editSource() {
+    const doc = document.querySelector(".vp-doc");
+    const node = getSelection().focusNode;
+    let block = (node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement)?.closest("[data-adr-src]");
+    if (!block || !doc?.contains(block)) {
+      const mid = [...doc.querySelectorAll("[data-adr-src]")].filter(el => el.parentElement === doc || el.parentElement?.parentElement === doc);
+      block = mid.find(el => el.getBoundingClientRect().bottom > innerHeight / 3);
+    }
+    if (!block) return message("No editable block here.", true);
+    const [start, end] = block.dataset.adrSrc.split(",").map(Number);
+    let current;
+    try { current = await api("source-edit", { url: location.href, start, end }); } catch (error) { return message(error.message, true); }
+    sourceOpen = true;
+    const box = document.createElement("div");
+    box.style.cssText = "position:fixed;inset:8vh 12vw;z-index:2147483000;display:flex;flex-direction:column;gap:6px;padding:10px;background:#0d1117;border:2px solid #388bfd;border-radius:8px;box-shadow:0 8px 40px #000a";
+    const input = document.createElement("textarea");
+    input.value = current.raw;
+    input.spellcheck = false;
+    input.style.cssText = "flex:1;resize:none;font:13px/1.5 ui-monospace,monospace;color:#e6edf3;background:#0d1117;border:1px solid #30363d;padding:8px;tab-size:2";
+    const bar = document.createElement("div");
+    bar.style.cssText = "display:flex;gap:10px;align-items:center;color:#8b949e;font:12px system-ui";
+    bar.textContent = `Lines ${current.from + 1}–${current.to} of the page file · Ctrl+Enter saves · Esc cancels`;
+    box.append(input, bar);
+    document.body.append(box);
+    const close = () => { sourceOpen = false; box.remove(); };
+    input.addEventListener("keydown", async key => {
+      key.stopPropagation();
+      if (key.key === "Escape") close();
+      else if (key.key === "Enter" && (key.ctrlKey || key.metaKey)) {
+        key.preventDefault();
+        try { await api("source-edit", { url: location.href, from: current.from, to: current.to, value: input.value, hash: current.hash }); close(); message("Saved to the page file"); }
+        catch (error) { message(error.message, true); }
+      }
+    }, true);
+    const first = input.value.split("\n").slice(0, current.focus[0]).join("\n").length;
+    input.focus();
+    input.setSelectionRange(first ? first + 1 : 0, first ? first + 1 : 0);
+  }
+  docOn("keydown", event => {
+    if (event.key !== KM.page.edit || event.isComposing || event.repeat || !vimEnabled || event.ctrlKey || event.metaKey || event.altKey ||
+        sourceOpen || !history.hidden || !panel.hidden || !pop.hidden || !document.querySelector(".vp-doc") ||
+        event.composedPath().some(node => node.matches?.("input, textarea, select, button, [contenteditable]:not([contenteditable='false']), [role='textbox']"))) return;
+    event.preventDefault();
+    editSource();
   });
   async function regionDraft() {
     const shot = await captureRegion();
