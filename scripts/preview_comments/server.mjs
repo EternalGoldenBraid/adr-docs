@@ -20,7 +20,7 @@ function meshDataDirectory() {
   const moved = join(homedir(), ".agent-mesh");
   return existsSync(join(moved, "agent-mesh.db")) ? moved : meshCodeDirectory;
 }
-import { readCell, writeCell, readWindow, writeWindow } from "./table-edit.mjs";
+import { readCell, writeCell, readWindow, writeWindow, hashOf } from "./table-edit.mjs";
 import { bareSession, readRoster, slugify } from "../../src/roster.mjs";
 import { answerRates, rank } from "../../src/nudge-plan.mjs";
 import { deriveState, disagrees, itemTurns } from "../../src/verified-state.mjs";
@@ -1252,8 +1252,9 @@ export async function startCommentBridge({
               if (![body.start, body.end].every(Number.isInteger)) throw new Error("Invalid block.");
               return reply(response, 200, readWindow(text, body.start, body.end, 8));
             }
-            writeFileSync(source, writeWindow(text, body.from, body.to, body.value, body.hash));
-            return reply(response, 200, { saved: true });
+            const next = writeWindow(text, body.from, body.to, body.value, body.hash);
+            writeFileSync(source, next);
+            return reply(response, 200, { saved: true, hash: hashOf(next) });
           }
           const where = [body.table, body.row, body.col];
           if (!where.every(Number.isInteger)) throw new Error("Invalid cell.");

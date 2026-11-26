@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.211.0 - 2026-11-26
+
+- The `e` source editor is now a draggable float like the team panel (the page stays visible), not a full-screen box. In its vim text field `Esc` then `:w` writes the page file and the page re-renders in place; `:wq` / `:q` close it, Ctrl+Enter also saves, and the editor stays open after `:w` so you can keep editing (thread c5679a4e).
+- Removed: the full-screen source overlay.
+
 ## 0.210.0 - 2026-11-26
 
 - Page editing in the live preview: `e` opens the page's markdown around the caret (the block under it plus 8 lines each way) in an editor; Ctrl+Enter writes the page file, Esc cancels. A save is refused if the file changed since you opened it. Blocks carry `data-adr-src` line ranges from a new markdown-it plugin (`src/source-lines.mjs`). Local preview only for now; published sites keep the table-cell editing (thread c5679a4e).

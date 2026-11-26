@@ -50,6 +50,7 @@
       .icon{padding:2px 9px;border-radius:6px;line-height:1.4}
       .whats-panel{width:min(780px,94vw)}.whats-body{max-height:62vh;overflow:auto;font:13px/1.5 ui-monospace,monospace}.whats-row{display:flex;gap:12px;padding:3px 8px;border-radius:4px;cursor:pointer}.whats-row.on,.whats-hunk.on{background:#3b4a63}.whats-preview{position:sticky;bottom:0;margin-top:8px;padding:6px 8px;background:#1f2430;border-top:1px solid #59616d;white-space:pre-wrap;color:#c9d1d9}.whats-row .slug{flex:1}.whats-row .add{color:#69db7c}.whats-row .del{color:#ff8787}.whats-row .when{color:#8b95a5}.whats-hunk{border-left:3px solid #59616d;margin:6px 0;padding:2px 8px;white-space:pre-wrap}.whats-hunk.on{border-color:#8ab4f8}.whats-hunk .ln{color:#8b95a5}.whats-hunk .op-plus{color:#69db7c}.whats-hunk .op-minus{color:#ff8787;text-decoration:line-through}.sb-new{color:#74c0fc;font-weight:700;white-space:nowrap}
       .set-panel{width:min(520px,94vw)}.set-list{display:grid;gap:2px;margin:8px 0}.set-row{display:flex;justify-content:space-between;gap:12px;text-align:left;border:0;border-left:3px solid #3a404a;background:transparent;color:inherit;font:inherit;padding:5px 10px;cursor:pointer}.set-row.on{background:#1d2a40;border-color:#74c0fc}.set-row b{font-weight:600;color:#d5dbe3}.set-row small{display:block}
+      .source-panel{width:min(520px,94vw)}.source-text{display:block;width:100%;box-sizing:border-box;height:min(46vh,420px);resize:vertical;font:13px/1.5 ui-monospace,monospace;color:inherit;background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:8px;tab-size:2}.source-status{font-size:11px;opacity:.7;margin-top:4px;min-height:1.2em}.source-text[data-vmode=normal],.source-text[data-vmode=visual]{caret-color:transparent}
       .help-panel{width:min(640px,94vw)}.help-tabs,.help-tabs-look{display:flex;gap:6px;margin:8px 0;flex-wrap:wrap}.help-tabs button,.help-tabs-look button{background:#2a2e36;color:inherit;border:1px solid #59616d;border-radius:6px;padding:3px 10px;cursor:pointer}.help-tabs button[aria-selected=true],.help-tabs-look button[aria-selected=true]{background:#3b4a63;border-color:#8ab4f8}.help-body{white-space:pre-wrap;font:13px/1.5 ui-monospace,monospace;margin:0;max-height:50vh;overflow:auto}
       .mesh-machines{margin-top:10px}.mach{display:grid;grid-template-columns:100px 1fr 230px;gap:8px;align-items:center;font-size:12px;padding:2px 0}.mach svg{width:100%;height:22px}.mach .hot{color:#f38ba8}.mach-detail{display:grid;gap:4px;margin:2px 0 8px;font-size:11px}.mach-detail.stale{opacity:.5}.cores{display:flex;gap:2px;height:36px;align-items:flex-end;flex:1}.core{flex:1;max-width:16px;height:100%;display:flex;align-items:flex-end;background:#252a32;border-radius:2px;overflow:hidden}.core i{display:block;width:100%;min-height:1px}.gpu{display:grid;grid-template-columns:110px 1fr 54px 1fr 80px 90px;gap:6px;align-items:center}.gpu .bar{position:relative;height:14px;background:#252a32;border-radius:3px;overflow:hidden}.gpu .bar i{position:absolute;inset:0 auto 0 0;display:block}.core{position:relative}.core em{position:absolute;top:0;left:0;right:0;text-align:center;font-style:normal;font-size:8px;opacity:.65}.cores-wrap{display:flex;gap:6px;align-items:stretch}.cores-wrap .scale{display:flex;flex-direction:column;justify-content:space-between;font-size:9px;opacity:.6;text-align:right;min-width:28px}.cores-wrap .avg{align-self:center;white-space:nowrap}.mach.stale{opacity:.5}.mesh-panel{width:min(var(--pw,640px),94vw);max-height:min(var(--ph,100vh),calc(100vh - 120px));overflow:auto}.mesh-panel.peek{position:fixed;left:auto;top:auto;right:12px;bottom:52px;margin:0;max-height:70vh;overflow:auto;opacity:.97}.mesh-corner{position:fixed;right:0;bottom:130px;padding:10px 3px;z-index:2147483000;background:#1b1d22cc;color:#aab;border:1px solid #3a404a;border-right:0;border-radius:8px 0 0 8px;font:11px/1 ui-monospace,monospace;writing-mode:vertical-rl;cursor:pointer;opacity:.55}.mesh-corner:hover{opacity:1}.mesh-table td:nth-child(2){white-space:nowrap}.mesh-tabs{margin:0 8px}.mesh-graph[hidden],.mesh-room[hidden]{display:none}.mesh-room{margin:8px;font-size:13px}.room-list{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}.room-list button,.room-new button,.room-send button{padding:2px 10px;border:1px solid #59616d;border-radius:999px;background:transparent;color:inherit;font:inherit;cursor:pointer}.room-list button.on,.room-new button.on{border-color:#74c0fc;background:rgba(116,192,252,.18)}.room-log{max-height:46vh;overflow:auto;display:grid;gap:6px;padding:4px 0}.room-post{padding:5px 9px;border-left:3px solid #59616d;background:#20242b;border-radius:0 6px 6px 0;white-space:pre-wrap}.room-post.me{border-color:#74c0fc}.room-post b{display:block;font-size:11px;margin-bottom:2px}.room-send{display:flex;gap:6px;margin-top:6px}.room-send textarea{flex:1;min-height:44px;background:#14171c;color:inherit;border:1px solid #3a404a;border-radius:6px;padding:5px;font:inherit}.room-new{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px}.room-new input{background:#14171c;color:inherit;border:1px solid #3a404a;border-radius:6px;padding:2px 6px;font:inherit}.mesh-graph{width:100%;height:auto;display:block}.mesh-graph text{fill:#d7dde6;font:11px ui-monospace,monospace;text-anchor:middle}.mesh-edges{font-size:12px;color:#aab;margin-top:8px}.mesh-table{width:100%;border-collapse:collapse;font-size:13px}.mesh-table th,.mesh-table td{text-align:left;padding:4px 8px;border-bottom:1px solid #3a404a}
       .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:#59616d}.dot.active{background:#51cf66}.dot.idle{background:#fcc419}
@@ -181,6 +182,11 @@
     <section class="panel help-panel" hidden aria-label="Help">
       <div class="history-head"><h2>Help</h2><small>[ ] or h/l switch tab · Esc closes</small><button class="help-close icon" type="button" aria-label="Close">✕</button></div>
       <div class="help-tabs" role="tablist"></div><pre class="help-body"></pre>
+    </section>
+    <section class="panel source-panel" hidden aria-label="Edit source">
+      <div class="history-head"><h2>Edit source</h2><small class="source-info"></small><button class="source-close icon" type="button" aria-label="Close">✕</button></div>
+      <textarea class="source-text" spellcheck="false"></textarea>
+      <div class="source-status"></div>
     </section>
     <div class="reader" hidden><button type="button" data-act="prev" title="Previous (<)">⏮</button><button type="button" data-act="pause" title="Pause / resume (p)">⏯</button><button type="button" data-act="next" title="Next (>)">⏭</button><button type="button" data-act="stop" title="Stop (Esc)">⏹</button><span class="reader-pos"></span></div><div class="status" role="status" aria-live="polite"></div>
     <div class="region" hidden><div class="region-box" hidden></div><div class="region-tip">Drag to select a region · Esc cancels</div></div>
@@ -513,7 +519,7 @@
       `j/k scroll smoothly · i caret mode (h/j/k/l/w/b/0/$ move, Esc leaves)`,
       `${KM.page.visual} select · V paragraph · ${KM.page.comment} comment (page if nothing selected)`,
       `] / [ next / previous thread awaiting you (across pages)`,
-      `${KM.page.edit} edit the markdown around the caret (8 lines each way; Ctrl+Enter saves) · ${KM.page.region} region screenshot · ${KM.leader}${KM.leaderKeys.history} history · ${KM.leader}${KM.leaderKeys.chat} session chat`,
+      `${KM.page.edit} edit the markdown around the caret in a float (8 lines each way; Esc then :w saves, :q closes, Ctrl+Enter saves) · ${KM.page.region} region screenshot · ${KM.leader}${KM.leaderKeys.history} history · ${KM.leader}${KM.leaderKeys.chat} session chat`,
       `${KM.resize.narrower}/${KM.resize.wider}/${KM.resize.shorter}/${KM.resize.taller} resize panel · t page tree`,
     ]],
     ["History", [
@@ -2855,49 +2861,50 @@
     });
     input.addEventListener("blur", () => { if (!done) close(); });
   });
-  // Source view: `e` opens the markdown around the caret (the block plus 8 lines each way); Ctrl+Enter or Save writes the page file.
-  let sourceOpen = false;
+  // Source view: `e` opens the markdown around the caret (the block plus 8 lines each way) in a float; :w writes the page file and the page re-renders in place.
+  const sourcePanel = find(".source-panel"), sourceText = find(".source-text"), sourceStatus = find(".source-status");
+  let source;
+  const sourceOpen = () => !sourcePanel.hidden;
+  const sourceNote = (text, error = false) => { sourceStatus.textContent = text; sourceStatus.style.color = error ? "#f38ba8" : ""; };
+  function sourceShow(win, hash) {
+    source = { from: win.from, to: win.to, hash };
+    sourceText.value = win.raw;
+    find(".source-info").textContent = `lines ${win.from + 1}–${win.to} · :w saves · :q closes`;
+  }
+  async function sourceSave(quit) {
+    try {
+      const done = await api("source-edit", { url: location.href, from: source.from, to: source.to, value: sourceText.value, hash: source.hash });
+      source = { from: source.from, to: source.from + sourceText.value.split("\n").length, hash: done.hash };
+      sourceNote("Written to the page file");
+      if (quit) sourcePanel.hidden = true;
+    } catch (error) { sourceNote(error.message, true); }
+  }
   async function editSource() {
     const doc = document.querySelector(".vp-doc");
     const node = getSelection().focusNode;
     let block = (node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement)?.closest("[data-adr-src]");
     if (!block || !doc?.contains(block)) {
-      const mid = [...doc.querySelectorAll("[data-adr-src]")].filter(el => el.parentElement === doc || el.parentElement?.parentElement === doc);
-      block = mid.find(el => el.getBoundingClientRect().bottom > innerHeight / 3);
+      block = [...doc.querySelectorAll("[data-adr-src]")].filter(el => el.parentElement === doc || el.parentElement?.parentElement === doc)
+        .find(el => el.getBoundingClientRect().bottom > innerHeight / 3);
     }
     if (!block) return message("No editable block here.", true);
     const [start, end] = block.dataset.adrSrc.split(",").map(Number);
     let current;
     try { current = await api("source-edit", { url: location.href, start, end }); } catch (error) { return message(error.message, true); }
-    sourceOpen = true;
-    const box = document.createElement("div");
-    box.style.cssText = "position:fixed;inset:8vh 12vw;z-index:2147483000;display:flex;flex-direction:column;gap:6px;padding:10px;background:#0d1117;border:2px solid #388bfd;border-radius:8px;box-shadow:0 8px 40px #000a";
-    const input = document.createElement("textarea");
-    input.value = current.raw;
-    input.spellcheck = false;
-    input.style.cssText = "flex:1;resize:none;font:13px/1.5 ui-monospace,monospace;color:#e6edf3;background:#0d1117;border:1px solid #30363d;padding:8px;tab-size:2";
-    const bar = document.createElement("div");
-    bar.style.cssText = "display:flex;gap:10px;align-items:center;color:#8b949e;font:12px system-ui";
-    bar.textContent = `Lines ${current.from + 1}–${current.to} of the page file · Ctrl+Enter saves · Esc cancels`;
-    box.append(input, bar);
-    document.body.append(box);
-    const close = () => { sourceOpen = false; box.remove(); };
-    input.addEventListener("keydown", async key => {
-      key.stopPropagation();
-      if (key.key === "Escape") close();
-      else if (key.key === "Enter" && (key.ctrlKey || key.metaKey)) {
-        key.preventDefault();
-        try { await api("source-edit", { url: location.href, from: current.from, to: current.to, value: input.value, hash: current.hash }); close(); message("Saved to the page file"); }
-        catch (error) { message(error.message, true); }
-      }
-    }, true);
-    const first = input.value.split("\n").slice(0, current.focus[0]).join("\n").length;
-    input.focus();
-    input.setSelectionRange(first ? first + 1 : 0, first ? first + 1 : 0);
+    sourceShow(current, current.hash);
+    sourceNote("");
+    sourcePanel.hidden = false;
+    sourceText.focus();
+    const upto = current.raw.split("\n").slice(0, current.focus[0]).join("\n").length;
+    const at = upto ? upto + 1 : 0;
+    sourceText.setSelectionRange(at, at);
+    sourceText.scrollTop = 0;
   }
+  find(".source-close").addEventListener("click", () => { sourcePanel.hidden = true; });
+  sourcePanel.addEventListener("keydown", event => { if (event.key === "Escape" && event.target !== sourceText) sourcePanel.hidden = true; });
   docOn("keydown", event => {
     if (event.key !== KM.page.edit || event.isComposing || event.repeat || !vimEnabled || event.ctrlKey || event.metaKey || event.altKey ||
-        sourceOpen || !history.hidden || !panel.hidden || !pop.hidden || !document.querySelector(".vp-doc") ||
+        sourceOpen() || !history.hidden || !panel.hidden || !pop.hidden || !document.querySelector(".vp-doc") ||
         event.composedPath().some(node => node.matches?.("input, textarea, select, button, [contenteditable]:not([contenteditable='false']), [role='textbox']"))) return;
     event.preventDefault();
     editSource();
@@ -3409,6 +3416,24 @@
     if (!vimEnabled || !t.matches?.("textarea") || event.isComposing || event.metaKey || event.altKey) return;
     const st = tstate(t), key = event.key;
     const stop = () => { event.preventDefault(); event.stopImmediatePropagation(); };
+    if (t === sourceText && key === "Enter" && event.ctrlKey) { stop(); sourceSave(false); return; }
+    if (t === sourceText && (st.mode === "normal" || st.ex !== undefined)) {
+      if (st.ex === undefined && key === ":") { st.ex = ""; sourceNote(":"); stop(); return; }
+      if (st.ex !== undefined) {
+        stop();
+        if (key === "Escape") { st.ex = undefined; sourceNote(""); }
+        else if (key === "Enter") {
+          const command = st.ex.trim();
+          st.ex = undefined;
+          if (command === "w") sourceSave(false);
+          else if (command === "wq" || command === "x") sourceSave(true);
+          else if (command === "q" || command === "q!") { sourcePanel.hidden = true; sourceNote(""); }
+          else sourceNote(`Not a command: ${command}`, true);
+        } else if (key === "Backspace") { st.ex = st.ex.slice(0, -1); sourceNote(":" + st.ex); }
+        else if (key.length === 1) { st.ex += key; sourceNote(":" + st.ex); }
+        return;
+      }
+    }
     const v = () => t.value;
     const ls = i => i <= 0 ? 0 : v().lastIndexOf("\n", i - 1) + 1;
     const le = i => { const n = v().indexOf("\n", i); return n < 0 ? v().length : n; };
@@ -4343,7 +4368,7 @@
   new MutationObserver(syncBanners).observe(shadow, { attributes: true, attributeFilter: ["hidden"], subtree: true });
   addEventListener("scroll", () => { if (marks.length) requestAnimationFrame(placeBubbles); }, { passive: true });
   addEventListener("resize", applyMarks);
-  [[panel, "comment"], [history, "history"], [find(".mesh-panel"), "team"], [whatsPanel, "whats"], [helpPanel, "help"]].forEach(([el, key]) => el && makeDraggable(el, key));
+  [[panel, "comment"], [history, "history"], [find(".mesh-panel"), "team"], [whatsPanel, "whats"], [helpPanel, "help"], [sourcePanel, "source"]].forEach(([el, key]) => el && makeDraggable(el, key));
   applyScale();
   applySiteFont();
   syncMarks();
