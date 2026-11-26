@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.208.0 - 2026-11-26
+
+- Leak guard checks commit messages: a `commit-msg` hook, and the push check now scans messages too. Terms stay in the local denylist (`~/.config/adr/denylist`), never in a tracked file (thread 8a56d0d2).
+- Removed: nothing this time.
+
 ## 0.207.0 - 2026-11-25
 
 - Moved the project-agnostic gates, vote and ticket-graph scripts, run catalog and media tools into `scripts/gates/`, and the Check, Data, Plot, Video, SyncedRun, RunningNow and catalog components into `src/components/` (thread 8a56d0d2).

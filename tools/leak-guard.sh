@@ -12,8 +12,12 @@ case ${1:-} in
   staged) who="$(git var GIT_AUTHOR_IDENT) $(git var GIT_COMMITTER_IDENT)"
           if printf '%s\n' "$who" | grep -qiE "$pattern"; then echo "leak-guard: the commit identity matches the denylist: $who" >&2; exit 1; fi
           diff=$(git diff --cached -U0 --no-color); names=$(git diff --cached --name-only) ;;
-  range)  diff=$(git log -p -U0 --no-color --format='%an <%ae> %cn <%ce>' "$2"); names=$(git diff --name-only "$2" 2>/dev/null) ;;
-  *) echo "usage: $0 staged | range <rev-range>" >&2; exit 2 ;;
+  range)  diff=$(git log -p -U0 --no-color --format='%an <%ae> %cn <%ce>' "$2"; git log --format=%B "$2" | sed 's/^/+/'); names=$(git diff --name-only "$2" 2>/dev/null) ;;
+  message) if grep -v '^#' "$2" | grep -qiE "$pattern"; then
+             echo "leak-guard: the commit message matches the denylist (see $list):" >&2
+             grep -v '^#' "$2" | grep -inE "$pattern" | head -5 >&2; exit 1; fi
+           exit 0 ;;
+  *) echo "usage: $0 staged | range <rev-range> | message <file>" >&2; exit 2 ;;
 esac
 hits=$({ printf '%s\n' "$diff" | grep -E '^(\+[^+]|[^ +@-])' ; printf '%s\n' "$names"; } | grep -inE "$pattern" | cut -c1-140)
 if [ -n "$hits" ]; then
