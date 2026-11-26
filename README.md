@@ -120,4 +120,4 @@ MIT
 
 ## Keeping private strings out
 
-This repo is public. `git config core.hooksPath .githooks` enables a pre-commit and pre-push check (`tools/leak-guard.sh`) that rejects changes matching the regexes in `~/.config/adr/denylist` (one per line, case-insensitive; kept outside the repo so the list itself is never published). Bypass deliberately with `--no-verify`; the pre-push hook still scans.
+This repo is public. `git config core.hooksPath .githooks` enables a pre-commit and pre-push check (`tools/leak-guard.sh`) that rejects changes matching the regexes in `~/.config/adr/ignore-terms` (one per line, case-insensitive; kept outside the repo so the list itself is never published; `ADR_IGNORE_TERMS` points elsewhere). It checks diffs, file names, author identity and commit messages. Bypass deliberately with `--no-verify`; the pre-push hook still scans.

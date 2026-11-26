@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.209.0 - 2026-11-26
+
+- The leak guard's term list is now "ignore terms": `~/.config/adr/ignore-terms` (or `$ADR_IGNORE_TERMS`) instead of `denylist`; messages say so. Move the old file by hand (thread 8a56d0d2).
+- Removed: the `denylist` / `ADR_DENYLIST` names.
+
 ## 0.208.0 - 2026-11-26
 
 - Leak guard checks commit messages: a `commit-msg` hook, and the push check now scans messages too. Terms stay in the local denylist (`~/.config/adr/denylist`), never in a tracked file (thread 8a56d0d2).

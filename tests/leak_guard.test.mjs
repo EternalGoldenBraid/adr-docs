@@ -6,12 +6,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const dir = mkdtempSync(join(tmpdir(), "leak-"));
-const list = join(dir, "denylist");
+const list = join(dir, "ignore-terms");
 writeFileSync(list, "secretword\n");
 const run = (...args) =>
-  spawnSync("tools/leak-guard.sh", args, { env: { ...process.env, ADR_DENYLIST: list }, encoding: "utf8" });
+  spawnSync("tools/leak-guard.sh", args, { env: { ...process.env, ADR_IGNORE_TERMS: list }, encoding: "utf8" });
 
-test("commit message with a denylisted term is rejected", () => {
+test("commit message with an ignored term is rejected", () => {
   const f = join(dir, "msg");
   writeFileSync(f, "Add SecretWord theme\n");
   assert.equal(run("message", f).status, 1);
@@ -25,7 +25,7 @@ test("push range checks commit messages", () => {
   git("-c", "user.name=a", "-c", "user.email=a@b.c", "commit", "-q", "--allow-empty", "-m", "base");
   git("-c", "user.name=a", "-c", "user.email=a@b.c", "commit", "-q", "--allow-empty", "-m", "the secretword loop");
   const r = spawnSync(join(process.cwd(), "tools/leak-guard.sh"), ["range", "HEAD~1..HEAD"], {
-    cwd: dir, env: { ...process.env, ADR_DENYLIST: list }, encoding: "utf8",
+    cwd: dir, env: { ...process.env, ADR_IGNORE_TERMS: list }, encoding: "utf8",
   });
   assert.equal(r.status, 1);
 });
