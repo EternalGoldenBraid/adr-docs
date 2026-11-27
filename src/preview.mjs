@@ -4,7 +4,7 @@ import { homedir } from "node:os";
 import { basename, dirname, extname, isAbsolute, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createServer } from "vitepress";
-import { ALLOWED, encodeResponse, loadMesh } from "./mesh-rpc.mjs";
+import { ALLOWED, encodeResponse, fitResponse, loadMesh } from "./mesh-rpc.mjs";
 import { startCommentBridge } from "../scripts/preview_comments/server.mjs";
 
 const packageRoot = fileURLToPath(new URL("../", import.meta.url));
@@ -78,7 +78,7 @@ export async function startDocumentPreview({
         } catch (error) { payload = { status: 502, body: { error: error.message } }; }
       }
       const routed = await meshRouter().catch(() => undefined);
-      for (const content of encodeResponse(request.id, payload)) {
+      for (const content of encodeResponse(request.id, fitResponse(payload))) {
         const result = routed ? await routed.replyToMessage(self.sessionId, { message_id: message.message_id, content }) : self.reply({ message_id: message.message_id, content });
         if (result?.error) { onError(new Error(`Mesh bridge reply failed: ${result.error}`)); break; }
       }

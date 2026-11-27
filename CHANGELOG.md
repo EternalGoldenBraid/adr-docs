@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.213.0 - 2026-11-27
+
+- Fix: an agent on another machine (the sim agent on gpu) reading its threads over the mesh could time out and lose them. The mesh allows about nine sends per pair, a large unread list needed more, and the read is marked seen before it is sent. A response that does not fit in 8 chunks is now shortened (latest replies kept, long texts cut, `trimmed` says so) instead of failing. Restart the preview to serve it.
+- Removed: nothing.
+
 ## 0.212.0 - 2026-11-27
 
 - The source editor opens page-wide (1100px, or the width you set) and follows Alt+h/l/j/k resize and Alt+Shift+hjkl moves.
