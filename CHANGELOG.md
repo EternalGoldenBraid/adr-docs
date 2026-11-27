@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.214.0 - 2026-11-27
+
+- Fix: a call from another machine over the mesh gave up after 30 s when the first relay it tried never answered (for example a second preview registered under the same name that does not serve requests). Each candidate now gets a 12 s turn and the next is tried on silence.
+- Removed: the give-up on the first silent relay.
+
 ## 0.213.0 - 2026-11-27
 
 - Fix: an agent on another machine (the sim agent on gpu) reading its threads over the mesh could time out and lose them. The mesh allows about nine sends per pair, a large unread list needed more, and the read is marked seen before it is sent. A response that does not fit in 8 chunks is now shortened (latest replies kept, long texts cut, `trimmed` says so) instead of failing. Restart the preview to serve it.

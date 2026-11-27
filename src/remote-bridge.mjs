@@ -31,7 +31,9 @@ async function meshBridge(machine, store, path, init, timeoutMs = 30_000) {
         content: `ADR-REQ ${JSON.stringify({ id, store, path, method: init.method ?? "GET", body: init.body })}` });
       if (sent.error) throw new Error(sent.error);
       const chunks = new Map();
-      for (const deadline = Date.now() + timeoutMs; Date.now() < deadline; await new Promise(done => setTimeout(done, 400))) {
+      // With several candidates each gets a short turn: a relay of another store (or an old preview) may never answer.
+      const turn = targets.length > 1 ? Math.min(timeoutMs, 12_000) : timeoutMs;
+      for (const deadline = Date.now() + turn; Date.now() < deadline; await new Promise(done => setTimeout(done, 400))) {
         for (const message of me.inbox().messages ?? []) {
           const part = parseResponse(message.content);
           if (part?.id !== id) continue;
@@ -46,8 +48,7 @@ async function meshBridge(machine, store, path, init, timeoutMs = 30_000) {
         }
         if (refused) break;
       }
-      if (!refused) throw new Error(`No answer from the preview "${store}" on ${machine} within ${timeoutMs / 1000} s.`);
-      if (target === targets.at(-1)) throw new Error(refused);
+      if (target === targets.at(-1)) throw new Error(refused ?? `No answer from the preview "${store}" on ${machine} within ${timeoutMs / 1000} s.`);
       refused = undefined;
     }
   } finally { me.close(); database.close(); }
