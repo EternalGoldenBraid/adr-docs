@@ -398,7 +398,7 @@ A page component can also start the region capture by dispatching a `preview-com
 
 ## Editing the page source
 
-With the caret in a block (or none: the block near the top of the view) and no text box focused, `e` opens a float (draggable like the team panel; the page stays visible) with the page's markdown: the block under the caret plus 8 lines before and after, cursor on the block. The field has the usual vim text keys; `Esc` for normal mode, then `:w` writes those lines into the page's `.md` file and the page re-renders in place, `:wq` writes and closes, `:q` closes, Ctrl+Enter also writes. The float stays open after `:w`. ADR refuses a save if the file changed since you opened it. The key is `page.edit` in the keymap. Local preview only; exports and published sites are read-only here (use `{editable}` tables for edits there).
+With the caret in a block (or none: the block near the top of the view) and no text box focused, `e` opens a float (draggable like the team panel; the page stays visible) with the page's markdown: the block under the caret plus 8 lines before and after, cursor on the block. The field has the usual vim text keys; `Esc` for normal mode, then `:w` writes those lines into the page's `.md` file and the page re-renders in place, `:wq` writes and closes, `:q` closes, Ctrl+Enter also writes. The float stays open after `:w`. ADR refuses a save if the file changed since you opened it. The float opens page-wide and takes the same Alt+h/l/j/k resize and Alt+Shift+hjkl move keys as the other floats. The key is `page.edit` in the keymap. Local preview only; exports and published sites are read-only here (use `{editable}` tables for edits there).
 
 ## Region outlines
 

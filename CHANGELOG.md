@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.212.0 - 2026-11-27
+
+- The source editor opens page-wide (1100px, or the width you set) and follows Alt+h/l/j/k resize and Alt+Shift+hjkl moves.
+- One list of floating windows (`floatPanels` in `client.js`) now drives dragging, Alt+Shift+hjkl moves and Alt+hjkl resizes; before, each had its own list, so the What's-new and help floats could not be moved with the keys and the source editor was missing from two of them.
+- Removed: the three separate panel lists.
+
 ## 0.211.0 - 2026-11-26
 
 - The `e` source editor is now a draggable float like the team panel (the page stays visible), not a full-screen box. In its vim text field `Esc` then `:w` writes the page file and the page re-renders in place; `:wq` / `:q` close it, Ctrl+Enter also saves, and the editor stays open after `:w` so you can keep editing (thread c5679a4e).
